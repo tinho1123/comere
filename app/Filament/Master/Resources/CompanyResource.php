@@ -3,10 +3,12 @@
 namespace App\Filament\Master\Resources;
 
 use App\Filament\Master\Resources\CompanyResource\Pages;
+use App\Filament\Master\Resources\CompanyResource\RelationManagers\UsersRelationManager;
 use App\Models\Company;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -34,38 +36,51 @@ class CompanyResource extends Resource
             TextInput::make('admin_email')
                 ->label('E-mail do administrador')
                 ->email()
-                ->required()
-                ->maxLength(255),
+                ->required(fn (string $operation): bool => $operation === 'create')
+                ->maxLength(255)
+                ->visibleOn('create'),
 
             TextInput::make('admin_password')
                 ->label('Senha do administrador')
                 ->password()
-                ->required()
-                ->minLength(8),
+                ->required(fn (string $operation): bool => $operation === 'create')
+                ->minLength(8)
+                ->visibleOn('create'),
         ]);
     }
 
     public static function table(Table $table): Table
     {
-        return $table->columns([
-            TextColumn::make('name')
-                ->label('Nome')
-                ->searchable()
-                ->sortable(),
+        return $table
+            ->columns([
+                TextColumn::make('name')
+                    ->label('Nome')
+                    ->searchable()
+                    ->sortable(),
 
-            TextColumn::make('users.email')
-                ->label('Administrador')
-                ->searchable(),
+                TextColumn::make('users.email')
+                    ->label('Administrador')
+                    ->searchable(),
 
-            IconColumn::make('active')
-                ->label('Ativa')
-                ->boolean(),
+                IconColumn::make('active')
+                    ->label('Ativa')
+                    ->boolean(),
 
-            TextColumn::make('created_at')
-                ->label('Criada em')
-                ->dateTime('d/m/Y')
-                ->sortable(),
-        ]);
+                TextColumn::make('created_at')
+                    ->label('Criada em')
+                    ->dateTime('d/m/Y')
+                    ->sortable(),
+            ])
+            ->actions([
+                EditAction::make(),
+            ]);
+    }
+
+    public static function getRelationManagers(): array
+    {
+        return [
+            UsersRelationManager::class,
+        ];
     }
 
     public static function getPages(): array
@@ -73,6 +88,7 @@ class CompanyResource extends Resource
         return [
             'index' => Pages\ListCompanies::route('/'),
             'create' => Pages\CreateCompany::route('/create'),
+            'edit' => Pages\EditCompany::route('/{record}/edit'),
         ];
     }
 }
