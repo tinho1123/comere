@@ -5,6 +5,7 @@ namespace App\Filament\Master\Resources;
 use App\Filament\Master\Resources\CompanyResource\Pages;
 use App\Filament\Master\Resources\CompanyResource\RelationManagers\UsersRelationManager;
 use App\Models\Company;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -46,6 +47,36 @@ class CompanyResource extends Resource
                 ->required(fn (string $operation): bool => $operation === 'create')
                 ->minLength(8)
                 ->visibleOn('create'),
+
+            FileUpload::make('logo_path')
+                ->label('Logo')
+                ->image()
+                ->disk('public')
+                ->directory(fn ($record) => 'store/'.($record?->uuid ?? 'temp').'/images/logo')
+                ->maxSize(512)
+                ->imageResizeMode('contain')
+                ->imageResizeTargetWidth(400)
+                ->imageResizeTargetHeight(400)
+                ->imageResizeUpscale(false)
+                ->getUploadedFileNameForStorageUsing(
+                    fn (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file) => \Illuminate\Support\Str::uuid().'.'.$file->getClientOriginalExtension()
+                )
+                ->visibleOn('edit'),
+
+            FileUpload::make('banner_path')
+                ->label('Banner')
+                ->image()
+                ->disk('public')
+                ->directory(fn ($record) => 'store/'.($record?->uuid ?? 'temp').'/images/banner')
+                ->maxSize(2048)
+                ->imageResizeMode('cover')
+                ->imageResizeTargetWidth(1280)
+                ->imageResizeTargetHeight(480)
+                ->imageResizeUpscale(false)
+                ->getUploadedFileNameForStorageUsing(
+                    fn (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file) => \Illuminate\Support\Str::uuid().'.'.$file->getClientOriginalExtension()
+                )
+                ->visibleOn('edit'),
         ]);
     }
 

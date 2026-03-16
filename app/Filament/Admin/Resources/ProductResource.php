@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\ProductResource\Pages;
 use App\Models\Product;
+use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -91,7 +92,16 @@ class ProductResource extends Resource
                     ]),
                 Forms\Components\FileUpload::make('image')
                     ->image()
-                    ->directory('products'),
+                    ->disk('public')
+                    ->directory(fn () => 'store/'.Filament::getTenant()->uuid.'/products')
+                    ->maxSize(1024)
+                    ->imageResizeMode('contain')
+                    ->imageResizeTargetWidth(800)
+                    ->imageResizeTargetHeight(800)
+                    ->imageResizeUpscale(false)
+                    ->getUploadedFileNameForStorageUsing(
+                        fn (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file) => \Illuminate\Support\Str::uuid().'.'.$file->getClientOriginalExtension()
+                    ),
                 Forms\Components\Toggle::make('active')
                     ->label('Ativo')
                     ->required()

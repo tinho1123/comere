@@ -37,7 +37,7 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USER }}
           password: ${{ secrets.SSH_PASSWORD }}
-          source: "app/,bootstrap/,config/,database/,lang/,public/,resources/,routes/,storage/,artisan,composer.json,composer.lock"
+          source: "app/,bootstrap/,config/,database/,lang/,public/,resources/,routes/,artisan,composer.json,composer.lock"
           target: "/home/u968588512/domains/comere.com.br/comere/"
 
       - name: Run post-deploy commands
@@ -52,6 +52,9 @@ jobs:
 
             echo "→ Instalando dependências PHP..."
             composer install --no-dev --optimize-autoloader --no-interaction
+
+            echo "→ Criando estrutura de diretórios..."
+            mkdir -p public/storage/store storage/framework/cache storage/framework/sessions storage/framework/views storage/logs
 
             echo "→ Executando migrations..."
             php artisan migrate --force
