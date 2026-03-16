@@ -18,7 +18,7 @@ class CompanyFactory extends Factory
             'uuid' => $this->faker->uuid(),
             'name' => $this->faker->company(),
             'foundation_date' => $this->faker->date(),
-            'active' => 'Y',
+            'active' => true,
         ];
     }
 }

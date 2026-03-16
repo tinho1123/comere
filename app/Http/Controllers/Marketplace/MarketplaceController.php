@@ -14,7 +14,7 @@ class MarketplaceController extends Controller
     {
         $category = $request->query('category');
 
-        $companies = Company::where('active', 'Y')
+        $companies = Company::where('active', true)
             ->when($category, function ($query, $category) {
                 return $query->where('type', $category);
             })
@@ -30,7 +30,7 @@ class MarketplaceController extends Controller
                 'is_promoted' => $company->is_promoted,
             ]);
 
-        $promotedProducts = Product::whereHas('company', fn ($q) => $q->where('active', 'Y'))
+        $promotedProducts = Product::whereHas('company', fn ($q) => $q->where('active', true))
             ->where('discounts', '>', 0) // Usando a coluna correta 'discounts'
             ->limit(8)
             ->get();
