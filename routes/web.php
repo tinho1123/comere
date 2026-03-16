@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Marketplace\MarketplaceController;
+use App\Http\Controllers\Marketplace\MarketplaceLoginController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -14,8 +15,8 @@ use App\Http\Controllers\Marketplace\MarketplaceController;
 |
 */
 
-use App\Http\Controllers\Marketplace\MarketplaceLoginController;
 use App\Http\Controllers\Marketplace\SSOCallbackController;
+use App\Http\Controllers\PushSubscriptionController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [MarketplaceController::class, 'index'])->name('marketplace.index');
@@ -34,6 +35,12 @@ Route::post('/complete-profile', [SSOCallbackController::class, 'storeProfile'])
 
 Route::middleware('auth:client')->group(function () {
     Route::get('/meus-pedidos', [MarketplaceController::class, 'orders'])->name('marketplace.orders');
+});
+
+// Push Notifications (admin users only)
+Route::middleware('auth')->group(function () {
+    Route::post('/push/subscribe', [PushSubscriptionController::class, 'subscribe'])->name('push.subscribe');
+    Route::post('/push/unsubscribe', [PushSubscriptionController::class, 'unsubscribe'])->name('push.unsubscribe');
 });
 
 // Rotas do Admin (existente)
