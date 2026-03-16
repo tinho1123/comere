@@ -9,6 +9,8 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use Illuminate\Support\Str;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -59,7 +61,7 @@ class CompanyResource extends Resource
                 ->imageResizeTargetHeight(400)
                 ->imageResizeUpscale(false)
                 ->getUploadedFileNameForStorageUsing(
-                    fn (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file) => \Illuminate\Support\Str::uuid().'.'.$file->getClientOriginalExtension()
+                    fn (TemporaryUploadedFile $file) => (string) Str::uuid().'.'.$file->getClientOriginalExtension()
                 )
                 ->visibleOn('edit'),
 
@@ -74,7 +76,7 @@ class CompanyResource extends Resource
                 ->imageResizeTargetHeight(480)
                 ->imageResizeUpscale(false)
                 ->getUploadedFileNameForStorageUsing(
-                    fn (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file) => \Illuminate\Support\Str::uuid().'.'.$file->getClientOriginalExtension()
+                    fn (TemporaryUploadedFile $file) => (string) Str::uuid().'.'.$file->getClientOriginalExtension()
                 )
                 ->visibleOn('edit'),
         ]);

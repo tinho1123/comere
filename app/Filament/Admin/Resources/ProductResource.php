@@ -6,6 +6,8 @@ use App\Filament\Admin\Resources\ProductResource\Pages;
 use App\Models\Product;
 use Filament\Facades\Filament;
 use Filament\Forms;
+use Illuminate\Support\Str;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -100,7 +102,7 @@ class ProductResource extends Resource
                     ->imageResizeTargetHeight(800)
                     ->imageResizeUpscale(false)
                     ->getUploadedFileNameForStorageUsing(
-                        fn (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file) => \Illuminate\Support\Str::uuid().'.'.$file->getClientOriginalExtension()
+                        fn (TemporaryUploadedFile $file) => (string) Str::uuid().'.'.$file->getClientOriginalExtension()
                     ),
                 Forms\Components\Toggle::make('active')
                     ->label('Ativo')
