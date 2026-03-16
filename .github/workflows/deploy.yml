@@ -37,8 +37,10 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USER }}
           password: ${{ secrets.SSH_PASSWORD }}
-          source: "app/,bootstrap/,config/,database/,lang/,public/,resources/,routes/,artisan,composer.json,composer.lock"
+          source: "app/,bootstrap/,config/,database/,lang/,public/,resources/views/,routes/,artisan,composer.json,composer.lock"
           target: "/home/u968588512/domains/comere.com.br/comere/"
+          timeout: 60s
+          command_timeout: 30m
 
       - name: Run post-deploy commands
         uses: appleboy/ssh-action@v1.0.3
