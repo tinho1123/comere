@@ -58,7 +58,7 @@ class MarketplaceController extends Controller
         $lastVisited = array_slice($lastVisited, 0, 5); // Manter as últimas 5
         session()->put('last_visited_stores', $lastVisited);
 
-        $company->load(['products' => fn ($q) => $q->where('active', 'Y')->with('category')]);
+        $company->load(['products' => fn ($q) => $q->where('active', true)->with('category')]);
 
         return Inertia::render('Marketplace/Show', [
             'company' => [

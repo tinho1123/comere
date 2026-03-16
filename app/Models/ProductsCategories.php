@@ -16,6 +16,10 @@ class ProductsCategories extends Model
         'active',
     ];
 
+    protected $casts = [
+        'active' => 'boolean',
+    ];
+
     public function products(): HasMany
     {
         return $this->hasMany(Product::class, 'category_id');

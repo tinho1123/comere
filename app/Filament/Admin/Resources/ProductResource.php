@@ -94,14 +94,10 @@ class ProductResource extends Resource
                     ->directory('products'),
                 Forms\Components\Toggle::make('active')
                     ->label('Ativo')
-                    ->formatStateUsing(fn ($state) => $state === 'Y')
-                    ->dehydrateStateUsing(fn ($state) => $state ? 'Y' : 'N')
                     ->required()
                     ->default(true),
                 Forms\Components\Toggle::make('isCool')
                     ->label('Gelado?')
-                    ->formatStateUsing(fn ($state) => $state === 'Y')
-                    ->dehydrateStateUsing(fn ($state) => $state ? 'Y' : 'N')
                     ->default(false),
             ]);
     }
