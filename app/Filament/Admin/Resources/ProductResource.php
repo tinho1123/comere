@@ -6,12 +6,12 @@ use App\Filament\Admin\Resources\ProductResource\Pages;
 use App\Models\Product;
 use Filament\Facades\Filament;
 use Filament\Forms;
-use Illuminate\Support\Str;
-use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\Str;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class ProductResource extends Resource
 {
