@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Services\PushNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -138,6 +139,22 @@ class OrderController extends Controller
         ]);
 
         $order->load('items.product');
+
+        // Notify company admin via push notification
+        try {
+            $client = $clientUser->client ?? null;
+            $clientName = $client?->name ?? 'Um cliente';
+            $itemCount = $order->items->count();
+
+            app(PushNotificationService::class)->notifyCompany(
+                $company->id,
+                '🛒 Novo pedido recebido!',
+                "{$clientName} fez um pedido com {$itemCount} ".($itemCount === 1 ? 'item' : 'itens').'.',
+                "/admin/{$company->uuid}/orders"
+            );
+        } catch (\Throwable) {
+            // Never fail the order creation due to notification errors
+        }
 
         return response()->json([
             'success' => true,
