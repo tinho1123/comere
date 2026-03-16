@@ -11,7 +11,6 @@
     <meta name="apple-mobile-web-app-title" content="Comere">
     <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
 
-    @routes
     @vite('resources/js/app.jsx')
     @inertiaHead
 </head>
