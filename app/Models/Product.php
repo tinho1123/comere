@@ -37,6 +37,12 @@ class Product extends Model
         'uuid',
     ];
 
+    protected $casts = [
+        'active' => 'boolean',
+        'isCool' => 'boolean',
+        'is_for_favored' => 'boolean',
+    ];
+
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);

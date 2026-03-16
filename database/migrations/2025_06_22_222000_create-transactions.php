@@ -22,11 +22,11 @@ return new class extends Migration
             $table->decimal('amount', 8, 2, true);
             $table->decimal('discounts', 8, 2, true);
             $table->decimal('fees', 8, 2, true);
-            $table->enum('active', ['Y', 'N'])->default('Y');
+            $table->boolean('active')->default(true);
             $table->decimal('total_amount', 8, 2, true);
             $table->bigInteger('quantity', false, true);
             $table->string('image')->nullable();
-            $table->enum('isCool', ['Y', 'N']);
+            $table->boolean('isCool')->default(false);
             $table->string('category_name');
             $table->foreignId('category_id')->constrained('products_categories')->cascadeOnUpdate();
             $table->string('client_name');

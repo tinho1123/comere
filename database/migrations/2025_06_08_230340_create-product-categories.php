@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('company_id')->constrained('companies')->cascadeOnDelete();
             $table->string('name');
             $table->string('description')->nullable();
-            $table->enum('active', ['Y', 'N'])->default('Y');
+            $table->boolean('active')->default(true);
             $table->timestamps();
         });
     }

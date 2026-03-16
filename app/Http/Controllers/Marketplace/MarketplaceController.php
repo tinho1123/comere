@@ -14,7 +14,7 @@ class MarketplaceController extends Controller
     {
         $category = $request->query('category');
 
-        $companies = Company::where('active', 'Y')
+        $companies = Company::where('active', true)
             ->when($category, function ($query, $category) {
                 return $query->where('type', $category);
             })
@@ -30,7 +30,7 @@ class MarketplaceController extends Controller
                 'is_promoted' => $company->is_promoted,
             ]);
 
-        $promotedProducts = Product::whereHas('company', fn ($q) => $q->where('active', 'Y'))
+        $promotedProducts = Product::whereHas('company', fn ($q) => $q->where('active', true))
             ->where('discounts', '>', 0) // Usando a coluna correta 'discounts'
             ->limit(8)
             ->get();
@@ -58,7 +58,7 @@ class MarketplaceController extends Controller
         $lastVisited = array_slice($lastVisited, 0, 5); // Manter as últimas 5
         session()->put('last_visited_stores', $lastVisited);
 
-        $company->load(['products' => fn ($q) => $q->where('active', 'Y')->with('category')]);
+        $company->load(['products' => fn ($q) => $q->where('active', true)->with('category')]);
 
         return Inertia::render('Marketplace/Show', [
             'company' => [

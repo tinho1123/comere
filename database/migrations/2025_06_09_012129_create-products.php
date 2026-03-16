@@ -19,13 +19,13 @@ return new class extends Migration
             $table->longText('description');
             $table->decimal('amount', 8, 2, true);
             $table->decimal('discounts', 8, 2, true);
-            $table->enum('active', ['Y', 'N'])->default('Y');
+            $table->boolean('active')->default(true);
             $table->decimal('total_amount', 8, 2, true);
             $table->bigInteger('quantity', false, true);
             $table->string('image')->nullable();
             $table->boolean('is_for_favored')->default(false);
             $table->decimal('favored_price', 10, 2)->nullable();
-            $table->enum('isCool', ['Y', 'N']);
+            $table->boolean('isCool')->default(false);
             $table->foreignId('category_id')->constrained('products_categories')->cascadeOnUpdate();
             $table->timestamps();
         });

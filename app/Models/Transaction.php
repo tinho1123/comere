@@ -52,6 +52,11 @@ class Transaction extends Model
         'payment_method',
     ];
 
+    protected $casts = [
+        'active' => 'boolean',
+        'isCool' => 'boolean',
+    ];
+
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);

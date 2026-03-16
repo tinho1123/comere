@@ -16,7 +16,7 @@ return new class extends Migration
             $table->uuid('uuid')->unique();
             $table->string('name', 255);
             $table->date('foundation_date');
-            $table->enum('active', ['Y', 'N']);
+            $table->boolean('active')->default(true);
             $table->timestamps();
         });
     }
