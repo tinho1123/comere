@@ -15,6 +15,7 @@ use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
@@ -89,7 +90,27 @@ class CompanyResource extends Resource
                     TextInput::make('address_zip')
                         ->label('CEP')
                         ->mask('99999-999')
-                        ->maxLength(9),
+                        ->maxLength(9)
+                        ->live(onBlur: true)
+                        ->afterStateUpdated(function (?string $state, callable $set) {
+                            $cep = preg_replace('/\D/', '', $state ?? '');
+
+                            if (strlen($cep) !== 8) {
+                                return;
+                            }
+
+                            $response = Http::get("https://viacep.com.br/ws/{$cep}/json/");
+
+                            if ($response->failed() || isset($response->json()['erro'])) {
+                                return;
+                            }
+
+                            $data = $response->json();
+                            $set('address_street', $data['logradouro'] ?? '');
+                            $set('address_neighborhood', $data['bairro'] ?? '');
+                            $set('address_city', $data['localidade'] ?? '');
+                            $set('address_state', strtoupper($data['uf'] ?? ''));
+                        }),
 
                     TextInput::make('address_street')
                         ->label('Rua / Avenida')
