@@ -68,7 +68,7 @@
                 initMap();
                 km = parseInt($wire.data?.max_km) || null;
                 updateCircle();
-                $wire.\$watch('data.max_km', v => {
+                $wire.$watch('data.max_km', v => {
                     km = parseInt(v) || null;
                     updateCircle();
                 });
