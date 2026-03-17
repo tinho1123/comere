@@ -72,7 +72,19 @@ class MarketplaceController extends Controller
                 'rating' => $company->rating,
                 'delivery_time' => $company->delivery_time ?? '20-30 min',
             ],
-            'productsByCategory' => $company->products->groupBy('category.name'),
+            'productsByCategory' => $company->products
+                ->map(fn ($product) => [
+                    'id' => $product->id,
+                    'uuid' => $product->uuid,
+                    'name' => $product->name,
+                    'description' => $product->description,
+                    'price' => $product->price,
+                    'image' => $product->image ? Storage::url($product->image) : null,
+                    'is_for_favored' => $product->is_for_favored,
+                    'favored_price' => $product->favored_price,
+                    'category' => $product->category?->name,
+                ])
+                ->groupBy('category'),
         ]);
     }
 
