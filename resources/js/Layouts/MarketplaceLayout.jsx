@@ -15,6 +15,7 @@ export default function MarketplaceLayout({ children }) {
     // Address state
     const [addresses, setAddresses] = useState([]);
     const [isAddingAddress, setIsAddingAddress] = useState(false);
+    const [addressErrors, setAddressErrors] = useState({});
     const [addressForm, setAddressForm] = useState({
         label: 'Casa', zip_code: '', street: '', number: '',
         complement: '', neighborhood: '', city: '', state: '', is_default: false,
@@ -67,12 +68,17 @@ export default function MarketplaceLayout({ children }) {
     const handleAddAddress = async (e) => {
         e.preventDefault();
         setIsLoading(true);
+        setAddressErrors({});
         try {
             await axios.post('/addresses', addressForm);
             router.reload({ only: ['default_address'] });
             loadAddresses();
             setIsAddingAddress(false);
             setAddressForm({ label: 'Casa', zip_code: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: '', is_default: false });
+        } catch (err) {
+            if (err.response?.status === 422) {
+                setAddressErrors(err.response.data.errors ?? {});
+            }
         } finally {
             setIsLoading(false);
         }
@@ -273,6 +279,13 @@ export default function MarketplaceLayout({ children }) {
                                                 <input type="checkbox" checked={addressForm.is_default} onChange={e => setAddressForm(p => ({ ...p, is_default: e.target.checked }))} className="accent-red-500" />
                                                 <span className="text-sm text-gray-600">Definir como principal</span>
                                             </label>
+                                            {Object.values(addressErrors).flat().length > 0 && (
+                                                <div className="col-span-2 bg-red-50 border border-red-200 rounded-xl p-3">
+                                                    {Object.values(addressErrors).flat().map((err, i) => (
+                                                        <p key={i} className="text-xs text-red-600">{err}</p>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="flex gap-3 mt-2">
                                             <button type="button" onClick={() => setIsAddingAddress(false)} className="flex-1 border border-gray-200 text-gray-600 font-bold py-3 rounded-xl text-sm hover:bg-gray-50 transition-all">Cancelar</button>

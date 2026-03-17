@@ -29,7 +29,7 @@ class ClientAddressController extends Controller
             'street' => 'required|string|max:255',
             'number' => 'required|string|max:20',
             'complement' => 'nullable|string|max:100',
-            'neighborhood' => 'required|string|max=100',
+            'neighborhood' => 'required|string|max:100',
             'city' => 'required|string|max:100',
             'state' => 'required|string|size:2',
             'latitude' => 'nullable|numeric|between:-90,90',
