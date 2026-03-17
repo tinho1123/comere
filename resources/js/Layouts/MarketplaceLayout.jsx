@@ -16,9 +16,11 @@ export default function MarketplaceLayout({ children }) {
     const [addresses, setAddresses] = useState([]);
     const [isAddingAddress, setIsAddingAddress] = useState(false);
     const [addressErrors, setAddressErrors] = useState({});
+    const [isGeocodingAddress, setIsGeocodingAddress] = useState(false);
     const [addressForm, setAddressForm] = useState({
         label: 'Casa', zip_code: '', street: '', number: '',
-        complement: '', neighborhood: '', city: '', state: '', is_default: false,
+        complement: '', neighborhood: '', city: '', state: '',
+        latitude: '', longitude: '', is_default: false,
     });
 
     const isAuthenticated = !!auth.user;
@@ -74,13 +76,36 @@ export default function MarketplaceLayout({ children }) {
             router.reload({ only: ['default_address'] });
             loadAddresses();
             setIsAddingAddress(false);
-            setAddressForm({ label: 'Casa', zip_code: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: '', is_default: false });
+            setAddressForm({ label: 'Casa', zip_code: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: '', latitude: '', longitude: '', is_default: false });
         } catch (err) {
             if (err.response?.status === 422) {
                 setAddressErrors(err.response.data.errors ?? {});
             }
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const geocodeAddressData = async (form) => {
+        const { street, number, city, state } = form;
+        if (!street || !city || !state) return;
+        setIsGeocodingAddress(true);
+        try {
+            const q = [number, street, city, state, 'Brasil'].filter(Boolean).join(', ');
+            const res = await fetch(
+                `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`,
+                { headers: { 'Accept-Language': 'pt-BR' } }
+            );
+            const data = await res.json();
+            if (data.length > 0) {
+                setAddressForm(prev => ({
+                    ...prev,
+                    latitude: parseFloat(data[0].lat).toFixed(6),
+                    longitude: parseFloat(data[0].lon).toFixed(6),
+                }));
+            }
+        } catch {} finally {
+            setIsGeocodingAddress(false);
         }
     };
 
@@ -91,13 +116,17 @@ export default function MarketplaceLayout({ children }) {
             const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
             const data = await res.json();
             if (!data.erro) {
-                setAddressForm(prev => ({
-                    ...prev,
-                    street: data.logradouro || prev.street,
-                    neighborhood: data.bairro || prev.neighborhood,
-                    city: data.localidade || prev.city,
-                    state: data.uf || prev.state,
-                }));
+                setAddressForm(prev => {
+                    const updated = {
+                        ...prev,
+                        street: data.logradouro || prev.street,
+                        neighborhood: data.bairro || prev.neighborhood,
+                        city: data.localidade || prev.city,
+                        state: data.uf || prev.state,
+                    };
+                    geocodeAddressData(updated);
+                    return updated;
+                });
             }
         } catch {}
     };
@@ -257,7 +286,13 @@ export default function MarketplaceLayout({ children }) {
                                             </div>
                                             <div className="flex flex-col gap-1">
                                                 <label className="text-xs font-bold text-gray-400 uppercase">Número</label>
-                                                <input value={addressForm.number} onChange={e => setAddressForm(p => ({ ...p, number: e.target.value }))} required className="border border-gray-200 rounded-xl py-2.5 px-3 text-sm outline-none focus:border-red-500" />
+                                                <input
+                                                    value={addressForm.number}
+                                                    onChange={e => setAddressForm(p => ({ ...p, number: e.target.value }))}
+                                                    onBlur={e => geocodeAddressData({ ...addressForm, number: e.target.value })}
+                                                    required
+                                                    className="border border-gray-200 rounded-xl py-2.5 px-3 text-sm outline-none focus:border-red-500"
+                                                />
                                             </div>
                                             <div className="flex flex-col gap-1">
                                                 <label className="text-xs font-bold text-gray-400 uppercase">Complemento</label>
@@ -275,6 +310,57 @@ export default function MarketplaceLayout({ children }) {
                                                 <label className="text-xs font-bold text-gray-400 uppercase">UF</label>
                                                 <input value={addressForm.state} onChange={e => setAddressForm(p => ({ ...p, state: e.target.value.toUpperCase() }))} maxLength={2} required className="border border-gray-200 rounded-xl py-2.5 px-3 text-sm outline-none focus:border-red-500 uppercase" />
                                             </div>
+                                            {/* Localização */}
+                                            <div className="col-span-2 flex flex-col gap-2">
+                                                <div className="flex items-center justify-between">
+                                                    <label className="text-xs font-bold text-gray-400 uppercase">Localização no mapa</label>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (!navigator.geolocation) return;
+                                                            navigator.geolocation.getCurrentPosition(pos => {
+                                                                setAddressForm(p => ({
+                                                                    ...p,
+                                                                    latitude: pos.coords.latitude.toFixed(6),
+                                                                    longitude: pos.coords.longitude.toFixed(6),
+                                                                }));
+                                                            });
+                                                        }}
+                                                        className="flex items-center gap-1 text-xs font-semibold text-red-500 hover:text-red-600 transition-colors"
+                                                    >
+                                                        <MapPin size={13} /> Usar GPS
+                                                    </button>
+                                                </div>
+
+                                                {isGeocodingAddress && (
+                                                    <div className="h-[160px] rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center">
+                                                        <p className="text-xs text-gray-400 animate-pulse">Buscando localização...</p>
+                                                    </div>
+                                                )}
+
+                                                {!isGeocodingAddress && addressForm.latitude && addressForm.longitude && (
+                                                    <div className="rounded-xl overflow-hidden border border-gray-200 relative" style={{ height: '160px' }}>
+                                                        <iframe
+                                                            src={`https://www.openstreetmap.org/export/embed.html?bbox=${parseFloat(addressForm.longitude) - 0.004},${parseFloat(addressForm.latitude) - 0.004},${parseFloat(addressForm.longitude) + 0.004},${parseFloat(addressForm.latitude) + 0.004}&layer=mapnik&marker=${addressForm.latitude},${addressForm.longitude}`}
+                                                            width="100%"
+                                                            height="160"
+                                                            style={{ border: 0, pointerEvents: 'none' }}
+                                                            title="Localização"
+                                                        />
+                                                        <p className="absolute bottom-1 right-2 text-[10px] text-gray-500 bg-white/80 px-1 rounded">
+                                                            {addressForm.latitude}, {addressForm.longitude}
+                                                        </p>
+                                                    </div>
+                                                )}
+
+                                                {!isGeocodingAddress && !addressForm.latitude && (
+                                                    <div className="h-[160px] rounded-xl border border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center gap-2">
+                                                        <MapPin size={20} className="text-gray-300" />
+                                                        <p className="text-xs text-gray-400">Preencha o CEP e o número para identificar a localização</p>
+                                                    </div>
+                                                )}
+                                            </div>
+
                                             <label className="col-span-2 flex items-center gap-2 cursor-pointer">
                                                 <input type="checkbox" checked={addressForm.is_default} onChange={e => setAddressForm(p => ({ ...p, is_default: e.target.checked }))} className="accent-red-500" />
                                                 <span className="text-sm text-gray-600">Definir como principal</span>
