@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Services\DistanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -17,22 +18,43 @@ class MarketplaceController extends Controller
     public function index(Request $request)
     {
         $category = $request->query('category');
+        $distanceService = new DistanceService;
+        $client = auth()->guard('client')->user();
+        $defaultAddress = $client?->addresses()->where('is_default', true)->first();
 
         $companies = Company::where('active', true)
-            ->when($category, function ($query, $category) {
-                return $query->where('type', $category);
-            })
+            ->with('deliveryFeeRanges')
+            ->when($category, fn ($q, $cat) => $q->where('type', $cat))
             ->get()
-            ->map(fn ($company) => [
-                'uuid' => $company->uuid,
-                'name' => $company->name,
-                'type' => $company->type,
-                'logo' => $company->logo_path ? Storage::url($company->logo_path) : '/default-store-logo.png',
-                'banner' => $company->banner_path ? Storage::url($company->banner_path) : '/default-store-banner.png',
-                'rating' => $company->rating,
-                'delivery_time' => $company->delivery_time ?? '20-30 min',
-                'is_promoted' => $company->is_promoted,
-            ]);
+            ->map(function ($company) use ($distanceService, $defaultAddress) {
+                $distance = null;
+                $deliveryFee = null;
+
+                if ($defaultAddress && $distanceService->canCalculate(
+                    $defaultAddress->latitude, $defaultAddress->longitude,
+                    $company->latitude, $company->longitude
+                )) {
+                    $distance = $distanceService->calculate(
+                        $defaultAddress->latitude, $defaultAddress->longitude,
+                        $company->latitude, $company->longitude
+                    );
+                    $deliveryFee = $distanceService->getFeeForDistance($distance, $company->deliveryFeeRanges);
+                }
+
+                return [
+                    'uuid' => $company->uuid,
+                    'name' => $company->name,
+                    'type' => $company->type,
+                    'logo' => $company->logo_path ? Storage::url($company->logo_path) : '/default-store-logo.png',
+                    'banner' => $company->banner_path ? Storage::url($company->banner_path) : '/default-store-banner.png',
+                    'rating' => $company->rating,
+                    'delivery_time' => $company->delivery_time ?? '20-30 min',
+                    'is_promoted' => $company->is_promoted,
+                    'distance_km' => $distance,
+                    'delivery_fee' => $deliveryFee,
+                    'has_address' => $company->latitude !== null,
+                ];
+            });
 
         $promotedProducts = Product::whereHas('company', fn ($q) => $q->where('active', true))
             ->where('discounts', '>', 0) // Usando a coluna correta 'discounts'
@@ -62,7 +84,25 @@ class MarketplaceController extends Controller
         $lastVisited = array_slice($lastVisited, 0, 5); // Manter as últimas 5
         session()->put('last_visited_stores', $lastVisited);
 
-        $company->load(['products' => fn ($q) => $q->where('active', true)->with('category')]);
+        $company->load(['products' => fn ($q) => $q->where('active', true)->with('category'), 'deliveryFeeRanges']);
+
+        $distanceService = new DistanceService;
+        $client = auth()->guard('client')->user();
+        $defaultAddress = $client?->addresses()->where('is_default', true)->first();
+
+        $distance = null;
+        $deliveryFee = null;
+
+        if ($defaultAddress && $distanceService->canCalculate(
+            $defaultAddress->latitude, $defaultAddress->longitude,
+            $company->latitude, $company->longitude
+        )) {
+            $distance = $distanceService->calculate(
+                $defaultAddress->latitude, $defaultAddress->longitude,
+                $company->latitude, $company->longitude
+            );
+            $deliveryFee = $distanceService->getFeeForDistance($distance, $company->deliveryFeeRanges);
+        }
 
         return Inertia::render('Marketplace/Show', [
             'company' => [
@@ -74,6 +114,13 @@ class MarketplaceController extends Controller
                 'banner' => $company->banner_path ? Storage::url($company->banner_path) : '/default-store-banner.png',
                 'rating' => $company->rating,
                 'delivery_time' => $company->delivery_time ?? '20-30 min',
+                'distance_km' => $distance,
+                'delivery_fee' => $deliveryFee,
+                'fee_ranges' => $company->deliveryFeeRanges->map(fn ($r) => [
+                    'max_km' => $r->max_km,
+                    'fee' => $r->fee,
+                    'is_active' => $r->is_active,
+                ]),
             ],
             'productsByCategory' => $company->products
                 ->map(fn ($product) => [

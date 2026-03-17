@@ -2,7 +2,7 @@ import { useState } from 'react';
 import MarketplaceLayout from '../../Layouts/MarketplaceLayout';
 import { Head, router, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, X, Plus, Minus, Trash2, LogIn } from 'lucide-react';
+import { ShoppingCart, X, Plus, Minus, Trash2, LogIn, MapPin, Truck } from 'lucide-react';
 
 export default function MarketplaceShow({ company, productsByCategory }) {
     const { auth } = usePage().props;
@@ -88,9 +88,42 @@ export default function MarketplaceShow({ company, productsByCategory }) {
             </div>
 
             <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
-                <p className="text-gray-600 font-medium mb-10 max-w-3xl leading-relaxed">
+                <p className="text-gray-600 font-medium mb-6 max-w-3xl leading-relaxed">
                     {company.description ?? 'Bem-vindo à nossa loja! Oferecemos os melhores produtos com a qualidade que você já conhece. Peça agora e aproveite nosso sistema de fiado exclusivo.'}
                 </p>
+
+                {/* Distância e entrega */}
+                <div className="flex flex-wrap gap-3 mb-8">
+                    {company.distance_km !== null && (
+                        <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-100 px-3 py-2 rounded-xl text-sm">
+                            <MapPin size={14} className="text-red-500" />
+                            <span className="font-medium text-gray-700">{company.distance_km} km de você</span>
+                        </div>
+                    )}
+                    {company.delivery_fee !== null && company.delivery_fee !== undefined && (
+                        <div className="flex items-center gap-1.5 bg-green-50 border border-green-100 px-3 py-2 rounded-xl text-sm">
+                            <Truck size={14} className="text-green-600" />
+                            <span className="font-medium text-green-700">
+                                Entrega R$ {Number(company.delivery_fee).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </span>
+                        </div>
+                    )}
+                    {company.distance_km !== null && company.delivery_fee === null && (
+                        <div className="flex items-center gap-1.5 bg-red-50 border border-red-100 px-3 py-2 rounded-xl text-sm">
+                            <Truck size={14} className="text-red-500" />
+                            <span className="font-medium text-red-600">Fora da área de entrega</span>
+                        </div>
+                    )}
+                    {company.fee_ranges?.length > 0 && (
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {company.fee_ranges.filter(r => r.is_active).map(r => (
+                                <span key={r.max_km} className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${company.distance_km !== null && company.distance_km <= r.max_km && (company.fee_ranges.filter(x => x.is_active && x.max_km < r.max_km).every(x => company.distance_km > x.max_km)) ? 'bg-red-500 text-white border-red-500' : 'bg-gray-50 text-gray-500 border-gray-200'}`}>
+                                    até {r.max_km}km · R$ {Number(r.fee).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </span>
+                            ))}
+                        </div>
+                    )}
+                </div>
 
                 <div className="flex flex-col md:flex-row gap-12">
                     {/* Menu Lateral de Categorias */}

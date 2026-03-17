@@ -9,6 +9,7 @@ use Filament\Panel\Concerns\HasTenancy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as AuthenticatableUser;
 use Illuminate\Support\Collection;
 
@@ -52,6 +53,16 @@ class Client extends AuthenticatableUser implements FilamentUser, HasTenants
     /**
      * Relacionamento N:N com Company via tabela pivot client_company
      */
+    public function addresses(): HasMany
+    {
+        return $this->hasMany(ClientAddress::class);
+    }
+
+    public function defaultAddress(): HasMany
+    {
+        return $this->hasMany(ClientAddress::class)->where('is_default', true);
+    }
+
     public function companies(): BelongsToMany
     {
         return $this->belongsToMany(Company::class, 'client_company')

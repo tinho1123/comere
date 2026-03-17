@@ -6,6 +6,7 @@ use App\Filament\Master\Resources\CompanyResource\Pages;
 use App\Filament\Master\Resources\CompanyResource\RelationManagers\UsersRelationManager;
 use App\Models\Company;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -78,6 +79,52 @@ class CompanyResource extends Resource
                 ->getUploadedFileNameForStorageUsing(
                     fn (TemporaryUploadedFile $file) => (string) Str::uuid().'.'.$file->getClientOriginalExtension()
                 )
+                ->visibleOn('edit'),
+
+            Section::make('Endereço da Loja')
+                ->description('Preencha para calcular distância e taxas de entrega.')
+                ->schema([
+                    TextInput::make('address_zip')
+                        ->label('CEP')
+                        ->mask('99999-999')
+                        ->maxLength(9),
+
+                    TextInput::make('address_street')
+                        ->label('Rua / Avenida')
+                        ->maxLength(255),
+
+                    TextInput::make('address_number')
+                        ->label('Número')
+                        ->maxLength(20),
+
+                    TextInput::make('address_complement')
+                        ->label('Complemento')
+                        ->maxLength(100),
+
+                    TextInput::make('address_neighborhood')
+                        ->label('Bairro')
+                        ->maxLength(100),
+
+                    TextInput::make('address_city')
+                        ->label('Cidade')
+                        ->maxLength(100),
+
+                    TextInput::make('address_state')
+                        ->label('Estado (UF)')
+                        ->maxLength(2)
+                        ->extraInputAttributes(['style' => 'text-transform:uppercase']),
+
+                    TextInput::make('latitude')
+                        ->label('Latitude')
+                        ->numeric()
+                        ->helperText('Ex: -23.550520'),
+
+                    TextInput::make('longitude')
+                        ->label('Longitude')
+                        ->numeric()
+                        ->helperText('Ex: -46.633308'),
+                ])
+                ->columns(3)
                 ->visibleOn('edit'),
         ]);
     }

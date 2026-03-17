@@ -1,8 +1,7 @@
-import React from 'react';
 import MarketplaceLayout from '../../Layouts/MarketplaceLayout';
-import { Link, usePage } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 
-export default function MarketplaceIndex({ companies, promotedProducts, lastVisited, categories, selectedCategory }) {
+export default function MarketplaceIndex({ companies, lastVisited, categories, selectedCategory }) {
     return (
         <MarketplaceLayout>
             {/* Categorias */}
@@ -92,9 +91,19 @@ export default function MarketplaceIndex({ companies, promotedProducts, lastVisi
                                         <span className="text-yellow-500">★ {store.rating}</span>
                                         <span>•</span>
                                         <span className="truncate">{store.type}</span>
-                                        <span>•</span>
-                                        <span>{store.delivery_time}</span>
                                     </div>
+                                    {store.distance_km !== null && (
+                                        <div className="flex items-center gap-2 mt-1.5">
+                                            <span className="text-xs text-gray-500">📍 {store.distance_km} km</span>
+                                            {store.delivery_fee !== null ? (
+                                                <span className="text-xs font-bold text-green-600">
+                                                    Entrega R$ {Number(store.delivery_fee).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                </span>
+                                            ) : (
+                                                <span className="text-xs text-red-500 font-medium">Fora da área</span>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                                 {store.is_promoted && (
                                     <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded italic w-max">PROMOÇÃO</span>

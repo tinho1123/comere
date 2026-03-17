@@ -49,6 +49,9 @@ class HandleInertiaRequests extends Middleware
                 ] : [
                     'unfinished' => 0,
                 ],
+            'default_address' => auth()->guard('client')->check()
+                ? auth()->guard('client')->user()->addresses()->where('is_default', true)->first()
+                : null,
         ];
 
         \Log::info('Inertia Shared Data:', [

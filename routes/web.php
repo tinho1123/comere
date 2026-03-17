@@ -2,19 +2,9 @@
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
+use App\Http\Controllers\Marketplace\ClientAddressController;
 use App\Http\Controllers\Marketplace\MarketplaceController;
 use App\Http\Controllers\Marketplace\MarketplaceLoginController;
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
-|
-*/
-
 use App\Http\Controllers\Marketplace\SSOCallbackController;
 use App\Http\Controllers\PushSubscriptionController;
 use Illuminate\Support\Facades\Route;
@@ -36,6 +26,12 @@ Route::post('/complete-profile', [SSOCallbackController::class, 'storeProfile'])
 Route::middleware('auth:client')->group(function () {
     Route::get('/meus-pedidos', [MarketplaceController::class, 'orders'])->name('marketplace.orders');
     Route::post('/store/{company:uuid}/orders', [MarketplaceController::class, 'storeOrder'])->name('marketplace.order.store');
+
+    Route::get('/addresses', [ClientAddressController::class, 'index'])->name('client.addresses.index');
+    Route::post('/addresses', [ClientAddressController::class, 'store'])->name('client.addresses.store');
+    Route::put('/addresses/{clientAddress:uuid}', [ClientAddressController::class, 'update'])->name('client.addresses.update');
+    Route::patch('/addresses/{clientAddress:uuid}/default', [ClientAddressController::class, 'setDefault'])->name('client.addresses.default');
+    Route::delete('/addresses/{clientAddress:uuid}', [ClientAddressController::class, 'destroy'])->name('client.addresses.destroy');
 });
 
 // Push Notifications (admin users only)

@@ -28,6 +28,15 @@ class Company extends Model
         'delivery_time',
         'is_promoted',
         'active',
+        'address_zip',
+        'address_street',
+        'address_number',
+        'address_complement',
+        'address_neighborhood',
+        'address_city',
+        'address_state',
+        'latitude',
+        'longitude',
     ];
 
     protected $casts = [
@@ -35,6 +44,8 @@ class Company extends Model
         'rating' => 'decimal:1',
         'active' => 'boolean',
         'is_promoted' => 'boolean',
+        'latitude' => 'float',
+        'longitude' => 'float',
     ];
 
     public function users(): BelongsToMany
@@ -65,6 +76,11 @@ class Company extends Model
     public function favoredTransactions(): HasMany
     {
         return $this->hasMany(FavoredTransaction::class);
+    }
+
+    public function deliveryFeeRanges(): HasMany
+    {
+        return $this->hasMany(DeliveryFeeRange::class)->orderBy('max_km');
     }
 
     public function getTenantKeyName(): string
