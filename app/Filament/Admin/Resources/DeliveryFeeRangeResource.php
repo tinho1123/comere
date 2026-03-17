@@ -8,6 +8,7 @@ use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\View;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\DeleteAction;
@@ -48,7 +49,8 @@ class DeliveryFeeRangeResource extends Resource
             Select::make('max_km')
                 ->label('Faixa (km)')
                 ->options(collect(DeliveryFeeRange::KM_RANGES)->mapWithKeys(fn ($km) => [$km => "Até {$km} km"]))
-                ->required(),
+                ->required()
+                ->live(),
 
             TextInput::make('fee')
                 ->label('Taxa (R$)')
@@ -60,6 +62,9 @@ class DeliveryFeeRangeResource extends Resource
             Toggle::make('is_active')
                 ->label('Ativa')
                 ->default(true),
+
+            View::make('filament.forms.components.delivery-range-map')
+                ->columnSpanFull(),
         ]);
     }
 

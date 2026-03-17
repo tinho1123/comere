@@ -1,29 +1,21 @@
 @php
-    $record   = $getRecord();
-    $addr     = $record->client?->defaultAddress()->first();
-    $company  = $record->company;
+    $record     = $getRecord();
+    $addr       = $record->client?->defaultAddress()->first();
+    $company    = $record->company;
 
-    $clientLat  = $addr?->latitude;
-    $clientLng  = $addr?->longitude;
-    $storeLat   = $company?->latitude;
-    $storeLng   = $company?->longitude;
+    $clientLat  = $addr?->latitude  ? (float) $addr->latitude  : null;
+    $clientLng  = $addr?->longitude ? (float) $addr->longitude : null;
+    $storeLat   = $company?->latitude  ? (float) $company->latitude  : null;
+    $storeLng   = $company?->longitude ? (float) $company->longitude : null;
 
+    $hasBoth    = $clientLat && $clientLng && $storeLat && $storeLng;
     $hasClient  = $clientLat && $clientLng;
-    $hasStore   = $storeLat && $storeLng;
-    $hasBoth    = $hasClient && $hasStore;
 
+    $distance   = null;
     if ($hasBoth) {
         $distance = app(\App\Services\DistanceService::class)->calculate(
-            (float) $storeLat, (float) $storeLng,
-            (float) $clientLat, (float) $clientLng
+            $storeLat, $storeLng, $clientLat, $clientLng
         );
-        $mapSrc = "https://maps.google.com/maps/dir/{$storeLat},{$storeLng}/{$clientLat},{$clientLng}?output=embed";
-    } elseif ($hasClient) {
-        $distance = null;
-        $mapSrc = "https://maps.google.com/maps?q={$clientLat},{$clientLng}&z=15&output=embed";
-    } else {
-        $distance = null;
-        $mapSrc = null;
     }
 
     $clientAddressText = $addr
@@ -33,6 +25,8 @@
     $storeAddressText = $company?->address_street
         ? "{$company->address_street}, {$company->address_number} — {$company->address_neighborhood}, {$company->address_city}/{$company->address_state}"
         : null;
+
+    $mapId = 'order-map-' . $record->id;
 @endphp
 
 <div class="fi-section rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
@@ -82,21 +76,96 @@
             </div>
         </div>
 
-        {{-- Mapa embutido --}}
-        @if ($mapSrc)
-            <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700" style="height: 320px;">
-                <iframe
-                    src="{{ $mapSrc }}"
-                    width="100%"
-                    height="320"
-                    style="border:0;"
-                    loading="lazy"
-                    referrerpolicy="no-referrer-when-downgrade"
-                    allowfullscreen
-                ></iframe>
-            </div>
+        {{-- Mapa Leaflet --}}
+        @if ($hasClient || $hasBoth)
+            <div
+                id="{{ $mapId }}"
+                style="height: 320px; border-radius: 0.75rem; overflow: hidden; border: 1px solid #e5e7eb; z-index: 0;"
+            ></div>
+
+            <script>
+                (function () {
+                    function initMap() {
+                        var clientLat = {{ $clientLat ?? 'null' }};
+                        var clientLng = {{ $clientLng ?? 'null' }};
+                        var storeLat  = {{ $storeLat  ?? 'null' }};
+                        var storeLng  = {{ $storeLng  ?? 'null' }};
+
+                        var map = L.map('{{ $mapId }}');
+
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                        }).addTo(map);
+
+                        var bounds = [];
+
+                        // Marcador da loja (azul)
+                        if (storeLat && storeLng) {
+                            var storeIcon = L.divIcon({
+                                className: '',
+                                html: '<div style="width:14px;height:14px;background:#3b82f6;border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>',
+                                iconAnchor: [7, 7]
+                            });
+                            L.marker([storeLat, storeLng], { icon: storeIcon })
+                                .addTo(map)
+                                .bindTooltip('{{ addslashes($company?->name ?? 'Loja') }}', { permanent: true, direction: 'top', offset: [0, -10] });
+                            bounds.push([storeLat, storeLng]);
+                        }
+
+                        // Marcador do cliente (vermelho)
+                        if (clientLat && clientLng) {
+                            var clientIcon = L.divIcon({
+                                className: '',
+                                html: '<div style="width:14px;height:14px;background:#ef4444;border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>',
+                                iconAnchor: [7, 7]
+                            });
+                            L.marker([clientLat, clientLng], { icon: clientIcon })
+                                .addTo(map)
+                                .bindTooltip('{{ addslashes($addr?->label ?? 'Cliente') }}', { permanent: true, direction: 'top', offset: [0, -10] });
+                            bounds.push([clientLat, clientLng]);
+                        }
+
+                        // Linha entre loja e cliente
+                        if (storeLat && storeLng && clientLat && clientLng) {
+                            L.polyline([[storeLat, storeLng], [clientLat, clientLng]], {
+                                color: '#6366f1',
+                                weight: 2,
+                                dashArray: '6 4',
+                                opacity: 0.7
+                            }).addTo(map);
+                        }
+
+                        if (bounds.length > 1) {
+                            map.fitBounds(bounds, { padding: [40, 40] });
+                        } else if (bounds.length === 1) {
+                            map.setView(bounds[0], 15);
+                        }
+                    }
+
+                    function load() {
+                        if (window.L) { initMap(); return; }
+                        if (!document.getElementById('leaflet-css')) {
+                            var link = document.createElement('link');
+                            link.id  = 'leaflet-css';
+                            link.rel = 'stylesheet';
+                            link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                            document.head.appendChild(link);
+                        }
+                        var script = document.createElement('script');
+                        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                        script.onload = initMap;
+                        document.head.appendChild(script);
+                    }
+
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', load);
+                    } else {
+                        load();
+                    }
+                })();
+            </script>
         @else
-            <div class="flex items-center justify-center rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800" style="height: 140px;">
+            <div class="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800" style="height: 140px;">
                 <p class="text-sm text-gray-400">Cadastre o endereço do cliente e da loja para visualizar o mapa.</p>
             </div>
         @endif
