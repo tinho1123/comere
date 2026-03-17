@@ -135,11 +135,15 @@ php artisan config:clear && php artisan cache:clear && php artisan route:clear &
 
 ## Pre-commit Checklist
 
-1. `./vendor/bin/pint` — fix all PHP formatting issues
-2. `./vendor/bin/phpunit` — all tests must pass
+**MANDATORY: After every code change, always run in this order:**
+
+1. `./vendor/bin/sail exec laravel.test ./vendor/bin/pint` — fix all PHP formatting issues (never skip)
+2. `./vendor/bin/sail exec laravel.test ./vendor/bin/phpunit --stop-on-failure` — all tests must pass
 3. Verify no `.env` or secrets committed
 4. Confirm all new DB tables have `company_id` for tenant isolation
 5. Verify multi-tenant scoping for any new queries
+
+> If Sail is not running, use `./vendor/bin/pint` and `./vendor/bin/phpunit` directly.
 
 ---
 
