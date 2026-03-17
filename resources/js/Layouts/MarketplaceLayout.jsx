@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, LogIn, X, Mail, LogOut, ShoppingCart, Search, Package } from 'lucide-react';
@@ -6,6 +6,12 @@ import { User, LogIn, X, Mail, LogOut, ShoppingCart, Search, Package } from 'luc
 export default function MarketplaceLayout({ children }) {
     const { auth, orders_count } = usePage().props;
     const [isAuthOpen, setIsAuthOpen] = useState(false);
+
+    useEffect(() => {
+        const handler = () => setIsAuthOpen(true);
+        window.addEventListener('open-auth-modal', handler);
+        return () => window.removeEventListener('open-auth-modal', handler);
+    }, []);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -16,7 +22,7 @@ export default function MarketplaceLayout({ children }) {
     const handleManualLogin = (e) => {
         e.preventDefault();
         setIsLoading(true);
-        router.post(route('marketplace.login'), {
+        router.post('/marketplace/login', {
             email,
             password
         }, {
@@ -30,7 +36,7 @@ export default function MarketplaceLayout({ children }) {
     };
 
     const handleLogout = () => {
-        router.post(route('marketplace.logout'));
+        router.post('/marketplace/logout');
     };
 
     return (
@@ -70,7 +76,7 @@ export default function MarketplaceLayout({ children }) {
                                 <div className="flex items-center gap-6">
                                     <div className="flex items-center gap-2">
                                         <Link
-                                            href={route('marketplace.orders')}
+                                            href="/meus-pedidos"
                                             className={`relative flex items-center gap-2 text-sm font-semibold transition-colors py-2 px-1 rounded-lg ${window.location.pathname === '/meus-pedidos' ? 'text-red-500' : 'text-gray-600 hover:text-red-500'}`}
                                         >
                                             <Package size={18} />

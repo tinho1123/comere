@@ -267,7 +267,10 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                                         <LogIn size={24} className="mx-auto text-gray-400 mb-2" />
                                         <p className="text-sm text-gray-500 mb-3">Faça login para finalizar o pedido</p>
                                         <button
-                                            onClick={() => setIsCartOpen(false)}
+                                            onClick={() => {
+                                                setIsCartOpen(false);
+                                                window.dispatchEvent(new CustomEvent('open-auth-modal'));
+                                            }}
                                             className="text-sm font-bold text-red-500 hover:underline"
                                         >
                                             Entrar na conta
