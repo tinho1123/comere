@@ -21,6 +21,10 @@ class Order extends Model
 
     const STATUS_CANCELLED = 'cancelled';
 
+    const CHANNEL_ONLINE = 'online';
+
+    const CHANNEL_PRESENTIAL = 'presential';
+
     protected $fillable = [
         'uuid',
         'company_id',
@@ -30,6 +34,7 @@ class Order extends Model
         'fee_amount',
         'total_amount',
         'status',
+        'channel',
         'notes',
         'confirmed_at',
         'shipped_at',

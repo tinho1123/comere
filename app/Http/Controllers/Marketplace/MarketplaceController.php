@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class MarketplaceController extends Controller
@@ -23,8 +24,8 @@ class MarketplaceController extends Controller
                 'uuid' => $company->uuid,
                 'name' => $company->name,
                 'type' => $company->type,
-                'logo' => $company->logo_path ?? '/default-store-logo.png',
-                'banner' => $company->banner_path ?? '/default-store-banner.png',
+                'logo' => $company->logo_path ? Storage::url($company->logo_path) : '/default-store-logo.png',
+                'banner' => $company->banner_path ? Storage::url($company->banner_path) : '/default-store-banner.png',
                 'rating' => $company->rating,
                 'delivery_time' => $company->delivery_time ?? '20-30 min',
                 'is_promoted' => $company->is_promoted,
@@ -66,8 +67,8 @@ class MarketplaceController extends Controller
                 'name' => $company->name,
                 'description' => $company->description,
                 'type' => $company->type,
-                'logo' => $company->logo_path ?? '/default-store-logo.png',
-                'banner' => $company->banner_path ?? '/default-store-banner.png',
+                'logo' => $company->logo_path ? Storage::url($company->logo_path) : '/default-store-logo.png',
+                'banner' => $company->banner_path ? Storage::url($company->banner_path) : '/default-store-banner.png',
                 'rating' => $company->rating,
                 'delivery_time' => $company->delivery_time ?? '20-30 min',
             ],
@@ -88,7 +89,7 @@ class MarketplaceController extends Controller
                 'created_at' => $order->created_at->format('d/m/Y H:i'),
                 'company' => [
                     'name' => $order->company->name,
-                    'logo' => $order->company->logo_path ?? '/default-store-logo.png',
+                    'logo' => $order->company->logo_path ? Storage::url($order->company->logo_path) : '/default-store-logo.png',
                 ],
                 'items' => $order->items->map(fn ($item) => [
                     'product_name' => $item->product_name,
