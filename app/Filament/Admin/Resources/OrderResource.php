@@ -198,6 +198,9 @@ class OrderResource extends Resource
                         ])->columns(4),
                 ]),
 
+            Infolists\Components\View::make('filament.infolists.components.order-location')
+                ->columnSpanFull(),
+
             Infolists\Components\Section::make('Totais')
                 ->schema([
                     Infolists\Components\TextEntry::make('subtotal')->label('Subtotal')->money('BRL'),
