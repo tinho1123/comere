@@ -17,7 +17,16 @@
             if (!this.lat || !this.lng) return;
             if (this.map) return;
 
-            this.map = L.map(this.$refs.mapEl).setView([this.lat, this.lng], 12);
+            this.map = L.map(this.$refs.mapEl, {
+                dragging: false,
+                touchZoom: false,
+                doubleClickZoom: false,
+                scrollWheelZoom: false,
+                boxZoom: false,
+                keyboard: false,
+                zoomControl: false,
+                attributionControl: true
+            }).setView([this.lat, this.lng], 12);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; OpenStreetMap'
@@ -30,13 +39,13 @@
                     iconAnchor: [7, 7]
                 })
             }).addTo(this.map).bindTooltip('{{ addslashes($company?->name ?? 'Loja') }}', { permanent: true, direction: 'top', offset: [0, -10] });
-
-            this.updateCircle();
         },
 
         updateCircle() {
             if (!this.map || !this.km) return;
             if (this.circle) { this.circle.remove(); this.circle = null; }
+
+            this.map.invalidateSize();
 
             this.circle = L.circle([this.lat, this.lng], {
                 radius: this.km * 1000,
@@ -47,7 +56,7 @@
                 dashArray: '6 4'
             }).addTo(this.map);
 
-            this.map.fitBounds(this.circle.getBounds(), { padding: [30, 30] });
+            this.map.fitBounds(this.circle.getBounds().pad(0.2));
         },
 
         loadLeaflet(cb) {
@@ -66,8 +75,11 @@
         loadLeaflet(() => {
             $nextTick(() => {
                 initMap();
-                km = parseInt($wire.data?.max_km) || null;
-                updateCircle();
+                const initialKm = parseInt($wire.data.max_km) || null;
+                if (initialKm) {
+                    km = initialKm;
+                    updateCircle();
+                }
                 $wire.$watch('data.max_km', v => {
                     km = parseInt(v) || null;
                     updateCircle();
