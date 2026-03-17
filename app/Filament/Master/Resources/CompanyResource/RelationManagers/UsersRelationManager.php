@@ -6,13 +6,13 @@ use App\Models\User;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\CreateAction;
 use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\EditAction;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Hash;
 
 class UsersRelationManager extends RelationManager
 {
@@ -40,12 +40,8 @@ class UsersRelationManager extends RelationManager
             TextInput::make('password')
                 ->label('Senha')
                 ->password()
-                ->required(fn (string $operation): bool => $operation === 'create')
-                ->minLength(8)
-                ->dehydrated(fn (?string $state): bool => filled($state))
-                ->helperText(fn (string $operation): string => $operation === 'edit'
-                    ? 'Deixe em branco para manter a senha atual.'
-                    : ''),
+                ->required()
+                ->minLength(8),
         ]);
     }
 
@@ -63,10 +59,6 @@ class UsersRelationManager extends RelationManager
                     ->searchable()
                     ->sortable(),
 
-                IconColumn::make('is_master')
-                    ->label('Master')
-                    ->boolean(),
-
                 TextColumn::make('created_at')
                     ->label('Criado em')
                     ->dateTime('d/m/Y H:i')
@@ -75,9 +67,12 @@ class UsersRelationManager extends RelationManager
             ->headerActions([
                 CreateAction::make()
                     ->label('Novo usuário')
-                    ->using(function (array $data, string $model): Model {
-                        /** @var User $user */
-                        $user = User::create($data);
+                    ->using(function (array $data): Model {
+                        $user = User::create([
+                            'name' => $data['name'],
+                            'email' => $data['email'],
+                            'password' => Hash::make($data['password']),
+                        ]);
 
                         $this->getOwnerRecord()->users()->attach($user->id);
 
@@ -85,9 +80,28 @@ class UsersRelationManager extends RelationManager
                     }),
             ])
             ->actions([
-                EditAction::make(),
+                Action::make('change_password')
+                    ->label('Trocar senha')
+                    ->icon('heroicon-o-key')
+                    ->form([
+                        TextInput::make('password')
+                            ->label('Nova senha')
+                            ->password()
+                            ->required()
+                            ->minLength(8)
+                            ->confirmed(),
+
+                        TextInput::make('password_confirmation')
+                            ->label('Confirmar nova senha')
+                            ->password()
+                            ->required(),
+                    ])
+                    ->action(function (User $record, array $data): void {
+                        $record->update(['password' => Hash::make($data['password'])]);
+                    }),
+
                 DeleteAction::make()
-                    ->label('Remover da loja')
+                    ->label('Remover')
                     ->modalHeading('Remover usuário da loja')
                     ->modalDescription('O usuário será removido desta loja. Caso não pertença a nenhuma outra loja, sua conta será excluída.')
                     ->action(function (User $record): void {
