@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Marketplace;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class MarketplaceController extends Controller
@@ -115,5 +118,65 @@ class MarketplaceController extends Controller
         return Inertia::render('Marketplace/Orders', [
             'orders' => $orders,
         ]);
+    }
+
+    public function storeOrder(Request $request, Company $company)
+    {
+        $client = auth('client')->user();
+
+        if (! $client->companies()->where('companies.id', $company->id)->exists()) {
+            abort(403);
+        }
+
+        $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.quantity' => 'required|integer|min:1',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        $order = Order::create([
+            'uuid' => Str::uuid(),
+            'company_id' => $company->id,
+            'client_id' => $client->id,
+            'status' => Order::STATUS_PENDING,
+            'channel' => Order::CHANNEL_ONLINE,
+            'notes' => $request->notes,
+            'subtotal' => 0,
+            'discount_amount' => 0,
+            'fee_amount' => 0,
+            'total_amount' => 0,
+        ]);
+
+        $subtotal = 0;
+
+        foreach ($request->items as $item) {
+            $product = Product::where('id', $item['product_id'])
+                ->where('company_id', $company->id)
+                ->firstOrFail();
+
+            $itemTotal = $product->amount * $item['quantity'];
+
+            OrderItem::create([
+                'uuid' => Str::uuid(),
+                'order_id' => $order->id,
+                'product_id' => $product->id,
+                'product_name' => $product->name,
+                'quantity' => $item['quantity'],
+                'unit_price' => $product->amount,
+                'discount_percent' => 0,
+                'discount_amount' => 0,
+                'total_amount' => $itemTotal,
+            ]);
+
+            $subtotal += $itemTotal;
+        }
+
+        $order->update([
+            'subtotal' => $subtotal,
+            'total_amount' => $subtotal,
+        ]);
+
+        return redirect()->route('marketplace.orders');
     }
 }

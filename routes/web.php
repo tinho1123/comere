@@ -35,6 +35,7 @@ Route::post('/complete-profile', [SSOCallbackController::class, 'storeProfile'])
 
 Route::middleware('auth:client')->group(function () {
     Route::get('/meus-pedidos', [MarketplaceController::class, 'orders'])->name('marketplace.orders');
+    Route::post('/store/{company:uuid}/orders', [MarketplaceController::class, 'storeOrder'])->name('marketplace.order.store');
 });
 
 // Push Notifications (admin users only)
