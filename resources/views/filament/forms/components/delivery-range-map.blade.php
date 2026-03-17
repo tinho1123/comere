@@ -89,7 +89,7 @@
     "
 >
     @if ($hasCoords)
-        <div x-ref="mapEl" style="height: 280px; border-radius: 0.75rem; overflow: hidden; border: 1px solid #e5e7eb;"></div>
+        <div wire:ignore x-ref="mapEl" style="height: 280px; border-radius: 0.75rem; overflow: hidden; border: 1px solid #e5e7eb;"></div>
         <p class="mt-1.5 text-xs text-gray-400">
             Selecione uma faixa acima para visualizar a área de cobertura em vermelho.
         </p>
