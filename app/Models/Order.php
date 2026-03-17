@@ -148,6 +148,12 @@ class Order extends Model
             $this->status = self::STATUS_SHIPPED;
             $this->shipped_at = now();
             $this->save();
+
+            foreach ($this->items()->with('product')->get() as $item) {
+                if ($item->product) {
+                    $item->product->decrement('quantity', $item->quantity);
+                }
+            }
         }
     }
 

@@ -85,14 +85,18 @@ class OrderController extends Controller
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.discount_percent' => 'nullable|numeric|min:0|max:100',
             'notes' => 'nullable|string|max:1000',
+            'channel' => 'nullable|in:'.Order::CHANNEL_ONLINE.','.Order::CHANNEL_PRESENTIAL,
         ]);
+
+        $channel = $request->get('channel', Order::CHANNEL_ONLINE);
 
         // Create order
         $order = Order::create([
             'uuid' => Str::uuid(),
             'company_id' => $company->id,
             'client_id' => $clientUser->client_id,
-            'status' => 'pending',
+            'status' => Order::STATUS_PENDING,
+            'channel' => $channel,
             'notes' => $request->get('notes'),
             'subtotal' => 0,
             'discount_amount' => 0,
@@ -137,6 +141,11 @@ class OrderController extends Controller
             'subtotal' => $subtotal,
             'total_amount' => $subtotal,
         ]);
+
+        if ($channel === Order::CHANNEL_PRESENTIAL) {
+            $order->approve();
+            $order->ship();
+        }
 
         $order->load('items.product');
 
