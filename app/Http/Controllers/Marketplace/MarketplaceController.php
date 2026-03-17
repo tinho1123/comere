@@ -125,7 +125,7 @@ class MarketplaceController extends Controller
         $client = auth('client')->user();
 
         if (! $client->companies()->where('companies.id', $company->id)->exists()) {
-            abort(403);
+            $client->companies()->attach($company->id, ['is_active' => true]);
         }
 
         $request->validate([
