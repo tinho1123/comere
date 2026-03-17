@@ -82,7 +82,7 @@ class OrderResource extends Resource
                                     $product = Product::find($state);
                                     if ($product) {
                                         $set('product_name', $product->name);
-                                        $set('unit_price', $product->price);
+                                        $set('unit_price', $product->amount);
                                     }
                                 })
                                 ->columnSpan(3),

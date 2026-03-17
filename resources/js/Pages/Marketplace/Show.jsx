@@ -75,7 +75,7 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                                             <span className="text-lg font-black text-gray-900">
                                                 R$ {Number(product.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                             </span>
-                                            {product.isCool === 'Y' && (
+                                            {product.isCool && (
                                                 <span className="bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded-full italic">❄️ GELADA</span>
                                             )}
                                         </div>
