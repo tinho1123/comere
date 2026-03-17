@@ -85,6 +85,6 @@ class User extends Authenticatable implements FilamentUser, HasTenants
             return $this->isMaster();
         }
 
-        return ! $this->isMaster();
+        return true;
     }
 }
