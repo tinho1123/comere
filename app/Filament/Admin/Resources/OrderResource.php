@@ -290,6 +290,13 @@ class OrderResource extends Resource
                     ->visible(fn (Order $record): bool => $record->canBeShipped())
                     ->action(fn (Order $record) => $record->ship())
                     ->requiresConfirmation(),
+                Tables\Actions\Action::make('deliver')
+                    ->label('Concluir pedido')
+                    ->icon('heroicon-o-check-badge')
+                    ->color('success')
+                    ->visible(fn (Order $record): bool => $record->canBeDelivered())
+                    ->action(fn (Order $record) => $record->deliver())
+                    ->requiresConfirmation(),
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
             ])
