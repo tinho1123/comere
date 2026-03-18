@@ -235,7 +235,7 @@ class BillingCycleResource extends Resource
             ->limit(12)
             ->pluck('period_start')
             ->mapWithKeys(fn ($d) => [
-                ($d instanceof \Carbon\Carbon ? $d->toDateString() : (string) $d) => Carbon::parse($d)->format('m/Y'),
+                ($d instanceof Carbon ? $d->toDateString() : (string) $d) => Carbon::parse($d)->format('m/Y'),
             ])
             ->toArray();
     }
