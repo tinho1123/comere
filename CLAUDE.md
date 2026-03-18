@@ -411,12 +411,22 @@ The admin panel supports web push notifications for new orders.
 - **Config:** `config/webpush.php` — reads `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` from `.env`
 - **Model:** `PushSubscription` — stores per-user/company endpoint + VAPID keys
 - **Controller:** `PushSubscriptionController` — `subscribe()` / `unsubscribe()` (web middleware, `auth` guard)
+- **Service:** `app/Services/PushNotificationService` — wraps `minishlink/web-push`
+
+### PushNotificationService
+```php
+// Usage: inject or resolve from container
+$service->notifyCompany(int $companyId, string $title, string $body, string $url = '/admin');
+```
+- Sends push to **all** subscriptions for a given `company_id`
+- Auto-deletes invalid subscriptions (HTTP 404/410 from push endpoint)
+- Uses VAPID from `config/webpush.php`
 
 ### Flow
 1. Admin logs in → blade hook registers `sw.js` and requests notification permission
 2. On grant → subscribes via VAPID and POSTs to `/push/subscribe`
 3. Server stores subscription in `push_subscriptions` table
-4. When an order is created → server uses `minishlink/web-push` to push to all subscriptions for that company
+4. When an order is created → call `PushNotificationService::notifyCompany()` to push to all admins
 
 ### Required `.env` variables
 ```env
@@ -429,6 +439,28 @@ VAPID_PRIVATE_KEY=
 - API calls (`/api/*`): NetworkFirst, 5-min cache, 10s timeout
 - Storage files (`/storage/*`): CacheFirst, 30-day cache
 - PWA manifest: name "Comere", theme `#e11d48`, standalone display
+- **Required assets (create if missing):** `public/icons/icon-192x192.png`, `public/icons/icon-512x512.png`
+
+---
+
+## Known Issues & Incomplete Areas
+
+> AI assistants: be aware of these gaps before modifying related code.
+
+### 1. `CreditController` — Missing fields on `FavoredDebt`
+`CreditController::balance()` references `$debt->credit_limit` and `$debt->available_credit`, but these columns **do not exist** in the `favored_debts` table or model. The migration only created `amount`, `due_date`, `status`. Fix requires adding these columns to `favored_debts` or rewriting the balance calculation from `favored_transactions`.
+
+### 2. `CreditController` — Non-existent `payment_status` field
+`CreditController::history()` and `balance()` filter `FavoredTransaction` by `payment_status`. This column **does not exist** — `FavoredTransaction` uses `favored_paid_amount` vs `favored_total` to determine payment status. Use `isFullyPaid()` or compute it manually.
+
+### 3. Client API routes not registered
+Controllers in `app/Http/Controllers/Api/Client/` exist and are complete, but their routes (`/api/client/companies/{company}/...`) are **not registered** in any route file. They need to be added to `routes/api.php` or a dedicated `routes/api_client.php`.
+
+### 4. `MarketplaceController` — Missing `Order` import
+`MarketplaceController::orders()` references the `Order` model without importing it (`use App\Models\Order;`). Will cause a runtime error.
+
+### 5. `FavoredDebt` — Not fully integrated
+The model and table exist but credit limit management is incomplete. `FavoredDebt` is intended to track per-client credit limits per company but the columns (`credit_limit`, `available_credit`) are missing from the schema.
 
 ---
 
