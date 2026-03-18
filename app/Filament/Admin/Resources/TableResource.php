@@ -20,7 +20,6 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Support\HtmlString;
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class TableResource extends Resource
 {
@@ -180,14 +179,29 @@ class TableResource extends Resource
                     ->modalHeading(fn (TableModel $record): string => 'QR Code — '.$record->name)
                     ->modalContent(function (TableModel $record): HtmlString {
                         $url = route('mesa.show', $record->uuid);
-                        $svg = QrCode::size(220)->generate($url);
+                        $id = 'qr-'.str_replace('-', '', $record->uuid);
 
-                        return new HtmlString(
-                            '<div class="flex flex-col items-center gap-3 py-4">'
-                            .$svg
-                            .'<p class="text-sm text-gray-500 break-all text-center">'.$url.'</p>'
-                            .'</div>'
-                        );
+                        return new HtmlString(<<<HTML
+                            <div class="flex flex-col items-center gap-3 py-4">
+                                <canvas id="{$id}"></canvas>
+                                <p class="text-sm text-gray-500 break-all text-center">{$url}</p>
+                            </div>
+                            <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSi2jPyeiKiqgB7KtKyZS/K4HQTAoEyAIlWg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+                            <script>
+                                document.addEventListener('DOMContentLoaded', function () {
+                                    new QRCode(document.getElementById('{$id}'), {
+                                        text: '{$url}',
+                                        width: 220,
+                                        height: 220,
+                                    });
+                                });
+                                new QRCode(document.getElementById('{$id}'), {
+                                    text: '{$url}',
+                                    width: 220,
+                                    height: 220,
+                                });
+                            </script>
+                        HTML);
                     })
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Fechar'),
