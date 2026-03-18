@@ -8,6 +8,7 @@ use App\Services\BillingService;
 use Carbon\Carbon;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\Action;
@@ -35,11 +36,15 @@ class BillingCycleResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        $count = BillingCycle::where('status', 'pending')
-            ->where('due_date', '<=', now()->addDays(3)->toDateString())
-            ->count();
+        try {
+            $count = BillingCycle::where('status', 'pending')
+                ->where('due_date', '<=', now()->addDays(3)->toDateString())
+                ->count();
 
-        return $count > 0 ? (string) $count : null;
+            return $count > 0 ? (string) $count : null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public static function getNavigationBadgeColor(): ?string
@@ -50,6 +55,11 @@ class BillingCycleResource extends Resource
     public static function canCreate(): bool
     {
         return false;
+    }
+
+    public static function form(Form $form): Form
+    {
+        return $form->schema([]);
     }
 
     public static function table(Table $table): Table
@@ -121,7 +131,7 @@ class BillingCycleResource extends Resource
 
                 SelectFilter::make('period')
                     ->label('Período')
-                    ->options(static::periodOptions())
+                    ->options(fn () => static::periodOptions())
                     ->query(function ($query, array $data) {
                         if (empty($data['value'])) {
                             return $query;
