@@ -178,13 +178,12 @@ class TableResource extends Resource
                     ->color('gray')
                     ->modalHeading(fn (TableModel $record): string => 'QR Code — '.$record->name)
                     ->modalContent(function (TableModel $record): HtmlString {
-                        $url = route('mesa.show', $record->uuid);
-                        $id = 'qr-'.str_replace('-', '', $record->uuid);
+                        $url = route('table.show', $record->uuid);
+                        $qrSrc = route('qr.table', $record->uuid);
 
                         return new HtmlString(
-                            '<div class="flex flex-col items-center gap-4 py-4"'
-                            .' x-data x-init="new QRCode(document.getElementById(\''.$id.'\'), {text:\''.$url.'\',width:220,height:220})">'
-                            .'<div id="'.$id.'"></div>'
+                            '<div class="flex flex-col items-center gap-4 py-4">'
+                            .'<img src="'.$qrSrc.'" alt="QR Code" class="w-56 h-56" />'
                             .'<p class="text-xs text-gray-400 break-all text-center max-w-xs">'.$url.'</p>'
                             .'</div>'
                         );

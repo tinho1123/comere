@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $mesa->name }} — {{ $mesa->company->name }}</title>
+    <title>{{ $table->name }} — {{ $table->company->name }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background: #f8fafc; font-family: system-ui, sans-serif; }
@@ -15,8 +15,8 @@
 
         {{-- Header da loja --}}
         <div class="text-center mb-6">
-            <p class="text-sm text-gray-500">{{ $mesa->company->name }}</p>
-            <h1 class="text-2xl font-bold text-gray-900 mt-1">{{ $mesa->name }}</h1>
+            <p class="text-sm text-gray-500">{{ $table->company->name }}</p>
+            <h1 class="text-2xl font-bold text-gray-900 mt-1">{{ $table->name }}</h1>
         </div>
 
         @if (session('success'))
@@ -25,8 +25,8 @@
             </div>
         @endif
 
-        @if ($mesa->activeSession)
-            @php $session = $mesa->activeSession; @endphp
+        @if ($table->activeSession)
+            @php $session = $table->activeSession; @endphp
 
             {{-- Status da mesa --}}
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-4">
@@ -42,7 +42,7 @@
                 @else
                     {{-- Formulário para registrar o nome --}}
                     <p class="mt-2 text-sm text-gray-500 mb-3">Nenhum cliente registrado nesta mesa.</p>
-                    <form method="POST" action="{{ route('mesa.register-name', $mesa->uuid) }}" class="flex gap-2">
+                    <form method="POST" action="{{ route('table.register-name', $table->uuid) }}" class="flex gap-2">
                         @csrf
                         <input
                             type="text"

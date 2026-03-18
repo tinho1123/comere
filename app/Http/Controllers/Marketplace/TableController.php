@@ -16,7 +16,7 @@ class TableController extends Controller
             ->with(['activeSession.items.product', 'activeSession.client', 'company'])
             ->firstOrFail();
 
-        return view('mesa.show', ['mesa' => $table]);
+        return view('table.show', ['table' => $table]);
     }
 
     public function registerName(Request $request, string $uuid): RedirectResponse
@@ -32,6 +32,6 @@ class TableController extends Controller
             $session->update(['guest_name' => $request->guest_name]);
         }
 
-        return redirect()->route('mesa.show', $uuid)->with('success', 'Nome registrado com sucesso!');
+        return redirect()->route('table.show', $uuid)->with('success', 'Nome registrado com sucesso!');
     }
 }

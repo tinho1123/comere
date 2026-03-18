@@ -53,7 +53,7 @@ jobs:
             cd ~/domains/comere.com.br/comere
 
             echo "→ Instalando dependências PHP..."
-            composer install --no-dev --optimize-autoloader --no-interaction
+            COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --no-interaction
 
             echo "→ Criando estrutura de diretórios..."
             mkdir -p public/storage/store storage/framework/cache storage/framework/sessions storage/framework/views storage/logs
