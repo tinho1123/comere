@@ -9,6 +9,7 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationGroup;
 use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -55,6 +56,12 @@ class AdminPanelProvider extends PanelProvider
             )
             ->brandName('Painel do administrador')
             ->defaultThemeMode(ThemeMode::Dark)
+            ->navigationGroups([
+                NavigationGroup::make('Mesas')->icon('heroicon-o-table-cells'),
+                NavigationGroup::make('Vendas')->icon('heroicon-o-shopping-cart'),
+                NavigationGroup::make('Gestão')->icon('heroicon-o-cog-6-tooth'),
+                NavigationGroup::make('Configurações')->icon('heroicon-o-adjustments-horizontal'),
+            ])
             ->discoverResources(in: app_path('Filament/Admin/Resources'), for: 'App\\Filament\\Admin\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([

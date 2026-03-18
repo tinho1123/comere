@@ -25,6 +25,11 @@ class UserResource extends Resource
 
     protected static ?int $navigationSort = 10;
 
+    public static function getNavigationGroup(): ?string
+    {
+        return 'Gestão';
+    }
+
     public static function canCreate(): bool
     {
         return false;
