@@ -4,7 +4,9 @@ namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\TableSessionResource\Pages;
 use App\Filament\Admin\Resources\TableSessionResource\RelationManagers\ItemsRelationManager;
+use App\Models\Order;
 use App\Models\TableSession;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
@@ -88,7 +90,14 @@ class TableSessionResource extends Resource
                         ->label('Total consumido')
                         ->getStateUsing(fn (TableSession $record): string => 'R$ '.number_format($record->items()->sum('total_amount'), 2, ',', '.'))
                         ->color('primary'),
-                ])->columns(2),
+
+                    TextEntry::make('payment_method')
+                        ->label('Pagamento')
+                        ->badge()
+                        ->color('success')
+                        ->formatStateUsing(fn (?string $state): string => $state ? (Order::paymentOptions()[$state] ?? $state) : '—')
+                        ->placeholder('—'),
+                ])->columns(3),
         ]);
     }
 
@@ -118,6 +127,13 @@ class TableSessionResource extends Resource
                     ->money('BRL')
                     ->sortable(),
 
+                TextColumn::make('payment_method')
+                    ->label('Pagamento')
+                    ->badge()
+                    ->color('success')
+                    ->formatStateUsing(fn (?string $state): string => $state ? (Order::paymentOptions()[$state] ?? $state) : '—')
+                    ->placeholder('—'),
+
                 TextColumn::make('opened_at')
                     ->label('Aberta em')
                     ->dateTime('d/m/Y H:i')
@@ -144,13 +160,24 @@ class TableSessionResource extends Resource
                     ->label('Fechar Mesa')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
-                    ->requiresConfirmation()
+                    ->modalHeading('Fechar Mesa')
+                    ->modalDescription('Informe o método de pagamento e confirme o fechamento.')
                     ->visible(fn (TableSession $record): bool => $record->isOpen())
-                    ->action(function (TableSession $record): void {
-                        $record->close();
+                    ->form([
+                        Select::make('payment_method')
+                            ->label('Método de pagamento')
+                            ->options(Order::paymentOptions())
+                            ->required()
+                            ->native(false),
+                    ])
+                    ->action(function (TableSession $record, array $data): void {
+                        $record->close($data['payment_method']);
+
+                        $paymentLabel = Order::paymentOptions()[$data['payment_method']] ?? $data['payment_method'];
 
                         Notification::make()
-                            ->title('Mesa fechada com sucesso!')
+                            ->title('Mesa fechada!')
+                            ->body('Pagamento: '.$paymentLabel.'. Total: R$ '.number_format($record->fresh()->total_amount, 2, ',', '.'))
                             ->success()
                             ->send();
                     }),

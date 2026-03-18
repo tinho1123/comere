@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources\TableSessionResource\Pages;
 
 use App\Filament\Admin\Resources\TableResource;
 use App\Filament\Admin\Resources\TableSessionResource;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\TableSession;
 use App\Models\TableSessionItem;
@@ -93,18 +94,26 @@ class ViewTableSession extends ViewRecord
                 ->label('Fechar Mesa')
                 ->icon('heroicon-o-x-circle')
                 ->color('danger')
-                ->requiresConfirmation()
                 ->modalHeading('Fechar Mesa')
-                ->modalDescription('Ao fechar a mesa, o estoque dos produtos será decrementado automaticamente. Deseja continuar?')
+                ->modalDescription('Informe o método de pagamento e confirme o fechamento. O estoque será decrementado automaticamente.')
                 ->visible(fn (): bool => $this->record->isOpen())
-                ->action(function (): void {
+                ->form([
+                    Select::make('payment_method')
+                        ->label('Método de pagamento')
+                        ->options(Order::paymentOptions())
+                        ->required()
+                        ->native(false),
+                ])
+                ->action(function (array $data): void {
                     /** @var TableSession $session */
                     $session = $this->record;
-                    $session->close();
+                    $session->close($data['payment_method']);
+
+                    $paymentLabel = Order::paymentOptions()[$data['payment_method']] ?? $data['payment_method'];
 
                     Notification::make()
                         ->title('Mesa fechada com sucesso!')
-                        ->body('Estoque decrementado. Total: R$ '.number_format($session->fresh()->total_amount, 2, ',', '.'))
+                        ->body('Pagamento: '.$paymentLabel.'. Total: R$ '.number_format($session->fresh()->total_amount, 2, ',', '.'))
                         ->success()
                         ->send();
 

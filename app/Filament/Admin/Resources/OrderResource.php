@@ -114,8 +114,13 @@ class OrderResource extends Resource
                 ])
                 ->visibleOn('create'),
 
-            Forms\Components\Section::make('Desconto e Observações')
+            Forms\Components\Section::make('Pagamento e Observações')
                 ->schema([
+                    Forms\Components\Select::make('payment_method')
+                        ->label('Método de pagamento')
+                        ->options(Order::paymentOptions())
+                        ->native(false),
+
                     Forms\Components\TextInput::make('discount_amount')
                         ->label('Desconto (R$)')
                         ->numeric()
@@ -181,6 +186,13 @@ class OrderResource extends Resource
                             Order::STATUS_CANCELLED => 'Cancelado',
                             default => $state,
                         }),
+                    Infolists\Components\TextEntry::make('payment_method')
+                        ->label('Pagamento')
+                        ->badge()
+                        ->color('success')
+                        ->formatStateUsing(fn (?string $state): string => $state ? (Order::paymentOptions()[$state] ?? $state) : '—')
+                        ->placeholder('—'),
+
                     Infolists\Components\TextEntry::make('created_at')
                         ->label('Data do Pedido')
                         ->dateTime(),
@@ -250,6 +262,13 @@ class OrderResource extends Resource
                         Order::STATUS_CANCELLED => 'Cancelado',
                         default => $state,
                     }),
+                Tables\Columns\TextColumn::make('payment_method')
+                    ->label('Pagamento')
+                    ->badge()
+                    ->color('success')
+                    ->formatStateUsing(fn (?string $state): string => $state ? (Order::paymentOptions()[$state] ?? $state) : '—')
+                    ->placeholder('—'),
+
                 Tables\Columns\TextColumn::make('total_amount')
                     ->label('Total')
                     ->money('BRL')

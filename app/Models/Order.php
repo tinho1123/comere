@@ -25,6 +25,24 @@ class Order extends Model
 
     const CHANNEL_PRESENTIAL = 'presential';
 
+    const PAYMENT_CASH = 'cash';
+
+    const PAYMENT_DEBIT = 'debit';
+
+    const PAYMENT_CREDIT = 'credit';
+
+    const PAYMENT_PIX = 'pix';
+
+    public static function paymentOptions(): array
+    {
+        return [
+            self::PAYMENT_CASH => 'Dinheiro',
+            self::PAYMENT_DEBIT => 'Cartão de Débito',
+            self::PAYMENT_CREDIT => 'Cartão de Crédito',
+            self::PAYMENT_PIX => 'Pix',
+        ];
+    }
+
     protected $fillable = [
         'uuid',
         'company_id',
@@ -35,6 +53,7 @@ class Order extends Model
         'total_amount',
         'status',
         'channel',
+        'payment_method',
         'notes',
         'confirmed_at',
         'shipped_at',

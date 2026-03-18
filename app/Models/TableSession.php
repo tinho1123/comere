@@ -19,6 +19,7 @@ class TableSession extends Model
         'guest_name',
         'device_token',
         'status',
+        'payment_method',
         'notes',
         'total_amount',
         'opened_at',
@@ -70,7 +71,7 @@ class TableSession extends Model
         return $this->guest_name ?? '—';
     }
 
-    public function close(): void
+    public function close(?string $paymentMethod = null): void
     {
         foreach ($this->items()->with('product')->get() as $item) {
             if ($item->product) {
@@ -84,6 +85,7 @@ class TableSession extends Model
             'status' => 'closed',
             'closed_at' => now(),
             'total_amount' => $total,
+            'payment_method' => $paymentMethod,
         ]);
     }
 }
