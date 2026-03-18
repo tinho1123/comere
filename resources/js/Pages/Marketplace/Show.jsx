@@ -169,7 +169,7 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                                         </div>
                                     </div>
                                     <div className="w-28 h-28 rounded-2xl overflow-hidden flex-shrink-0 shadow-inner border border-gray-100 relative">
-                                        <img src={product.image ?? '/demo-product.png'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={product.name} />
+                                        <img src={product.image ?? '/icons/icon-192x192.png'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={product.name} />
                                         {cart[product.id] ? (
                                             <div className="absolute bottom-1 right-1 flex items-center gap-1 bg-white rounded-full shadow-lg border border-gray-100 px-1">
                                                 <button
@@ -257,7 +257,7 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                                 {cartItems.map(({ product, quantity }) => (
                                     <div key={product.id} className="flex gap-4 items-center">
                                         <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 border border-gray-100">
-                                            <img src={product.image ?? '/demo-product.png'} className="w-full h-full object-cover" alt={product.name} />
+                                            <img src={product.image ?? '/icons/icon-192x192.png'} className="w-full h-full object-cover" alt={product.name} />
                                         </div>
                                         <div className="flex-grow min-w-0">
                                             <p className="font-bold text-sm text-gray-900 truncate">{product.name}</p>

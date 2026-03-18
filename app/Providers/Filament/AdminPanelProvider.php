@@ -55,11 +55,12 @@ class AdminPanelProvider extends PanelProvider
             ->brandName('Painel do administrador')
             ->defaultThemeMode(ThemeMode::Dark)
             ->navigationGroups([
-                NavigationGroup::make('Mesas'),
-                NavigationGroup::make('Vendas'),
-                NavigationGroup::make('Gestão'),
-                NavigationGroup::make('Configurações'),
+                NavigationGroup::make('Mesas')->collapsible(),
+                NavigationGroup::make('Vendas')->collapsible(),
+                NavigationGroup::make('Gestão')->collapsible()->collapsed(),
+                NavigationGroup::make('Configurações')->collapsible()->collapsed(),
             ])
+            ->sidebarCollapsibleOnDesktop()
             ->discoverResources(in: app_path('Filament/Admin/Resources'), for: 'App\\Filament\\Admin\\Resources')
             ->discoverPages(in: app_path('Filament/Admin/Pages'), for: 'App\\Filament\\Admin\\Pages')
             ->pages([])

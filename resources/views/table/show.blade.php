@@ -102,9 +102,8 @@
                                             <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}"
                                                 class="w-16 h-16 rounded-xl object-cover flex-shrink-0">
                                         @else
-                                            <div class="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0 text-2xl">
-                                                🍽️
-                                            </div>
+                                            <img src="{{ asset('icons/icon-192x192.png') }}" alt="Comere"
+                                                class="w-16 h-16 rounded-xl object-contain flex-shrink-0 p-1 bg-white">
                                         @endif
 
                                         {{-- Info + form --}}
