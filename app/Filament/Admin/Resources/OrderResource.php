@@ -226,6 +226,7 @@ class OrderResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->defaultSort('created_at', 'desc')
             ->columns([
                 Tables\Columns\TextColumn::make('uuid')
                     ->label('ID')
@@ -235,7 +236,8 @@ class OrderResource extends Resource
                 Tables\Columns\TextColumn::make('client.name')
                     ->label('Cliente')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->placeholder('—'),
                 Tables\Columns\BadgeColumn::make('channel')
                     ->label('Canal')
                     ->colors([
@@ -262,6 +264,11 @@ class OrderResource extends Resource
                         Order::STATUS_CANCELLED => 'Cancelado',
                         default => $state,
                     }),
+                Tables\Columns\TextColumn::make('notes')
+                    ->label('Origem')
+                    ->placeholder('—')
+                    ->limit(30),
+
                 Tables\Columns\TextColumn::make('payment_method')
                     ->label('Pagamento')
                     ->badge()

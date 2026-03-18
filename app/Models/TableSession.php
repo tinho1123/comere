@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class TableSession extends Model
 {
@@ -73,13 +75,15 @@ class TableSession extends Model
 
     public function close(?string $paymentMethod = null): void
     {
-        foreach ($this->items()->with('product')->get() as $item) {
+        $items = $this->items()->with('product')->get();
+
+        foreach ($items as $item) {
             if ($item->product) {
                 $item->product->decrement('quantity', $item->quantity);
             }
         }
 
-        $total = $this->items()->sum('total_amount');
+        $total = $items->sum('total_amount');
 
         $this->update([
             'status' => 'closed',
@@ -87,5 +91,45 @@ class TableSession extends Model
             'total_amount' => $total,
             'payment_method' => $paymentMethod,
         ]);
+
+        $this->createOrder($items, $total, $paymentMethod);
+    }
+
+    private function createOrder(Collection $items, float $total, ?string $paymentMethod): void
+    {
+        $this->loadMissing('table');
+
+        $tableName = $this->table?->name ?? 'Mesa';
+        $guest = $this->client_display_name !== '—' ? ' — '.$this->client_display_name : '';
+
+        $order = Order::create([
+            'uuid' => (string) Str::uuid(),
+            'company_id' => $this->company_id,
+            'client_id' => $this->client_id,
+            'subtotal' => $total,
+            'discount_amount' => 0,
+            'fee_amount' => 0,
+            'total_amount' => $total,
+            'status' => Order::STATUS_DELIVERED,
+            'channel' => Order::CHANNEL_PRESENTIAL,
+            'payment_method' => $paymentMethod,
+            'notes' => $tableName.$guest,
+            'confirmed_at' => now(),
+            'delivered_at' => now(),
+        ]);
+
+        foreach ($items as $item) {
+            OrderItem::create([
+                'uuid' => (string) Str::uuid(),
+                'order_id' => $order->id,
+                'product_id' => $item->product_id,
+                'product_name' => $item->product_name,
+                'quantity' => $item->quantity,
+                'unit_price' => $item->unit_price,
+                'discount_percent' => 0,
+                'discount_amount' => 0,
+                'total_amount' => $item->total_amount,
+            ]);
+        }
     }
 }
