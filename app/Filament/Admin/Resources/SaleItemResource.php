@@ -6,6 +6,7 @@ use App\Filament\Admin\Resources\SaleItemResource\Pages;
 use App\Models\Order;
 use App\Models\OrderItem;
 use Filament\Resources\Resource;
+use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -72,7 +73,7 @@ class SaleItemResource extends Resource
                     ->label('Total')
                     ->money('BRL')
                     ->sortable()
-                    ->weight(\Filament\Support\Enums\FontWeight::Bold)
+                    ->weight(FontWeight::Bold)
                     ->summarize(
                         Sum::make()->money('BRL')->label('Total Geral')
                     ),

@@ -57,10 +57,10 @@ class AdminPanelProvider extends PanelProvider
             ->brandName('Painel do administrador')
             ->defaultThemeMode(ThemeMode::Dark)
             ->navigationGroups([
-                NavigationGroup::make('Mesas')->icon('heroicon-o-table-cells'),
-                NavigationGroup::make('Vendas')->icon('heroicon-o-shopping-cart'),
-                NavigationGroup::make('Gestão')->icon('heroicon-o-cog-6-tooth'),
-                NavigationGroup::make('Configurações')->icon('heroicon-o-adjustments-horizontal'),
+                NavigationGroup::make('Mesas'),
+                NavigationGroup::make('Vendas'),
+                NavigationGroup::make('Gestão'),
+                NavigationGroup::make('Configurações'),
             ])
             ->discoverResources(in: app_path('Filament/Admin/Resources'), for: 'App\\Filament\\Admin\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
