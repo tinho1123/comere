@@ -52,6 +52,11 @@ class BillingCycleResource extends Resource
         return 'warning';
     }
 
+    public static function canViewAny(): bool
+    {
+        return filament()->getCurrentPanel()?->getId() === 'master';
+    }
+
     public static function canCreate(): bool
     {
         return false;

@@ -63,6 +63,11 @@ class CompanyResource extends Resource
         }
     }
 
+    public static function canViewAny(): bool
+    {
+        return filament()->getCurrentPanel()?->getId() === 'master';
+    }
+
     public static function form(Form $form): Form
     {
         return $form->schema([
