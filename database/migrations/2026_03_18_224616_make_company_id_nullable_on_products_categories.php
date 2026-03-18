@@ -13,6 +13,11 @@ return new class extends Migration
             return;
         }
 
+        // Se a coluna não existe, não há nada a fazer
+        if (! Schema::hasColumn('products_categories', 'company_id')) {
+            return;
+        }
+
         // Remove FK se existir, ignora se não existir
         try {
             Schema::table('products_categories', function (Blueprint $table) {
