@@ -30,6 +30,9 @@ jobs:
       - name: Build assets
         run: npm run build
 
+      - name: Install PHP dependencies
+        run: composer update --no-dev --optimize-autoloader --no-interaction
+
       - name: Upload projeto para Hostinger
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -37,7 +40,7 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USER }}
           password: ${{ secrets.SSH_PASSWORD }}
-          source: "app/,bootstrap/,config/,database/,lang/,public/,resources/views/,routes/,artisan,composer.json,composer.lock"
+          source: "app/,bootstrap/,config/,database/,lang/,public/,resources/views/,routes/,vendor/,artisan,composer.json,composer.lock"
           target: "/home/u968588512/domains/comere.com.br/comere/"
           timeout: 60s
           command_timeout: 30m
@@ -51,9 +54,6 @@ jobs:
           password: ${{ secrets.SSH_PASSWORD }}
           script: |
             cd ~/domains/comere.com.br/comere
-
-            echo "→ Instalando dependências PHP..."
-            COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --no-interaction
 
             echo "→ Criando estrutura de diretórios..."
             mkdir -p public/storage/store storage/framework/cache storage/framework/sessions storage/framework/views storage/logs
