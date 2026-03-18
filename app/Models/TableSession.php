@@ -17,6 +17,7 @@ class TableSession extends Model
         'table_id',
         'client_id',
         'guest_name',
+        'device_token',
         'status',
         'notes',
         'total_amount',
