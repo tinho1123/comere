@@ -60,6 +60,15 @@ jobs:
 
             echo "→ Executando migrations..."
             php artisan migrate --force
+
+            echo "→ Otimizando aplicação..."
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
+            php artisan event:cache
+            php artisan icons:cache
+            php artisan filament:cache-components
+            php artisan optimize
+
+            echo "→ Linkando storage público..."
+            php artisan storage:link --force || true

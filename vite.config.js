@@ -70,4 +70,18 @@ export default defineConfig({
             },
         }),
     ],
+    build: {
+        // Divide vendors em chunks separados — o browser recacheia só o que mudou
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    'vendor-react':   ['react', 'react-dom'],
+                    'vendor-inertia': ['@inertiajs/react'],
+                    'vendor-motion':  ['framer-motion'],
+                    'vendor-icons':   ['lucide-react'],
+                },
+            },
+        },
+        chunkSizeWarningLimit: 500,
+    },
 });
