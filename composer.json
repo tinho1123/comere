@@ -7,7 +7,6 @@
     "require": {
         "php": "^8.1",
         "bilalbaraz/supabase-laravel": "^0.1.2",
-        "chillerlan/php-qrcode": "^6.0",
         "filament/filament": "^3.3",
         "guzzlehttp/guzzle": "^7.2",
         "inertiajs/inertia-laravel": "^2.0",

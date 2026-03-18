@@ -179,12 +179,14 @@ class TableResource extends Resource
                     ->modalHeading(fn (TableModel $record): string => 'QR Code — '.$record->name)
                     ->modalContent(function (TableModel $record): HtmlString {
                         $url = route('table.show', $record->uuid);
-                        $qrSrc = route('qr.table', $record->uuid);
+                        $qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='.urlencode($url);
+                        $externalLink = 'https://www.qr-code-generator.com/?data='.urlencode($url);
 
                         return new HtmlString(
                             '<div class="flex flex-col items-center gap-4 py-4">'
-                            .'<img src="'.$qrSrc.'" alt="QR Code" class="w-56 h-56" />'
+                            .'<img src="'.$qrSrc.'" alt="QR Code" class="w-56 h-56 rounded-lg" />'
                             .'<p class="text-xs text-gray-400 break-all text-center max-w-xs">'.$url.'</p>'
+                            .'<a href="'.$externalLink.'" target="_blank" rel="noopener noreferrer" class="text-xs text-indigo-500 hover:underline">Gerar em site externo</a>'
                             .'</div>'
                         );
                     })

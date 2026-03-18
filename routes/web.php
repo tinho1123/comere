@@ -8,12 +8,11 @@ use App\Http\Controllers\Marketplace\MarketplaceLoginController;
 use App\Http\Controllers\Marketplace\SSOCallbackController;
 use App\Http\Controllers\Marketplace\TableController;
 use App\Http\Controllers\PushSubscriptionController;
-use App\Http\Controllers\QrCodeController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/table/{uuid}', [TableController::class, 'show'])->name('table.show');
-Route::get('/qr/table/{uuid}', [QrCodeController::class, 'table'])->name('qr.table')->middleware('auth');
 Route::post('/table/{uuid}/name', [TableController::class, 'registerName'])->name('table.register-name');
+Route::post('/table/{uuid}/item', [TableController::class, 'addItem'])->name('table.add-item');
 
 Route::get('/', [MarketplaceController::class, 'index'])->name('marketplace.index');
 Route::get('/store/{company:uuid}', [MarketplaceController::class, 'show'])->name('marketplace.show');
