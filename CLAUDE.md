@@ -4,7 +4,7 @@
 
 **Comere** is a multi-tenant B2B credit management SaaS (fiado/installment system) targeting small-to-medium Brazilian businesses. Companies use it to offer credit to their clients, track transactions, manage orders, and provide a self-service client portal.
 
-**Phase 1 MVP status:** ~80% complete (as of Mar 2026)
+**Phase 1 MVP status:** ~85% complete (as of Mar 2026)
 
 ---
 
@@ -23,6 +23,9 @@
 | Database | MySQL 8.4 (Eloquent ORM) |
 | Cache | Redis |
 | Payments | Stripe (`stripe/stripe-php ^10.0`) |
+| Web Push | `minishlink/web-push` + VAPID |
+| PWA | `vite-plugin-pwa` + Service Worker |
+| Storage/Auth | `bilalbaraz/supabase-laravel` |
 | Dev Env | Laravel Sail (Docker) |
 | Testing | PHPUnit 10.x |
 | Formatter | Laravel Pint |
@@ -38,9 +41,10 @@ app/
 │   │   ├── ClientResource/
 │   │   ├── FavoredTransactionResource/
 │   │   ├── OrderResource/
-│   │   └── ProductResource/
+│   │   ├── ProductResource/
+│   │   └── UserResource/       # Read-only: lists users per company
 │   ├── Master/Resources/       # Super-admin panel (/master)
-│   │   └── CompanyResource/
+│   │   └── CompanyResource/    # + UsersRelationManager
 │   ├── Pages/
 │   ├── Resources/
 │   └── Widgets/
@@ -53,9 +57,16 @@ app/
 │   │   │   ├── PaymentController
 │   │   │   └── ProductController
 │   │   ├── Auth/               # Admin login/logout
-│   │   └── Marketplace/        # Public marketplace + SSO controllers
+│   │   ├── Marketplace/        # Public marketplace + SSO controllers
+│   │   ├── FavoredTransactionController.php  # Fiado CRUD + payDebt
+│   │   ├── PushSubscriptionController.php    # Web push subscribe/unsubscribe
+│   │   ├── DashboardController.php
+│   │   └── UsersController.php
 │   └── Middleware/             # 12 middleware classes
-├── Models/                     # 13 Eloquent models
+│       ├── ClientTenantResolver.php
+│       ├── RemoveTenantScopes.php
+│       └── ... (10 standard Laravel middleware)
+├── Models/                     # 14 Eloquent models
 └── Providers/
     ├── Filament/
     │   ├── AdminPanelProvider.php   # path: /admin, id: admin
@@ -63,7 +74,7 @@ app/
     └── ...
 
 routes/
-├── web.php                     # Marketplace, SSO, admin login routes
+├── web.php                     # Marketplace, SSO, admin login, push routes
 ├── api.php                     # Base API routes
 └── api_favored.php             # Fiado/credit transaction API routes
 
@@ -75,10 +86,19 @@ resources/
 │   │   └── MarketplaceLayout.jsx
 │   ├── app.jsx                 # Inertia.js entry point
 │   └── bootstrap.js            # Axios setup
-└── views/                      # Blade templates
+└── views/
+    ├── filament/
+    │   └── push-notification-init.blade.php  # Injects SW + push subscription JS
+    └── ...                     # Other Blade templates
+
+public/
+└── sw.js                       # Service Worker (push events, cache management)
+
+config/
+└── webpush.php                 # VAPID public/private key config
 
 database/
-├── migrations/                 # 21 migration files
+├── migrations/                 # 24 migration files
 ├── seeders/
 └── factories/
 
@@ -162,13 +182,15 @@ php artisan config:clear && php artisan cache:clear && php artisan route:clear &
 ### Admin Panel (`/admin`)
 - **Provider:** `AdminPanelProvider` — id: `admin`, path: `/admin`
 - **Tenant-aware:** Company (slug: uuid), dark theme, Rose/Indigo colors
-- **Resources:** `ClientResource`, `ProductResource`, `OrderResource`, `FavoredTransactionResource`
+- **Resources:** `ClientResource`, `ProductResource`, `OrderResource`, `FavoredTransactionResource`, `UserResource`
+- **Push notifications:** Blade hook injects `push-notification-init` at `panels::body.end` — auto-registers SW and VAPID subscription for logged-in admins
+- **Navigation groups:** Gestão (clients, users), Vendas (orders, fiado), Produtos (products)
 
 ### Master Panel (`/master`)
 - **Provider:** `MasterPanelProvider` — id: `master`, path: `/master`
 - **Access:** Only users with `is_master = true`
 - **No tenant scope** — manages all companies globally
-- **Resources:** `CompanyResource` (create/list companies, creates admin user on company creation)
+- **Resources:** `CompanyResource` (create/list companies, creates admin user on company creation, has `UsersRelationManager`)
 - **Colors:** Violet
 
 ---
@@ -217,10 +239,12 @@ Schema::create('table_name', function (Blueprint $table) {
     $table->id();
     $table->uuid('uuid')->unique();
     $table->foreignId('company_id')->constrained()->onDelete('cascade'); // REQUIRED
-    // ... columns
+    // ... columns — use string() not text() for indexed/unique columns
     $table->timestamps();
 });
 ```
+
+> **MySQL gotcha:** Never put a UNIQUE constraint on a `text()` column — MySQL requires a key length for TEXT indexes. Use `string(N)` instead.
 
 ### API Response Format
 ```json
@@ -251,7 +275,7 @@ Schema::create('table_name', function (Blueprint $table) {
 | Client (SSO) | Clerk JWT | SSO callback |
 | API | Sanctum tokens | `auth:sanctum` |
 
-- Account lockout: 5 failed attempts → 30-minute lock (Client model)
+- Account lockout: 5 failed attempts → 30-minute lock (`Client::incrementLoginAttempts()`)
 - Session-based tenant tracking via `selected_tenant_id`
 - `is_master` boolean on `users` table gates access to `/master` panel
 
@@ -288,9 +312,21 @@ POST /api/client/notifications/mark-all-read
 GET  /api/client/notifications/unread-count
 ```
 
+## API Endpoints (Fiado/Favored — `auth:sanctum`, `api_favored.php`)
+
+```
+GET  /api/favored-transactions                        # All transactions for company
+POST /api/favored-transactions                        # Create transaction
+GET  /api/favored-transactions/clients-with-transactions  # Summary per client
+GET  /api/favored-transactions/{client:uuid}          # Transactions by client
+PUT  /api/favored-transactions/{transaction}          # Update transaction
+DELETE /api/favored-transactions/{transaction}        # Delete transaction
+POST /api/favored-transactions/{transaction}/pay      # Record partial/full payment
+```
+
 ---
 
-## Web Routes (Marketplace)
+## Web Routes (Marketplace + Push)
 
 ```
 GET  /                              # Marketplace index
@@ -298,9 +334,15 @@ GET  /store/{company:uuid}          # Company store
 POST /marketplace/login             # Client CPF/CNPJ login
 POST /marketplace/logout
 POST /sso-callback                  # Clerk SSO
+GET  /sso-callback                  # Redirect to marketplace.index
 GET  /complete-profile              # Profile completion
 POST /complete-profile
 GET  /meus-pedidos                  # My orders [auth:client]
+
+# Push Notifications [auth (admin users)]
+POST /push/subscribe                # Register SW push subscription
+POST /push/unsubscribe              # Remove SW push subscription
+
 GET  /login                         # Admin login
 POST /login
 POST /logout
@@ -308,33 +350,36 @@ POST /logout
 
 ---
 
-## Core Models
+## Core Models (14)
 
 | Model | Key Relationships | Notable Fields |
 |---|---|---|
-| `Company` | belongsToMany Users, hasMany Products/Orders/Transactions/Fees/FavoredTransactions | uuid, metadata (JSON), active |
+| `Company` | belongsToMany Users, hasMany Products/Orders/Transactions/Fees/FavoredTransactions | uuid, metadata (JSON), active (bool), is_promoted (bool) |
 | `User` | belongsToMany Companies (`companies_users` pivot) | uuid, is_master (boolean) |
-| `Client` | belongsToMany Companies (`client_company` pivot), hasMany Orders/Notifications | uuid, document_type, document_number, clerk_id, locked_until |
-| `Product` | belongsTo Company, belongsTo ProductsCategories, hasMany Transactions | uuid, is_for_favored, favored_price, isCool |
+| `Client` | belongsToMany Companies (`client_company` pivot), hasMany Orders/Notifications | uuid, document_type, document_number, clerk_id, locked_until, preferences (array) |
+| `Product` | belongsTo Company, belongsTo ProductsCategories, hasMany Transactions | uuid, is_for_favored, favored_price, isCool (bool), active (bool) |
 | `ProductsCategories` | hasMany Products | Global — no company_id |
-| `Order` | belongsTo Company, belongsTo Client, hasMany OrderItems | uuid, status, subtotal/discount/fee/total |
+| `Order` | belongsTo Company, belongsTo Client, hasMany OrderItems | uuid, status, subtotal/discount_amount/fee_amount/total_amount, confirmed/shipped/delivered/cancelled_at |
 | `OrderItem` | belongsTo Order, belongsTo Product | uuid, unit_price, discount_percent |
 | `Transaction` | belongsTo Company, belongsTo Product, belongsTo Fee | uuid, type, payment_method |
-| `FavoredTransaction` | belongsTo Company/Client/Order/Product | uuid, due_date, favored_total, favored_paid_amount |
+| `FavoredTransaction` | belongsTo Company/Client/Order/Product/Category | uuid, due_date, favored_total, favored_paid_amount, `getRemainingBalance()`, `isFullyPaid()` |
 | `FavoredDebt` | belongsTo Company | amount, due_date, status |
 | `Fee` | belongsTo Company, hasMany Transactions | uuid, type, amount |
 | `Notification` | belongsTo Company | uuid, client_user_id, type, read_at |
 | `CompaniesUsers` | Pivot: belongsTo User, belongsTo Company | user_id, company_id |
+| `PushSubscription` | belongsTo User, belongsTo Company | endpoint (string 500), public_key, auth_token |
 
 ### Order Status Flow
 `pending → processing → shipped → delivered` (cancellation supported at any stage)
+
+Model helpers: `canBeApproved()`, `canBeShipped()`, `canBeDelivered()`, `approve()`, `ship()`, `deliver()`, `recalculateTotal()`
 
 ### Notification Types
 `order_update` · `payment_reminder` · `credit_warning` · `announcement`
 
 ---
 
-## Database Tables (21 migrations)
+## Database Tables (24 migrations)
 
 | Table | Tenant-scoped |
 |---|---|
@@ -352,6 +397,38 @@ POST /logout
 | orders | Yes (`company_id`) |
 | order_items | No (scoped via order) |
 | notifications | Yes (`company_id`) |
+| push_subscriptions | Yes (`company_id`) |
+
+---
+
+## PWA & Web Push Notifications
+
+The admin panel supports web push notifications for new orders.
+
+### Architecture
+- **Service Worker:** `public/sw.js` — handles `push` events, displays notifications, handles `notificationclick`
+- **Blade hook:** `resources/views/filament/push-notification-init.blade.php` — injected at `panels::body.end` via `AdminPanelProvider::boot()`
+- **Config:** `config/webpush.php` — reads `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` from `.env`
+- **Model:** `PushSubscription` — stores per-user/company endpoint + VAPID keys
+- **Controller:** `PushSubscriptionController` — `subscribe()` / `unsubscribe()` (web middleware, `auth` guard)
+
+### Flow
+1. Admin logs in → blade hook registers `sw.js` and requests notification permission
+2. On grant → subscribes via VAPID and POSTs to `/push/subscribe`
+3. Server stores subscription in `push_subscriptions` table
+4. When an order is created → server uses `minishlink/web-push` to push to all subscriptions for that company
+
+### Required `.env` variables
+```env
+VAPID_PUBLIC_KEY=      # Generate with: php artisan webpush:vapid
+VAPID_PRIVATE_KEY=
+```
+
+### Vite PWA config (`vite.config.js`)
+- `VitePWA` with `registerType: 'autoUpdate'`, offline asset caching via Workbox
+- API calls (`/api/*`): NetworkFirst, 5-min cache, 10s timeout
+- Storage files (`/storage/*`): CacheFirst, 30-day cache
+- PWA manifest: name "Comere", theme `#e11d48`, standalone display
 
 ---
 
@@ -435,6 +512,9 @@ STRIPE_SECRET_KEY=
 
 VITE_CLERK_PUBLISHABLE_KEY=   # Client SSO
 
+VAPID_PUBLIC_KEY=             # Web push notifications (admin panel)
+VAPID_PRIVATE_KEY=            # Generate: php artisan webpush:vapid
+
 CACHE_DRIVER=file             # Use redis in production
 SESSION_DRIVER=file           # Use redis in production
 QUEUE_CONNECTION=sync
@@ -465,5 +545,12 @@ For deeper context on specific areas, see:
 - Email notification queue
 - Advanced product filtering & cart persistence
 - PDF invoice generation
-- Mobile PWA
 - WhatsApp / SMS notifications
+
+### Recently Completed (Phase 1 additions)
+- ✅ PWA support (`vite-plugin-pwa`, service worker, offline caching)
+- ✅ Web push notifications for admin panel (VAPID + `minishlink/web-push`)
+- ✅ `UserResource` in admin panel (read-only per-company user listing)
+- ✅ `is_master` flag on users (Master panel access control)
+- ✅ Boolean migration for `active`/`isCool` columns
+- ✅ `push_subscriptions` table (per-company, per-user SW subscriptions)
