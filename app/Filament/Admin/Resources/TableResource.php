@@ -7,7 +7,6 @@ use App\Models\Client;
 use App\Models\Table as TableModel;
 use App\Models\TableSession;
 use chillerlan\QRCode\QRCode;
-use chillerlan\QRCode\QROptions;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -181,11 +180,7 @@ class TableResource extends Resource
                     ->modalHeading(fn (TableModel $record): string => 'QR Code — '.$record->name)
                     ->modalContent(function (TableModel $record): HtmlString {
                         $url = route('mesa.show', $record->uuid);
-                        $options = new QROptions([
-                            'outputType' => 'svg',
-                            'imageBase64' => false,
-                        ]);
-                        $svg = (new QRCode($options))->render($url);
+                        $svg = (new QRCode)->render($url);
 
                         return new HtmlString(
                             '<div class="flex flex-col items-center gap-4 py-4">'
