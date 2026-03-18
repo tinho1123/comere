@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\TableQrController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Marketplace\ClientAddressController;
@@ -44,6 +45,7 @@ Route::middleware('auth:client')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/push/subscribe', [PushSubscriptionController::class, 'subscribe'])->name('push.subscribe');
     Route::post('/push/unsubscribe', [PushSubscriptionController::class, 'unsubscribe'])->name('push.unsubscribe');
+    Route::get('/admin/table/{uuid}/qr-image', [TableQrController::class, 'image'])->name('table.qr-image');
 });
 
 // Rotas do Admin (existente)
