@@ -13,13 +13,15 @@ return new class extends Migration
             return;
         }
 
-        $this->dropForeignIfExists('products_categories', 'products_categories_company_id_foreign');
+        // Remove FK se existir, ignora se não existir
+        try {
+            Schema::table('products_categories', function (Blueprint $table) {
+                $table->dropForeign(['company_id']);
+            });
+        } catch (Throwable) {
+        }
 
         DB::statement('ALTER TABLE products_categories MODIFY COLUMN company_id BIGINT UNSIGNED NULL');
-
-        Schema::table('products_categories', function (Blueprint $table) {
-            $table->foreign('company_id')->references('id')->on('companies')->onDelete('cascade');
-        });
     }
 
     public function down(): void
@@ -28,27 +30,6 @@ return new class extends Migration
             return;
         }
 
-        $this->dropForeignIfExists('products_categories', 'products_categories_company_id_foreign');
-
         DB::statement('ALTER TABLE products_categories MODIFY COLUMN company_id BIGINT UNSIGNED NOT NULL');
-
-        Schema::table('products_categories', function (Blueprint $table) {
-            $table->foreign('company_id')->references('id')->on('companies')->onDelete('cascade');
-        });
-    }
-
-    private function dropForeignIfExists(string $table, string $foreignKey): void
-    {
-        $exists = DB::select("
-            SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS
-            WHERE TABLE_SCHEMA = DATABASE()
-              AND TABLE_NAME = ?
-              AND CONSTRAINT_NAME = ?
-              AND CONSTRAINT_TYPE = 'FOREIGN KEY'
-        ", [$table, $foreignKey]);
-
-        if ($exists) {
-            DB::statement("ALTER TABLE `{$table}` DROP FOREIGN KEY `{$foreignKey}`");
-        }
     }
 };
