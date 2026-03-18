@@ -79,6 +79,11 @@ class Company extends Model
         return $this->hasMany(FavoredTransaction::class);
     }
 
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
     public function deliveryFeeRanges(): HasMany
     {
         return $this->hasMany(DeliveryFeeRange::class)->orderBy('max_km');
