@@ -99,7 +99,7 @@
                                     <div class="p-4 flex gap-3 items-start">
                                         {{-- Imagem --}}
                                         @if ($product->image)
-                                            <img src="{{ $product->image }}" alt="{{ $product->name }}"
+                                            <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}"
                                                 class="w-16 h-16 rounded-xl object-cover flex-shrink-0">
                                         @else
                                             <div class="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0 text-2xl">
