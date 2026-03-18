@@ -17,12 +17,16 @@ class TableSessionItem extends Model
         'quantity',
         'unit_price',
         'total_amount',
+        'is_delivered',
+        'delivered_at',
     ];
 
     protected $casts = [
         'quantity' => 'integer',
         'unit_price' => 'decimal:2',
         'total_amount' => 'decimal:2',
+        'is_delivered' => 'boolean',
+        'delivered_at' => 'datetime',
     ];
 
     public function session(): BelongsTo
