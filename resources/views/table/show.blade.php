@@ -200,11 +200,32 @@
             </div>
 
         @else
-            {{-- Mesa livre --}}
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
-                <div class="text-4xl mb-3">🪑</div>
-                <h2 class="font-semibold text-gray-700 mb-1">Mesa livre</h2>
-                <p class="text-sm text-gray-400">Não há consumo ativo nesta mesa no momento.</p>
+            {{-- Mesa livre — abrir sessão --}}
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <div class="text-center mb-5">
+                    <div class="text-4xl mb-2">🪑</div>
+                    <h2 class="font-semibold text-gray-800">Mesa disponível</h2>
+                    <p class="text-sm text-gray-400 mt-1">Informe seu apelido para abrir a mesa e fazer pedidos.</p>
+                </div>
+
+                <form method="POST" action="{{ route('table.open', $table->uuid) }}" class="space-y-3">
+                    @csrf
+                    <input
+                        type="text"
+                        name="guest_name"
+                        placeholder="Seu apelido (ex: João, Mesa do Zé...)"
+                        required
+                        autofocus
+                        class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    >
+                    @error('guest_name')
+                        <p class="text-red-500 text-xs">{{ $message }}</p>
+                    @enderror
+                    <button type="submit"
+                        class="w-full bg-indigo-600 text-white py-3 rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors">
+                        Abrir mesa
+                    </button>
+                </form>
             </div>
         @endif
 

@@ -11,6 +11,7 @@ use App\Http\Controllers\PushSubscriptionController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/table/{uuid}', [TableController::class, 'show'])->name('table.show');
+Route::post('/table/{uuid}/open', [TableController::class, 'open'])->name('table.open');
 Route::post('/table/{uuid}/name', [TableController::class, 'registerName'])->name('table.register-name');
 Route::post('/table/{uuid}/item', [TableController::class, 'addItem'])->name('table.add-item');
 

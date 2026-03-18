@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Marketplace;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Table as TableModel;
+use App\Models\TableSession;
 use App\Models\TableSessionItem;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -43,6 +44,33 @@ class TableController extends Controller
         }
 
         return redirect()->route('table.show', $uuid)->with('success', 'Nome registrado com sucesso!');
+    }
+
+    public function open(Request $request, string $uuid): RedirectResponse
+    {
+        $request->validate([
+            'guest_name' => ['required', 'string', 'max:100'],
+        ]);
+
+        $table = TableModel::where('uuid', $uuid)
+            ->where('is_active', true)
+            ->firstOrFail();
+
+        if ($table->activeSession) {
+            return redirect()->route('table.show', $uuid);
+        }
+
+        TableSession::create([
+            'uuid' => str()->uuid(),
+            'company_id' => $table->company_id,
+            'table_id' => $table->id,
+            'guest_name' => $request->guest_name,
+            'status' => 'open',
+            'opened_at' => now(),
+            'total_amount' => 0,
+        ]);
+
+        return redirect()->route('table.show', $uuid)->with('success', 'Mesa aberta! Bem-vindo, '.$request->guest_name.'.');
     }
 
     public function addItem(Request $request, string $uuid): RedirectResponse

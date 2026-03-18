@@ -29,9 +29,10 @@ class ItemsRelationManager extends RelationManager
                     $companyId = $this->getOwnerRecord()->company_id;
 
                     return Product::where('company_id', $companyId)
-                        ->where('is_active', true)
+                        ->where('active', true)
+                        ->orderBy('name')
                         ->get()
-                        ->mapWithKeys(fn ($p) => [$p->id => $p->name.' (R$ '.number_format($p->amount, 2, ',', '.').')'])
+                        ->mapWithKeys(fn ($p) => [$p->id => $p->name.' — R$ '.number_format($p->amount, 2, ',', '.')])
                         ->toArray();
                 })
                 ->searchable()
@@ -41,33 +42,33 @@ class ItemsRelationManager extends RelationManager
                     $product = Product::find($state);
                     if ($product) {
                         $set('product_name', $product->name);
-                        $set('unit_price', $product->amount);
+                        $set('unit_price', number_format($product->amount, 2, '.', ''));
                     }
                 })
-                ->columnSpan(2),
-
-            TextInput::make('product_name')
-                ->label('Nome')
-                ->required()
-                ->maxLength(200)
-                ->columnSpan(2),
+                ->columnSpanFull(),
 
             TextInput::make('quantity')
-                ->label('Qtd')
+                ->label('Quantidade')
                 ->numeric()
                 ->default(1)
                 ->minValue(1)
                 ->required()
-                ->live()
                 ->columnSpan(1),
 
             TextInput::make('unit_price')
-                ->label('Preço unit.')
+                ->label('Preço unitário')
                 ->numeric()
                 ->prefix('R$')
                 ->required()
                 ->columnSpan(1),
-        ])->columns(6);
+
+            TextInput::make('product_name')
+                ->label('Nome no pedido')
+                ->required()
+                ->maxLength(200)
+                ->helperText('Preenchido automaticamente ao selecionar o produto')
+                ->columnSpanFull(),
+        ])->columns(2);
     }
 
     public function table(Table $table): Table
