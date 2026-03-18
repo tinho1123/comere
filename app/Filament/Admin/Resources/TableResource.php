@@ -6,6 +6,8 @@ use App\Filament\Admin\Resources\TableResource\Pages;
 use App\Models\Client;
 use App\Models\Table as TableModel;
 use App\Models\TableSession;
+use chillerlan\QRCode\QRCode;
+use chillerlan\QRCode\QROptions;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -179,29 +181,18 @@ class TableResource extends Resource
                     ->modalHeading(fn (TableModel $record): string => 'QR Code — '.$record->name)
                     ->modalContent(function (TableModel $record): HtmlString {
                         $url = route('mesa.show', $record->uuid);
-                        $id = 'qr-'.str_replace('-', '', $record->uuid);
+                        $options = new QROptions([
+                            'outputType' => 'svg',
+                            'imageBase64' => false,
+                        ]);
+                        $svg = (new QRCode($options))->render($url);
 
-                        return new HtmlString(<<<HTML
-                            <div class="flex flex-col items-center gap-3 py-4">
-                                <canvas id="{$id}"></canvas>
-                                <p class="text-sm text-gray-500 break-all text-center">{$url}</p>
-                            </div>
-                            <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSi2jPyeiKiqgB7KtKyZS/K4HQTAoEyAIlWg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-                            <script>
-                                document.addEventListener('DOMContentLoaded', function () {
-                                    new QRCode(document.getElementById('{$id}'), {
-                                        text: '{$url}',
-                                        width: 220,
-                                        height: 220,
-                                    });
-                                });
-                                new QRCode(document.getElementById('{$id}'), {
-                                    text: '{$url}',
-                                    width: 220,
-                                    height: 220,
-                                });
-                            </script>
-                        HTML);
+                        return new HtmlString(
+                            '<div class="flex flex-col items-center gap-4 py-4">'
+                            .'<div class="w-56 h-56">'.$svg.'</div>'
+                            .'<p class="text-xs text-gray-400 break-all text-center max-w-xs">'.$url.'</p>'
+                            .'</div>'
+                        );
                     })
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Fechar'),
