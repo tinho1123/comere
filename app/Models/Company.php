@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Company extends Model
 {
@@ -81,6 +82,16 @@ class Company extends Model
     public function deliveryFeeRanges(): HasMany
     {
         return $this->hasMany(DeliveryFeeRange::class)->orderBy('max_km');
+    }
+
+    public function billingSetting(): HasOne
+    {
+        return $this->hasOne(BillingSetting::class);
+    }
+
+    public function billingCycles(): HasMany
+    {
+        return $this->hasMany(BillingCycle::class)->orderByDesc('period_start');
     }
 
     public function getTenantKeyName(): string
