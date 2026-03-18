@@ -20,7 +20,8 @@ class ProductController extends Controller
         $this->authorizeClientAccess($company);
 
         $query = Product::where('company_id', $company->id)
-            ->where('active', true);
+            ->where('active', true)
+            ->where('is_marketplace', true);
 
         // Filter by category
         if ($request->has('category')) {

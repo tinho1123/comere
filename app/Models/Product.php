@@ -32,6 +32,7 @@ class Product extends Model
         'isCool',
         'is_for_favored',
         'favored_price',
+        'is_marketplace',
         'category_id',
         'active',
         'uuid',
@@ -41,6 +42,7 @@ class Product extends Model
         'active' => 'boolean',
         'isCool' => 'boolean',
         'is_for_favored' => 'boolean',
+        'is_marketplace' => 'boolean',
     ];
 
     public function company(): BelongsTo

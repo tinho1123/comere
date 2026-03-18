@@ -92,6 +92,13 @@ class ProductResource extends Resource
                             ->prefix('R$')
                             ->visible(fn (Forms\Get $get): bool => $get('is_for_favored')),
                     ]),
+                Forms\Components\Section::make('Disponibilidade')
+                    ->schema([
+                        Forms\Components\Toggle::make('is_marketplace')
+                            ->label('Disponível no Marketplace')
+                            ->helperText('Ative para que este produto apareça no catálogo de delivery/marketplace.')
+                            ->default(false),
+                    ]),
                 Forms\Components\FileUpload::make('image')
                     ->image()
                     ->disk('public')
@@ -137,6 +144,13 @@ class ProductResource extends Resource
                 Tables\Columns\IconColumn::make('active')
                     ->label('Ativo')
                     ->boolean(),
+                Tables\Columns\IconColumn::make('is_marketplace')
+                    ->label('Marketplace')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-globe-alt')
+                    ->falseIcon('heroicon-o-minus')
+                    ->trueColor('success')
+                    ->falseColor('gray'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Criado em')
                     ->dateTime()

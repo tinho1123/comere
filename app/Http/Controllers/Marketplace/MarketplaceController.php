@@ -57,7 +57,9 @@ class MarketplaceController extends Controller
             });
 
         $promotedProducts = Product::whereHas('company', fn ($q) => $q->where('active', true))
-            ->where('discounts', '>', 0) // Usando a coluna correta 'discounts'
+            ->where('active', true)
+            ->where('is_marketplace', true)
+            ->where('discounts', '>', 0)
             ->limit(8)
             ->get();
 
@@ -84,7 +86,7 @@ class MarketplaceController extends Controller
         $lastVisited = array_slice($lastVisited, 0, 5); // Manter as últimas 5
         session()->put('last_visited_stores', $lastVisited);
 
-        $company->load(['products' => fn ($q) => $q->where('active', true)->with('category'), 'deliveryFeeRanges']);
+        $company->load(['products' => fn ($q) => $q->where('active', true)->where('is_marketplace', true)->with('category'), 'deliveryFeeRanges']);
 
         $distanceService = new DistanceService;
         $client = auth()->guard('client')->user();
