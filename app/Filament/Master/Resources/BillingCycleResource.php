@@ -8,13 +8,11 @@ use App\Services\BillingService;
 use Carbon\Carbon;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\BulkAction;
 use Filament\Tables\Actions\BulkActionGroup;
-use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -49,9 +47,9 @@ class BillingCycleResource extends Resource
         return 'warning';
     }
 
-    public static function form(Form $form): Form
+    public static function canCreate(): bool
     {
-        return $form->schema([]);
+        return false;
     }
 
     public static function table(Table $table): Table
@@ -84,13 +82,14 @@ class BillingCycleResource extends Resource
                     ->money('BRL')
                     ->sortable(),
 
-                BadgeColumn::make('status')
+                TextColumn::make('status')
                     ->label('Status')
-                    ->colors([
-                        'success' => 'paid',
-                        'danger' => 'overdue',
-                        'warning' => 'pending',
-                    ])
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'paid' => 'success',
+                        'overdue' => 'danger',
+                        default => 'warning',
+                    })
                     ->formatStateUsing(fn ($state) => match ($state) {
                         'paid' => 'Pago',
                         'overdue' => 'Em atraso',
