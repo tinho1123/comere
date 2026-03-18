@@ -99,6 +99,11 @@ class Company extends Model
         return $this->hasMany(BillingCycle::class)->orderByDesc('period_start');
     }
 
+    public function tables(): HasMany
+    {
+        return $this->hasMany(Table::class);
+    }
+
     public function getTenantKeyName(): string
     {
         return 'id';

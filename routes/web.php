@@ -6,8 +6,12 @@ use App\Http\Controllers\Marketplace\ClientAddressController;
 use App\Http\Controllers\Marketplace\MarketplaceController;
 use App\Http\Controllers\Marketplace\MarketplaceLoginController;
 use App\Http\Controllers\Marketplace\SSOCallbackController;
+use App\Http\Controllers\Marketplace\TableController;
 use App\Http\Controllers\PushSubscriptionController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/mesa/{uuid}', [TableController::class, 'show'])->name('mesa.show');
+Route::post('/mesa/{uuid}/nome', [TableController::class, 'registerName'])->name('mesa.register-name');
 
 Route::get('/', [MarketplaceController::class, 'index'])->name('marketplace.index');
 Route::get('/store/{company:uuid}', [MarketplaceController::class, 'show'])->name('marketplace.show');
