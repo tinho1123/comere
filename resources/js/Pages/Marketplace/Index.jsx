@@ -57,7 +57,7 @@ export default function MarketplaceIndex({ companies, lastVisited, categories, s
                                 className="flex-shrink-0 w-24 flex flex-col items-center gap-2 group"
                             >
                                 <div className="w-16 h-16 rounded-full border-2 border-gray-100 p-1 bg-white group-hover:border-red-500 transition-colors shadow-sm">
-                                    <img src={store.logo_path ?? '/default-store-logo.png'} className="w-full h-full rounded-full object-cover" alt={store.name} />
+                                    <img src={store.logo} className="w-full h-full rounded-full object-cover" alt={store.name} />
                                 </div>
                                 <span className="text-xs font-semibold text-center truncate w-full px-1">{store.name}</span>
                             </Link>

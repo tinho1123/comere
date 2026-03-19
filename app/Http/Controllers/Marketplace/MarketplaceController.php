@@ -66,7 +66,13 @@ class MarketplaceController extends Controller
         $lastVisitedUuids = session()->get('last_visited_stores', []);
         $lastVisited = Company::whereIn('uuid', $lastVisitedUuids)
             ->get()
-            ->sortBy(fn ($c) => array_search($c->uuid, $lastVisitedUuids));
+            ->sortBy(fn ($c) => array_search($c->uuid, $lastVisitedUuids))
+            ->map(fn ($c) => [
+                'uuid' => $c->uuid,
+                'name' => $c->name,
+                'logo' => $c->logo_path ? Storage::url($c->logo_path) : '/default-store-logo.png',
+                'type' => $c->type,
+            ]);
 
         return Inertia::render('Marketplace/Index', [
             'companies' => $companies,
