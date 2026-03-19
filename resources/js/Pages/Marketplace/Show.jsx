@@ -10,10 +10,23 @@ export default function MarketplaceShow({ company, productsByCategory }) {
     const [cart, setCart] = useState({});
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [isCheckingOut, setIsCheckingOut] = useState(false);
+    const [selectedPayment, setSelectedPayment] = useState('');
+
+    const surcharges = company.payment_surcharges ?? {};
+    const paymentOptions = company.payment_options ?? {};
 
     const cartItems = Object.values(cart);
     const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-    const cartTotal = cartItems.reduce((sum, item) => sum + Number(item.product.amount) * item.quantity, 0);
+    const cartSubtotal = cartItems.reduce((sum, item) => sum + Number(item.product.amount) * item.quantity, 0);
+
+    const cartFee = (() => {
+        if (!selectedPayment || !surcharges[selectedPayment]) return 0;
+        const s = surcharges[selectedPayment];
+        if (s.type === 'percent') return cartSubtotal * (s.amount / 100);
+        return s.amount;
+    })();
+
+    const cartTotal = cartSubtotal + cartFee;
 
     const addToCart = (product) => {
         setCart(prev => ({
@@ -51,6 +64,7 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                 product_id: item.product.id,
                 quantity: item.quantity,
             })),
+            payment_method: selectedPayment || null,
         }, {
             onSuccess: () => {
                 setCart({});
@@ -280,11 +294,46 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                             </div>
 
                             <div className="p-6 border-t border-gray-100 flex flex-col gap-4">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-gray-500 font-medium">Total</span>
-                                    <span className="text-2xl font-black text-gray-900">
-                                        R$ {cartTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                    </span>
+                                {/* Forma de pagamento */}
+                                {Object.keys(paymentOptions).length > 0 && (
+                                    <div>
+                                        <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Forma de pagamento</p>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {Object.entries(paymentOptions).map(([key, label]) => {
+                                                const s = surcharges[key];
+                                                return (
+                                                    <button
+                                                        key={key}
+                                                        onClick={() => setSelectedPayment(selectedPayment === key ? '' : key)}
+                                                        className={`text-left px-3 py-2 rounded-xl border text-sm font-semibold transition-all ${selectedPayment === key ? 'bg-red-500 text-white border-red-500' : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-red-300'}`}
+                                                    >
+                                                        <span className="block">{label}</span>
+                                                        {s && <span className={`text-[10px] font-bold ${selectedPayment === key ? 'text-red-100' : 'text-orange-500'}`}>{s.label}</span>}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Resumo financeiro */}
+                                <div className="flex flex-col gap-1">
+                                    <div className="flex justify-between text-sm text-gray-500">
+                                        <span>Subtotal</span>
+                                        <span>R$ {cartSubtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    {cartFee > 0 && (
+                                        <div className="flex justify-between text-sm text-orange-500 font-semibold">
+                                            <span>Acréscimo ({surcharges[selectedPayment]?.label})</span>
+                                            <span>+ R$ {cartFee.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between items-center pt-1 border-t border-gray-100 mt-1">
+                                        <span className="font-bold text-gray-700">Total</span>
+                                        <span className="text-2xl font-black text-gray-900">
+                                            R$ {cartTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
                                 </div>
 
                                 {auth.user ? (

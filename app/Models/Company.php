@@ -104,6 +104,11 @@ class Company extends Model
         return $this->hasMany(Table::class);
     }
 
+    public function paymentSurcharges(): HasMany
+    {
+        return $this->hasMany(PaymentSurcharge::class)->orderBy('payment_method');
+    }
+
     public function getTenantKeyName(): string
     {
         return 'id';

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\PaymentSurcharge;
 use App\Models\Product;
 use App\Services\DistanceService;
 use Illuminate\Http\Request;
@@ -86,7 +87,11 @@ class MarketplaceController extends Controller
         $lastVisited = array_slice($lastVisited, 0, 5); // Manter as últimas 5
         session()->put('last_visited_stores', $lastVisited);
 
-        $company->load(['products' => fn ($q) => $q->where('active', true)->where('is_marketplace', true)->with('category'), 'deliveryFeeRanges']);
+        $company->load([
+            'products' => fn ($q) => $q->where('active', true)->where('is_marketplace', true)->with('category'),
+            'deliveryFeeRanges',
+            'paymentSurcharges' => fn ($q) => $q->where('active', true),
+        ]);
 
         $distanceService = new DistanceService;
         $client = auth()->guard('client')->user();
@@ -123,6 +128,14 @@ class MarketplaceController extends Controller
                     'fee' => $r->fee,
                     'is_active' => $r->is_active,
                 ]),
+                'payment_surcharges' => $company->paymentSurcharges->mapWithKeys(fn ($s) => [
+                    $s->payment_method => [
+                        'type' => $s->type,
+                        'amount' => (float) $s->amount,
+                        'label' => $s->label(),
+                    ],
+                ]),
+                'payment_options' => Order::paymentOptions(),
             ],
             'productsByCategory' => $company->products
                 ->map(fn ($product) => [
@@ -181,6 +194,7 @@ class MarketplaceController extends Controller
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
+            'payment_method' => 'nullable|string|in:cash,debit,credit,pix',
             'notes' => 'nullable|string|max:1000',
         ]);
 
@@ -190,6 +204,7 @@ class MarketplaceController extends Controller
             'client_id' => $client->id,
             'status' => Order::STATUS_PENDING,
             'channel' => Order::CHANNEL_ONLINE,
+            'payment_method' => $request->payment_method,
             'notes' => $request->notes,
             'subtotal' => 0,
             'discount_amount' => 0,
@@ -221,9 +236,19 @@ class MarketplaceController extends Controller
             $subtotal += $itemTotal;
         }
 
+        $feeAmount = 0;
+        if ($request->payment_method) {
+            $surcharge = PaymentSurcharge::where('company_id', $company->id)
+                ->where('payment_method', $request->payment_method)
+                ->where('active', true)
+                ->first();
+            $feeAmount = $surcharge?->calculate($subtotal) ?? 0;
+        }
+
         $order->update([
             'subtotal' => $subtotal,
-            'total_amount' => $subtotal,
+            'fee_amount' => $feeAmount,
+            'total_amount' => $subtotal + $feeAmount,
         ]);
 
         return redirect()->route('marketplace.orders');

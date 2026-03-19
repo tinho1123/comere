@@ -5,6 +5,7 @@ namespace App\Filament\Admin\Resources;
 use App\Filament\Admin\Resources\TableSessionResource\Pages;
 use App\Filament\Admin\Resources\TableSessionResource\RelationManagers\ItemsRelationManager;
 use App\Models\Order;
+use App\Models\PaymentSurcharge;
 use App\Models\TableSession;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
@@ -86,10 +87,21 @@ class TableSessionResource extends Resource
                         ->label('Itens')
                         ->getStateUsing(fn (TableSession $record): int => $record->items()->count()),
 
-                    TextEntry::make('total_preview')
-                        ->label('Total consumido')
+                    TextEntry::make('subtotal_preview')
+                        ->label('Subtotal')
                         ->getStateUsing(fn (TableSession $record): string => 'R$ '.number_format($record->items()->sum('total_amount'), 2, ',', '.'))
                         ->color('primary'),
+
+                    TextEntry::make('surcharge_preview')
+                        ->label('Acréscimo')
+                        ->getStateUsing(fn (TableSession $record): string => $record->surcharge_amount > 0 ? 'R$ '.number_format($record->surcharge_amount, 2, ',', '.') : '—')
+                        ->color('warning'),
+
+                    TextEntry::make('total_preview')
+                        ->label('Total final')
+                        ->getStateUsing(fn (TableSession $record): string => 'R$ '.number_format($record->total_amount ?? $record->items()->sum('total_amount'), 2, ',', '.'))
+                        ->color('success')
+                        ->weight('bold'),
 
                     TextEntry::make('payment_method')
                         ->label('Pagamento')
@@ -97,7 +109,7 @@ class TableSessionResource extends Resource
                         ->color('success')
                         ->formatStateUsing(fn (?string $state): string => $state ? (Order::paymentOptions()[$state] ?? $state) : '—')
                         ->placeholder('—'),
-                ])->columns(3),
+                ])->columns(4),
         ]);
     }
 
@@ -161,23 +173,50 @@ class TableSessionResource extends Resource
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->modalHeading('Fechar Mesa')
-                    ->modalDescription('Informe o método de pagamento e confirme o fechamento.')
+                    ->modalDescription(fn (TableSession $record): string => 'Subtotal: R$ '.number_format($record->items()->sum('total_amount'), 2, ',', '.').'. Selecione o método de pagamento para calcular o total final.')
                     ->visible(fn (TableSession $record): bool => $record->isOpen())
-                    ->form([
-                        Select::make('payment_method')
-                            ->label('Método de pagamento')
-                            ->options(Order::paymentOptions())
-                            ->required()
-                            ->native(false),
-                    ])
+                    ->form(function (TableSession $record): array {
+                        $surcharges = PaymentSurcharge::where('company_id', $record->company_id)
+                            ->where('active', true)
+                            ->get()
+                            ->keyBy('payment_method');
+
+                        $options = collect(Order::paymentOptions())->mapWithKeys(function ($label, $method) use ($surcharges) {
+                            $surcharge = $surcharges->get($method);
+                            if ($surcharge) {
+                                $label .= ' ('.$surcharge->label().')';
+                            }
+
+                            return [$method => $label];
+                        })->all();
+
+                        return [
+                            Select::make('payment_method')
+                                ->label('Método de pagamento')
+                                ->options($options)
+                                ->required()
+                                ->native(false),
+                        ];
+                    })
                     ->action(function (TableSession $record, array $data): void {
+                        $subtotal = (float) $record->items()->sum('total_amount');
+                        $surchargeAmount = $record->calculateSurcharge($subtotal, $data['payment_method']);
+                        $total = $subtotal + $surchargeAmount;
+
                         $record->close($data['payment_method']);
 
                         $paymentLabel = Order::paymentOptions()[$data['payment_method']] ?? $data['payment_method'];
+                        $body = 'Subtotal: R$ '.number_format($subtotal, 2, ',', '.').'. ';
+
+                        if ($surchargeAmount > 0) {
+                            $body .= 'Acréscimo: R$ '.number_format($surchargeAmount, 2, ',', '.').'. ';
+                        }
+
+                        $body .= 'Total: R$ '.number_format($total, 2, ',', '.').'. Pagamento: '.$paymentLabel.'.';
 
                         Notification::make()
                             ->title('Mesa fechada!')
-                            ->body('Pagamento: '.$paymentLabel.'. Total: R$ '.number_format($record->fresh()->total_amount, 2, ',', '.'))
+                            ->body($body)
                             ->success()
                             ->send();
                     }),
