@@ -1,12 +1,11 @@
 <x-filament-panels::page>
-    <x-filament::section>
-        <x-filament-panels::form wire:submit="save">
-            {{ $this->form }}
+    <form wire:submit.prevent="save">
+        {{ $this->form }}
 
-            <x-filament-panels::form.actions
-                :actions="$this->getCachedFormActions()"
-                :full-width="$this->hasFullWidthFormActions()"
-            />
-        </x-filament-panels::form>
-    </x-filament::section>
+        <div class="mt-4 flex justify-end">
+            <x-filament::button type="submit">
+                Salvar
+            </x-filament::button>
+        </div>
+    </form>
 </x-filament-panels::page>

@@ -3,7 +3,6 @@
 namespace App\Filament\Admin\Pages;
 
 use App\Models\Order;
-use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Section;
@@ -72,14 +71,5 @@ class PaymentSettings extends Page implements HasForms
             ->title('Configurações salvas!')
             ->success()
             ->send();
-    }
-
-    protected function getHeaderActions(): array
-    {
-        return [
-            Action::make('save')
-                ->label('Salvar')
-                ->action('save'),
-        ];
     }
 }
