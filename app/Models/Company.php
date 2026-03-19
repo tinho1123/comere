@@ -38,6 +38,7 @@ class Company extends Model
         'address_state',
         'latitude',
         'longitude',
+        'accepted_payment_methods',
     ];
 
     protected $casts = [
@@ -47,7 +48,19 @@ class Company extends Model
         'is_promoted' => 'boolean',
         'latitude' => 'float',
         'longitude' => 'float',
+        'accepted_payment_methods' => 'array',
     ];
+
+    public function getEffectivePaymentMethods(): array
+    {
+        $accepted = $this->accepted_payment_methods;
+
+        if (empty($accepted)) {
+            return array_keys(Order::paymentOptions());
+        }
+
+        return $accepted;
+    }
 
     public function users(): BelongsToMany
     {
@@ -102,11 +115,6 @@ class Company extends Model
     public function tables(): HasMany
     {
         return $this->hasMany(Table::class);
-    }
-
-    public function paymentSurcharges(): HasMany
-    {
-        return $this->hasMany(PaymentSurcharge::class)->orderBy('payment_method');
     }
 
     public function getTenantKeyName(): string

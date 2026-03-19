@@ -5,7 +5,6 @@ namespace App\Filament\Admin\Resources;
 use App\Filament\Admin\Resources\TableSessionResource\Pages;
 use App\Filament\Admin\Resources\TableSessionResource\RelationManagers\ItemsRelationManager;
 use App\Models\Order;
-use App\Models\PaymentSurcharge;
 use App\Models\TableSession;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
@@ -176,19 +175,11 @@ class TableSessionResource extends Resource
                     ->modalDescription(fn (TableSession $record): string => 'Subtotal: R$ '.number_format($record->items()->sum('total_amount'), 2, ',', '.').'. Selecione o método de pagamento para calcular o total final.')
                     ->visible(fn (TableSession $record): bool => $record->isOpen())
                     ->form(function (TableSession $record): array {
-                        $surcharges = PaymentSurcharge::where('company_id', $record->company_id)
-                            ->where('active', true)
-                            ->get()
-                            ->keyBy('payment_method');
-
-                        $options = collect(Order::paymentOptions())->mapWithKeys(function ($label, $method) use ($surcharges) {
-                            $surcharge = $surcharges->get($method);
-                            if ($surcharge) {
-                                $label .= ' ('.$surcharge->label().')';
-                            }
-
-                            return [$method => $label];
-                        })->all();
+                        $record->loadMissing('company');
+                        $accepted = $record->company->getEffectivePaymentMethods();
+                        $options = collect(Order::paymentOptions())
+                            ->only($accepted)
+                            ->all();
 
                         return [
                             Select::make('payment_method')
@@ -199,8 +190,9 @@ class TableSessionResource extends Resource
                         ];
                     })
                     ->action(function (TableSession $record, array $data): void {
-                        $subtotal = (float) $record->items()->sum('total_amount');
-                        $surchargeAmount = $record->calculateSurcharge($subtotal, $data['payment_method']);
+                        $items = $record->items()->with('product')->get();
+                        $subtotal = (float) $items->sum('total_amount');
+                        $surchargeAmount = $record->calculateSurcharge($subtotal, $data['payment_method'], $items);
                         $total = $subtotal + $surchargeAmount;
 
                         $record->close($data['payment_method']);

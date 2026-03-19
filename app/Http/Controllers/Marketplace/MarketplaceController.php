@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\PaymentSurcharge;
 use App\Models\Product;
 use App\Services\DistanceService;
 use Illuminate\Http\Request;
@@ -90,7 +89,6 @@ class MarketplaceController extends Controller
         $company->load([
             'products' => fn ($q) => $q->where('active', true)->where('is_marketplace', true)->with('category'),
             'deliveryFeeRanges',
-            'paymentSurcharges' => fn ($q) => $q->where('active', true),
         ]);
 
         $distanceService = new DistanceService;
@@ -128,13 +126,7 @@ class MarketplaceController extends Controller
                     'fee' => $r->fee,
                     'is_active' => $r->is_active,
                 ]),
-                'payment_surcharges' => $company->paymentSurcharges->mapWithKeys(fn ($s) => [
-                    $s->payment_method => [
-                        'type' => $s->type,
-                        'amount' => (float) $s->amount,
-                        'label' => $s->label(),
-                    ],
-                ]),
+                'accepted_payment_methods' => $company->getEffectivePaymentMethods(),
                 'payment_options' => Order::paymentOptions(),
             ],
             'productsByCategory' => $company->products
@@ -149,6 +141,7 @@ class MarketplaceController extends Controller
                     'image' => $product->image ? Storage::url($product->image) : null,
                     'is_for_favored' => $product->is_for_favored,
                     'favored_price' => $product->favored_price,
+                    'payment_surcharges' => $product->payment_surcharges ?? [],
                     'category' => $product->category?->name,
                 ])
                 ->groupBy('category'),
@@ -238,17 +231,21 @@ class MarketplaceController extends Controller
 
         $feeAmount = 0;
         if ($request->payment_method) {
-            $surcharge = PaymentSurcharge::where('company_id', $company->id)
-                ->where('payment_method', $request->payment_method)
-                ->where('active', true)
-                ->first();
-            $feeAmount = $surcharge?->calculate($subtotal) ?? 0;
+            foreach ($order->items()->with('product')->get() as $item) {
+                if ($item->product) {
+                    $feeAmount += $item->product->getSurchargeFor(
+                        $request->payment_method,
+                        (float) $item->total_amount,
+                        $item->quantity
+                    );
+                }
+            }
         }
 
         $order->update([
             'subtotal' => $subtotal,
-            'fee_amount' => $feeAmount,
-            'total_amount' => $subtotal + $feeAmount,
+            'fee_amount' => round($feeAmount, 2),
+            'total_amount' => $subtotal + round($feeAmount, 2),
         ]);
 
         return redirect()->route('marketplace.orders');

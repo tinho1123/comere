@@ -12,18 +12,24 @@ export default function MarketplaceShow({ company, productsByCategory }) {
     const [isCheckingOut, setIsCheckingOut] = useState(false);
     const [selectedPayment, setSelectedPayment] = useState('');
 
-    const surcharges = company.payment_surcharges ?? {};
-    const paymentOptions = company.payment_options ?? {};
+    const acceptedMethods = company.accepted_payment_methods ?? [];
+    const allPaymentOptions = company.payment_options ?? {};
+    const paymentOptions = Object.fromEntries(
+        Object.entries(allPaymentOptions).filter(([key]) => acceptedMethods.includes(key))
+    );
 
     const cartItems = Object.values(cart);
     const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
     const cartSubtotal = cartItems.reduce((sum, item) => sum + Number(item.product.amount) * item.quantity, 0);
 
     const cartFee = (() => {
-        if (!selectedPayment || !surcharges[selectedPayment]) return 0;
-        const s = surcharges[selectedPayment];
-        if (s.type === 'percent') return cartSubtotal * (s.amount / 100);
-        return s.amount;
+        if (!selectedPayment) return 0;
+        return cartItems.reduce((sum, { product, quantity }) => {
+            const s = product.payment_surcharges?.[selectedPayment];
+            if (!s || !s.amount || s.amount <= 0) return sum;
+            const itemTotal = Number(product.amount) * quantity;
+            return sum + (s.type === 'percent' ? itemTotal * (s.amount / 100) : s.amount * quantity);
+        }, 0);
     })();
 
     const cartTotal = cartSubtotal + cartFee;
@@ -324,7 +330,7 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                                     </div>
                                     {cartFee > 0 && (
                                         <div className="flex justify-between text-sm text-orange-500 font-semibold">
-                                            <span>Acréscimo ({surcharges[selectedPayment]?.label})</span>
+                                            <span>Acréscimo</span>
                                             <span>+ R$ {cartFee.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     )}

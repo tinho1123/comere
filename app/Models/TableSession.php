@@ -88,7 +88,7 @@ class TableSession extends Model
         }
 
         $subtotal = (float) $items->sum('total_amount');
-        $surchargeAmount = $this->calculateSurcharge($subtotal, $paymentMethod);
+        $surchargeAmount = $this->calculateSurcharge($subtotal, $paymentMethod, $items);
         $total = $subtotal + $surchargeAmount;
 
         $this->update([
@@ -103,18 +103,22 @@ class TableSession extends Model
         $this->createOrder($items, $subtotal, $surchargeAmount, $total, $paymentMethod);
     }
 
-    public function calculateSurcharge(float $subtotal, ?string $paymentMethod): float
+    public function calculateSurcharge(float $subtotal, ?string $paymentMethod, ?Collection $loadedItems = null): float
     {
         if (! $paymentMethod) {
             return 0.0;
         }
 
-        $surcharge = PaymentSurcharge::where('company_id', $this->company_id)
-            ->where('payment_method', $paymentMethod)
-            ->where('active', true)
-            ->first();
+        $items = $loadedItems ?? $this->items()->with('product')->get();
 
-        return $surcharge?->calculate($subtotal) ?? 0.0;
+        $total = 0.0;
+        foreach ($items as $item) {
+            if ($item->product) {
+                $total += $item->product->getSurchargeFor($paymentMethod, (float) $item->total_amount, $item->quantity);
+            }
+        }
+
+        return round($total, 2);
     }
 
     private function createOrder(Collection $items, float $subtotal, float $surchargeAmount, float $total, ?string $paymentMethod): void
