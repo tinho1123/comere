@@ -86,8 +86,13 @@ class TableSessionResource extends Resource
                         ->label('Itens')
                         ->getStateUsing(fn (TableSession $record): int => $record->items()->count()),
 
+                    TextEntry::make('subtotal_preview')
+                        ->label('Subtotal')
+                        ->getStateUsing(fn (TableSession $record): string => 'R$ '.number_format($record->items()->sum('total_amount'), 2, ',', '.'))
+                        ->color('primary'),
+
                     TextEntry::make('total_preview')
-                        ->label('Total')
+                        ->label('Total final')
                         ->getStateUsing(fn (TableSession $record): string => 'R$ '.number_format($record->total_amount ?? $record->items()->sum('total_amount'), 2, ',', '.'))
                         ->color('success')
                         ->weight('bold'),
@@ -98,7 +103,7 @@ class TableSessionResource extends Resource
                         ->color('success')
                         ->formatStateUsing(fn (?string $state): string => $state ? (Order::paymentOptions()[$state] ?? $state) : '—')
                         ->placeholder('—'),
-                ])->columns(3),
+                ])->columns(4),
         ]);
     }
 
