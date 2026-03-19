@@ -22,6 +22,11 @@ class UsersRelationManager extends RelationManager
 
     protected static ?string $modelLabel = 'Usuário';
 
+    public static function isReadOnly(): bool
+    {
+        return false;
+    }
+
     public function form(Form $form): Form
     {
         return $form->schema([

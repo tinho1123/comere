@@ -476,6 +476,11 @@ class CompanyResource extends Resource
                     ->icon('heroicon-o-banknotes')
                     ->color('warning')
                     ->url(fn (Company $record): string => static::getUrl('view', ['record' => $record])),
+                Action::make('manage_users')
+                    ->label('Usuários')
+                    ->icon('heroicon-o-users')
+                    ->color('info')
+                    ->url(fn (Company $record): string => static::getUrl('edit', ['record' => $record])),
                 EditAction::make(),
             ]);
     }
