@@ -126,8 +126,6 @@ class MarketplaceController extends Controller
                     'fee' => $r->fee,
                     'is_active' => $r->is_active,
                 ]),
-                'accepted_payment_methods' => $company->getEffectivePaymentMethods(),
-                'payment_options' => Order::paymentOptions(),
             ],
             'productsByCategory' => $company->products
                 ->map(fn ($product) => [
@@ -141,7 +139,6 @@ class MarketplaceController extends Controller
                     'image' => $product->image ? Storage::url($product->image) : null,
                     'is_for_favored' => $product->is_for_favored,
                     'favored_price' => $product->favored_price,
-                    'payment_surcharges' => $product->payment_surcharges ?? [],
                     'category' => $product->category?->name,
                 ])
                 ->groupBy('category'),
@@ -187,7 +184,6 @@ class MarketplaceController extends Controller
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
-            'payment_method' => 'nullable|string|in:cash,debit,credit,pix',
             'notes' => 'nullable|string|max:1000',
         ]);
 
@@ -197,7 +193,6 @@ class MarketplaceController extends Controller
             'client_id' => $client->id,
             'status' => Order::STATUS_PENDING,
             'channel' => Order::CHANNEL_ONLINE,
-            'payment_method' => $request->payment_method,
             'notes' => $request->notes,
             'subtotal' => 0,
             'discount_amount' => 0,
@@ -229,23 +224,9 @@ class MarketplaceController extends Controller
             $subtotal += $itemTotal;
         }
 
-        $feeAmount = 0;
-        if ($request->payment_method) {
-            foreach ($order->items()->with('product')->get() as $item) {
-                if ($item->product) {
-                    $feeAmount += $item->product->getSurchargeFor(
-                        $request->payment_method,
-                        (float) $item->total_amount,
-                        $item->quantity
-                    );
-                }
-            }
-        }
-
         $order->update([
             'subtotal' => $subtotal,
-            'fee_amount' => round($feeAmount, 2),
-            'total_amount' => $subtotal + round($feeAmount, 2),
+            'total_amount' => $subtotal,
         ]);
 
         return redirect()->route('marketplace.orders');

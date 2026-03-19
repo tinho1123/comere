@@ -33,7 +33,6 @@ class Product extends Model
         'is_for_favored',
         'favored_price',
         'is_marketplace',
-        'payment_surcharges',
         'category_id',
         'active',
         'uuid',
@@ -44,24 +43,7 @@ class Product extends Model
         'isCool' => 'boolean',
         'is_for_favored' => 'boolean',
         'is_marketplace' => 'boolean',
-        'payment_surcharges' => 'array',
     ];
-
-    public function getSurchargeFor(string $paymentMethod, float $itemTotal, int $quantity = 1): float
-    {
-        $surcharges = $this->payment_surcharges ?? [];
-        $config = $surcharges[$paymentMethod] ?? null;
-
-        if (! $config || empty($config['amount'])) {
-            return 0.0;
-        }
-
-        if ($config['type'] === 'percent') {
-            return round($itemTotal * ($config['amount'] / 100), 2);
-        }
-
-        return round((float) $config['amount'] * $quantity, 2);
-    }
 
     public function company(): BelongsTo
     {
