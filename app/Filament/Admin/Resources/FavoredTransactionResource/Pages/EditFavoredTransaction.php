@@ -18,4 +18,16 @@ class EditFavoredTransaction extends EditRecord
             Actions\DeleteAction::make(),
         ];
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
+
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        $data['client_name'] = $this->record->client?->name ?? $this->record->client_name;
+
+        return $data;
+    }
 }
