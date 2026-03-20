@@ -22,6 +22,15 @@ class HandleInertiaRequests extends Middleware
      *
      * @see https://inertiajs.com/asset-versioning
      */
+    public function handle(Request $request, \Closure $next): mixed
+    {
+        if ($request->is('livewire/*') || $request->is('admin/*')) {
+            return $next($request);
+        }
+
+        return parent::handle($request, $next);
+    }
+
     public function version(Request $request): ?string
     {
         return parent::version($request);
