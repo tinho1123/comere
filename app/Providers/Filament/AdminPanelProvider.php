@@ -38,7 +38,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->login()
+            ->login(\App\Filament\Admin\Pages\Login::class)
             ->colors([
                 'danger' => Color::Rose,
                 'gray' => Color::Gray,

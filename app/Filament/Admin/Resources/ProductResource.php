@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\ProductResource\Pages;
 use App\Models\Product;
+use App\Models\ProductSubcategory;
 use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -180,11 +181,65 @@ class ProductResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('category.name')
                     ->label('Categoria')
-                    ->sortable(),
+                    ->sortable()
+                    ->color('primary')
+                    ->action(
+                        Tables\Actions\Action::make('edit_category')
+                            ->label('Alterar categoria')
+                            ->modalHeading('Alterar Categoria / Subcategoria')
+                            ->fillForm(fn (Product $record): array => [
+                                'category_id' => $record->category_id,
+                                'subcategory_id' => $record->subcategory_id,
+                            ])
+                            ->form(fn (): array => [
+                                Forms\Components\Select::make('category_id')
+                                    ->label('Categoria')
+                                    ->relationship('category', 'name')
+                                    ->required()
+                                    ->live()
+                                    ->afterStateUpdated(fn (Forms\Set $set) => $set('subcategory_id', null)),
+                                Forms\Components\Select::make('subcategory_id')
+                                    ->label('Subcategoria')
+                                    ->options(fn (Forms\Get $get): array => ProductSubcategory::where('company_id', Filament::getTenant()->id)
+                                        ->where('active', true)
+                                        ->pluck('name', 'id')
+                                        ->toArray()
+                                    )
+                                    ->nullable()
+                                    ->placeholder('Nenhuma'),
+                            ])
+                            ->action(fn (Product $record, array $data) => $record->update([
+                                'category_id' => $data['category_id'],
+                                'subcategory_id' => $data['subcategory_id'],
+                            ]))
+                    ),
                 Tables\Columns\TextColumn::make('subcategory.name')
                     ->label('Subcategoria')
                     ->placeholder('—')
-                    ->sortable(),
+                    ->sortable()
+                    ->color('primary')
+                    ->action(
+                        Tables\Actions\Action::make('edit_subcategory')
+                            ->label('Alterar subcategoria')
+                            ->modalHeading('Alterar Subcategoria')
+                            ->fillForm(fn (Product $record): array => [
+                                'subcategory_id' => $record->subcategory_id,
+                            ])
+                            ->form(fn (): array => [
+                                Forms\Components\Select::make('subcategory_id')
+                                    ->label('Subcategoria')
+                                    ->options(fn (): array => ProductSubcategory::where('company_id', Filament::getTenant()->id)
+                                        ->where('active', true)
+                                        ->pluck('name', 'id')
+                                        ->toArray()
+                                    )
+                                    ->nullable()
+                                    ->placeholder('Nenhuma'),
+                            ])
+                            ->action(fn (Product $record, array $data) => $record->update([
+                                'subcategory_id' => $data['subcategory_id'],
+                            ]))
+                    ),
                 Tables\Columns\IconColumn::make('active')
                     ->label('Ativo')
                     ->boolean(),

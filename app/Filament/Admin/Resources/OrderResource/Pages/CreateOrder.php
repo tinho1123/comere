@@ -32,8 +32,18 @@ class CreateOrder extends CreateRecord
             'fee_amount' => 0,
             'total_amount' => $total,
             'status' => Order::STATUS_PENDING,
-            'channel' => Order::CHANNEL_PRESENTIAL,
+            'channel' => $data['channel'] ?? Order::CHANNEL_PRESENTIAL,
+            'payment_method' => $data['payment_method'] ?? null,
             'notes' => $data['notes'] ?? null,
+            'delivery_zip' => $data['delivery_zip'] ?? null,
+            'delivery_street' => $data['delivery_street'] ?? null,
+            'delivery_number' => $data['delivery_number'] ?? null,
+            'delivery_complement' => $data['delivery_complement'] ?? null,
+            'delivery_neighborhood' => $data['delivery_neighborhood'] ?? null,
+            'delivery_city' => $data['delivery_city'] ?? null,
+            'delivery_state' => $data['delivery_state'] ?? null,
+            'delivery_latitude' => $data['delivery_latitude'] ?? null,
+            'delivery_longitude' => $data['delivery_longitude'] ?? null,
         ]);
 
         foreach ($items as $item) {

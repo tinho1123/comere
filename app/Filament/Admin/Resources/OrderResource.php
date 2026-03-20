@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\OrderResource\Pages;
 use App\Models\Client;
+use App\Models\ClientAddress;
 use App\Models\Delivery;
 use App\Models\Driver;
 use App\Models\Order;
@@ -11,6 +12,7 @@ use App\Models\Product;
 use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Infolists;
 use Filament\Infolists\Infolist;
@@ -19,6 +21,8 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 
 class OrderResource extends Resource
@@ -46,6 +50,21 @@ class OrderResource extends Resource
     public static function form(Form $form): Form
     {
         return $form->schema([
+            Forms\Components\Section::make('Tipo de pedido')
+                ->schema([
+                    Forms\Components\Select::make('channel')
+                        ->label('Canal')
+                        ->options([
+                            Order::CHANNEL_ONLINE => 'Online (Delivery)',
+                            Order::CHANNEL_PRESENTIAL => 'Presencial',
+                        ])
+                        ->default(Order::CHANNEL_PRESENTIAL)
+                        ->native(false)
+                        ->required()
+                        ->live()
+                        ->visibleOn('create'),
+                ]),
+
             Forms\Components\Section::make('Cliente')
                 ->schema([
                     Forms\Components\Select::make('client_id')
@@ -59,12 +78,187 @@ class OrderResource extends Resource
                         })
                         ->searchable()
                         ->required()
+                        ->live()
+                        ->afterStateUpdated(fn (Set $set) => $set('client_address_id', null))
                         ->visibleOn('create'),
 
                     Forms\Components\TextInput::make('client.name')
                         ->label('Cliente')
                         ->disabled()
                         ->visibleOn('edit'),
+                ]),
+
+            Forms\Components\Section::make('Endereço de entrega')
+                ->description('Obrigatório para pedidos online.')
+                ->visibleOn('create')
+                ->visible(fn (Get $get): bool => $get('channel') === Order::CHANNEL_ONLINE)
+                ->schema([
+                    Forms\Components\Select::make('client_address_id')
+                        ->label('Usar endereço salvo do cliente')
+                        ->options(function (Get $get): array {
+                            $clientId = $get('client_id');
+                            if (! $clientId) {
+                                return [];
+                            }
+
+                            return ClientAddress::where('client_id', $clientId)
+                                ->get()
+                                ->mapWithKeys(fn ($a) => [
+                                    $a->id => ($a->label ? "[$a->label] " : '')
+                                        .$a->street.', '.$a->number
+                                        .($a->complement ? " {$a->complement}" : '')
+                                        ." — {$a->city}/{$a->state}",
+                                ])
+                                ->toArray();
+                        })
+                        ->placeholder('Ou preencha manualmente abaixo')
+                        ->nullable()
+                        ->live()
+                        ->afterStateUpdated(function ($state, Set $set): void {
+                            if (! $state) {
+                                return;
+                            }
+                            $addr = ClientAddress::find($state);
+                            if (! $addr) {
+                                return;
+                            }
+                            $set('delivery_zip', $addr->zip_code);
+                            $set('delivery_street', $addr->street);
+                            $set('delivery_number', $addr->number);
+                            $set('delivery_complement', $addr->complement);
+                            $set('delivery_neighborhood', $addr->neighborhood);
+                            $set('delivery_city', $addr->city);
+                            $set('delivery_state', $addr->state);
+                            $set('delivery_latitude', $addr->latitude);
+                            $set('delivery_longitude', $addr->longitude);
+                        })
+                        ->columnSpanFull(),
+
+                    Forms\Components\TextInput::make('delivery_zip')
+                        ->label('CEP')
+                        ->mask('99999-999')
+                        ->required(fn (Get $get): bool => $get('channel') === Order::CHANNEL_ONLINE)
+                        ->live(debounce: 600)
+                        ->afterStateUpdated(function ($state, Set $set): void {
+                            $cep = preg_replace('/\D/', '', $state ?? '');
+                            if (strlen($cep) !== 8) {
+                                return;
+                            }
+                            $response = Http::timeout(5)->get("https://viacep.com.br/ws/{$cep}/json/");
+                            if ($response->successful() && ! isset($response->json()['erro'])) {
+                                $data = $response->json();
+                                $set('delivery_street', $data['logradouro'] ?? null);
+                                $set('delivery_neighborhood', $data['bairro'] ?? null);
+                                $set('delivery_city', $data['localidade'] ?? null);
+                                $set('delivery_state', $data['uf'] ?? null);
+                                $set('delivery_latitude', null);
+                                $set('delivery_longitude', null);
+                            }
+                        })
+                        ->columnSpan(1),
+
+                    Forms\Components\Grid::make(3)->schema([
+                        Forms\Components\TextInput::make('delivery_street')
+                            ->label('Rua / Logradouro')
+                            ->required(fn (Get $get): bool => $get('channel') === Order::CHANNEL_ONLINE)
+                            ->columnSpan(2),
+
+                        Forms\Components\TextInput::make('delivery_number')
+                            ->label('Número')
+                            ->required(fn (Get $get): bool => $get('channel') === Order::CHANNEL_ONLINE)
+                            ->columnSpan(1),
+                    ]),
+
+                    Forms\Components\Grid::make(3)->schema([
+                        Forms\Components\TextInput::make('delivery_complement')
+                            ->label('Complemento')
+                            ->nullable()
+                            ->columnSpan(1),
+
+                        Forms\Components\TextInput::make('delivery_neighborhood')
+                            ->label('Bairro')
+                            ->columnSpan(1),
+
+                        Forms\Components\TextInput::make('delivery_city')
+                            ->label('Cidade')
+                            ->columnSpan(1),
+                    ]),
+
+                    Forms\Components\TextInput::make('delivery_state')
+                        ->label('Estado (UF)')
+                        ->maxLength(2)
+                        ->columnSpan(1),
+
+                    Forms\Components\Hidden::make('delivery_latitude'),
+                    Forms\Components\Hidden::make('delivery_longitude'),
+
+                    Forms\Components\Actions::make([
+                        Forms\Components\Actions\Action::make('geocode')
+                            ->label('Buscar no mapa')
+                            ->icon('heroicon-o-map-pin')
+                            ->color('info')
+                            ->action(function (Get $get, Set $set): void {
+                                $parts = array_filter([
+                                    trim(($get('delivery_street') ?? '').' '.($get('delivery_number') ?? '')),
+                                    $get('delivery_neighborhood'),
+                                    $get('delivery_city'),
+                                    $get('delivery_state'),
+                                    'Brasil',
+                                ]);
+                                $query = implode(', ', $parts);
+                                if (! $query) {
+                                    return;
+                                }
+                                $response = Http::withHeaders(['User-Agent' => 'Comere/1.0 contact@comere.app'])
+                                    ->timeout(5)
+                                    ->get('https://nominatim.openstreetmap.org/search', [
+                                        'q' => $query,
+                                        'format' => 'json',
+                                        'limit' => 1,
+                                        'countrycodes' => 'br',
+                                    ]);
+                                if ($response->successful() && count($response->json()) > 0) {
+                                    $result = $response->json()[0];
+                                    $set('delivery_latitude', $result['lat']);
+                                    $set('delivery_longitude', $result['lon']);
+                                } else {
+                                    Notification::make()
+                                        ->warning()
+                                        ->title('Endereço não encontrado')
+                                        ->body('Verifique os dados e tente novamente.')
+                                        ->send();
+                                }
+                            }),
+                    ]),
+
+                    Forms\Components\Placeholder::make('map_preview')
+                        ->label('Localização no mapa')
+                        ->content(function (Get $get): HtmlString {
+                            $lat = $get('delivery_latitude');
+                            $lng = $get('delivery_longitude');
+                            if (! $lat || ! $lng) {
+                                return new HtmlString(
+                                    '<div class="flex items-center justify-center rounded-xl border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800" style="height:110px">'
+                                    .'<p class="text-sm text-gray-400">Preencha o endereço e clique em <strong>Buscar no mapa</strong></p>'
+                                    .'</div>'
+                                );
+                            }
+                            $latF = (float) $lat;
+                            $lngF = (float) $lng;
+                            $bbox = ($lngF - 0.005).','
+                                .($latF - 0.005).','
+                                .($lngF + 0.005).','
+                                .($latF + 0.005);
+                            $src = "https://www.openstreetmap.org/export/embed.html?bbox={$bbox}&layer=mapnik&marker={$latF},{$lngF}";
+
+                            return new HtmlString(
+                                '<div class="w-full rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm" style="height:280px">'
+                                ."<iframe src=\"{$src}\" style=\"width:100%;height:100%;border:0\" loading=\"lazy\"></iframe>"
+                                .'</div>'
+                                .'<p class="text-xs text-gray-500 mt-1">Lat: '.number_format($latF, 6).' &nbsp;|&nbsp; Lng: '.number_format($lngF, 6).'</p>'
+                            );
+                        })
+                        ->columnSpanFull(),
                 ]),
 
             Forms\Components\Section::make('Produtos')

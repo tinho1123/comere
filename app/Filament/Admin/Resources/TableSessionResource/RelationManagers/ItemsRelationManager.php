@@ -123,6 +123,8 @@ class ItemsRelationManager extends RelationManager
                     ->using(function (array $data): TableSessionItem {
                         $data['table_session_id'] = $this->getOwnerRecord()->id;
                         $data['total_amount'] = $data['quantity'] * $data['unit_price'];
+                        $data['is_delivered'] = true;
+                        $data['delivered_at'] = now();
 
                         return TableSessionItem::create($data);
                     }),

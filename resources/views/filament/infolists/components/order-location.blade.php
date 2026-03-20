@@ -1,26 +1,44 @@
 @php
-    $record     = $getRecord();
-    $addr       = $record->client?->defaultAddress()->first();
-    $company    = $record->company;
+    $record  = $getRecord();
+    $company = $record->company;
 
-    $clientLat  = $addr?->latitude  ? (float) $addr->latitude  : null;
-    $clientLng  = $addr?->longitude ? (float) $addr->longitude : null;
-    $storeLat   = $company?->latitude  ? (float) $company->latitude  : null;
-    $storeLng   = $company?->longitude ? (float) $company->longitude : null;
+    // Prioridade: endereço salvo no pedido (online) > endereço padrão do cliente
+    $hasOrderAddress = $record->delivery_latitude && $record->delivery_longitude;
 
-    $hasBoth    = $clientLat && $clientLng && $storeLat && $storeLng;
-    $hasClient  = $clientLat && $clientLng;
+    if ($hasOrderAddress) {
+        $clientLat = (float) $record->delivery_latitude;
+        $clientLng = (float) $record->delivery_longitude;
+        $clientAddressText = implode(', ', array_filter([
+            trim(($record->delivery_street ?? '') . ', ' . ($record->delivery_number ?? '')),
+            $record->delivery_complement,
+            $record->delivery_neighborhood,
+            ($record->delivery_city ?? '') . '/' . ($record->delivery_state ?? ''),
+        ]));
+        $clientZip = $record->delivery_zip;
+        $addressLabel = 'Endereço de entrega';
+    } else {
+        $addr = $record->client?->defaultAddress()->first();
+        $clientLat = $addr?->latitude  ? (float) $addr->latitude  : null;
+        $clientLng = $addr?->longitude ? (float) $addr->longitude : null;
+        $clientAddressText = $addr
+            ? "{$addr->street}, {$addr->number}" . ($addr->complement ? ", {$addr->complement}" : '') . " — {$addr->neighborhood}, {$addr->city}/{$addr->state}"
+            : null;
+        $clientZip = $addr?->zip_code;
+        $addressLabel = 'Endereço do Cliente';
+    }
 
-    $distance   = null;
+    $storeLat = $company?->latitude  ? (float) $company->latitude  : null;
+    $storeLng = $company?->longitude ? (float) $company->longitude : null;
+
+    $hasBoth   = $clientLat && $clientLng && $storeLat && $storeLng;
+    $hasClient = $clientLat && $clientLng;
+
+    $distance = null;
     if ($hasBoth) {
         $distance = app(\App\Services\DistanceService::class)->calculate(
             $storeLat, $storeLng, $clientLat, $clientLng
         );
     }
-
-    $clientAddressText = $addr
-        ? "{$addr->street}, {$addr->number}" . ($addr->complement ? ", {$addr->complement}" : '') . " — {$addr->neighborhood}, {$addr->city}/{$addr->state}"
-        : null;
 
     $storeAddressText = $company?->address_street
         ? "{$company->address_street}, {$company->address_number} — {$company->address_neighborhood}, {$company->address_city}/{$company->address_state}"
@@ -44,10 +62,12 @@
         {{-- Endereços e distância --}}
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-4">
             <div class="rounded-lg bg-gray-50 dark:bg-gray-800 p-4">
-                <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Endereço do Cliente</p>
+                <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">{{ $addressLabel }}</p>
                 @if ($clientAddressText)
                     <p class="text-sm text-gray-800 dark:text-gray-200">{{ $clientAddressText }}</p>
-                    <p class="text-xs text-gray-400 mt-1">CEP: {{ $addr->zip_code }}</p>
+                    @if ($clientZip)
+                        <p class="text-xs text-gray-400 mt-1">CEP: {{ $clientZip }}</p>
+                    @endif
                 @else
                     <p class="text-sm text-gray-400 italic">Não cadastrado</p>
                 @endif
@@ -121,7 +141,7 @@
                             });
                             L.marker([clientLat, clientLng], { icon: clientIcon })
                                 .addTo(map)
-                                .bindTooltip('{{ addslashes($addr?->label ?? 'Cliente') }}', { permanent: true, direction: 'top', offset: [0, -10] });
+                                .bindTooltip('{{ addslashes($addressLabel) }}', { permanent: true, direction: 'top', offset: [0, -10] });
                             bounds.push([clientLat, clientLng]);
                         }
 

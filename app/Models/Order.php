@@ -60,6 +60,15 @@ class Order extends Model
         'shipped_at',
         'delivered_at',
         'cancelled_at',
+        'delivery_zip',
+        'delivery_street',
+        'delivery_number',
+        'delivery_complement',
+        'delivery_neighborhood',
+        'delivery_city',
+        'delivery_state',
+        'delivery_latitude',
+        'delivery_longitude',
     ];
 
     protected $casts = [
@@ -67,6 +76,8 @@ class Order extends Model
         'discount_amount' => 'decimal:2',
         'fee_amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
+        'delivery_latitude' => 'float',
+        'delivery_longitude' => 'float',
         'confirmed_at' => 'datetime',
         'shipped_at' => 'datetime',
         'delivered_at' => 'datetime',
