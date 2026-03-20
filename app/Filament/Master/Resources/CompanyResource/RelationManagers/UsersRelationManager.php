@@ -22,7 +22,7 @@ class UsersRelationManager extends RelationManager
 
     protected static ?string $modelLabel = 'Usuário';
 
-    public static function isReadOnly(): bool
+    public function isReadOnly(): bool
     {
         return false;
     }
