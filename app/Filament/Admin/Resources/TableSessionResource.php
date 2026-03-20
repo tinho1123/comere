@@ -136,10 +136,10 @@ class TableSessionResource extends Resource
                     ->color(fn (string $state): string => $state === 'open' ? 'success' : 'gray')
                     ->formatStateUsing(fn (string $state): string => $state === 'open' ? 'Aberta' : 'Fechada'),
 
-                TextColumn::make('subtotal')
+                TextColumn::make('subtotal_live')
                     ->label('Subtotal')
-                    ->money('BRL')
-                    ->sortable(),
+                    ->getStateUsing(fn (TableSession $record): float => (float) $record->items()->sum('total_amount'))
+                    ->money('BRL'),
 
                 TextColumn::make('total_amount')
                     ->label('Total')
