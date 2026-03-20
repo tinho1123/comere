@@ -99,6 +99,40 @@ class ProductResource extends Resource
                             ->helperText('Ative para que este produto apareça no catálogo de delivery/marketplace.')
                             ->default(false),
                     ]),
+                Forms\Components\Section::make('Acréscimos por forma de pagamento')
+                    ->description('Defina acréscimos aplicados ao valor do item conforme a forma de pagamento escolhida.')
+                    ->collapsible()
+                    ->collapsed()
+                    ->schema([
+                        Forms\Components\Grid::make(3)->schema([
+                            Forms\Components\Placeholder::make('_label_cash')->label('')->content('Dinheiro'),
+                            Forms\Components\Select::make('payment_surcharges.cash.type')
+                                ->label('Tipo')->options(['percent' => 'Porcentagem (%)', 'fixed' => 'Valor fixo (R$)'])->default('percent')->native(false),
+                            Forms\Components\TextInput::make('payment_surcharges.cash.amount')
+                                ->label('Acréscimo')->numeric()->default(0)->minValue(0)->step(0.01),
+                        ]),
+                        Forms\Components\Grid::make(3)->schema([
+                            Forms\Components\Placeholder::make('_label_debit')->label('')->content('Cartão de Débito'),
+                            Forms\Components\Select::make('payment_surcharges.debit.type')
+                                ->label('Tipo')->options(['percent' => 'Porcentagem (%)', 'fixed' => 'Valor fixo (R$)'])->default('percent')->native(false),
+                            Forms\Components\TextInput::make('payment_surcharges.debit.amount')
+                                ->label('Acréscimo')->numeric()->default(0)->minValue(0)->step(0.01),
+                        ]),
+                        Forms\Components\Grid::make(3)->schema([
+                            Forms\Components\Placeholder::make('_label_credit')->label('')->content('Cartão de Crédito'),
+                            Forms\Components\Select::make('payment_surcharges.credit.type')
+                                ->label('Tipo')->options(['percent' => 'Porcentagem (%)', 'fixed' => 'Valor fixo (R$)'])->default('percent')->native(false),
+                            Forms\Components\TextInput::make('payment_surcharges.credit.amount')
+                                ->label('Acréscimo')->numeric()->default(0)->minValue(0)->step(0.01),
+                        ]),
+                        Forms\Components\Grid::make(3)->schema([
+                            Forms\Components\Placeholder::make('_label_pix')->label('')->content('Pix'),
+                            Forms\Components\Select::make('payment_surcharges.pix.type')
+                                ->label('Tipo')->options(['percent' => 'Porcentagem (%)', 'fixed' => 'Valor fixo (R$)'])->default('percent')->native(false),
+                            Forms\Components\TextInput::make('payment_surcharges.pix.amount')
+                                ->label('Acréscimo')->numeric()->default(0)->minValue(0)->step(0.01),
+                        ]),
+                    ]),
                 Forms\Components\FileUpload::make('image')
                     ->image()
                     ->disk('public')

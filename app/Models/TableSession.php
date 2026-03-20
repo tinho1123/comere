@@ -23,12 +23,16 @@ class TableSession extends Model
         'status',
         'payment_method',
         'notes',
+        'subtotal',
+        'surcharge_amount',
         'total_amount',
         'opened_at',
         'closed_at',
     ];
 
     protected $casts = [
+        'subtotal' => 'decimal:2',
+        'surcharge_amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
         'opened_at' => 'datetime',
         'closed_at' => 'datetime',
@@ -83,19 +87,41 @@ class TableSession extends Model
             }
         }
 
-        $total = (float) $items->sum('total_amount');
+        $subtotal = (float) $items->sum('total_amount');
+        $surchargeAmount = $this->calculateSurcharge($subtotal, $paymentMethod, $items);
+        $total = $subtotal + $surchargeAmount;
 
         $this->update([
             'status' => 'closed',
             'closed_at' => now(),
+            'subtotal' => $subtotal,
+            'surcharge_amount' => $surchargeAmount,
             'total_amount' => $total,
             'payment_method' => $paymentMethod,
         ]);
 
-        $this->createOrder($items, $total, $paymentMethod);
+        $this->createOrder($items, $subtotal, $surchargeAmount, $total, $paymentMethod);
     }
 
-    private function createOrder(Collection $items, float $total, ?string $paymentMethod): void
+    public function calculateSurcharge(float $subtotal, ?string $paymentMethod, ?Collection $loadedItems = null): float
+    {
+        if (! $paymentMethod) {
+            return 0.0;
+        }
+
+        $items = $loadedItems ?? $this->items()->with('product')->get();
+
+        $total = 0.0;
+        foreach ($items as $item) {
+            if ($item->product) {
+                $total += $item->product->getSurchargeFor($paymentMethod, (float) $item->total_amount, $item->quantity);
+            }
+        }
+
+        return round($total, 2);
+    }
+
+    private function createOrder(Collection $items, float $subtotal, float $surchargeAmount, float $total, ?string $paymentMethod): void
     {
         $this->loadMissing('table');
 
@@ -106,9 +132,9 @@ class TableSession extends Model
             'uuid' => (string) Str::uuid(),
             'company_id' => $this->company_id,
             'client_id' => $this->client_id,
-            'subtotal' => $total,
+            'subtotal' => $subtotal,
             'discount_amount' => 0,
-            'fee_amount' => 0,
+            'fee_amount' => $surchargeAmount,
             'total_amount' => $total,
             'status' => Order::STATUS_DELIVERED,
             'channel' => Order::CHANNEL_PRESENTIAL,
