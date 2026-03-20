@@ -80,8 +80,8 @@ class FavoredTransactionResourceTest extends TestCase
         ]);
 
         Livewire::test(ListFavoredTransactions::class)
-            ->assertTableColumnExists('client.name')
-            ->assertTableColumnFormattedStateSet('client.name', $this->client->name, $transaction);
+            ->assertTableColumnExists('person_name')
+            ->assertTableColumnStateSet('person_name', $this->client->name, $transaction);
     }
 
     /** @test */
