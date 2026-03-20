@@ -91,7 +91,7 @@ class TableSessionResource extends Resource
 
                     TextEntry::make('subtotal_preview')
                         ->label('Subtotal')
-                        ->getStateUsing(fn (TableSession $record): string => 'R$ '.number_format($record->subtotal ?? $record->items()->sum('total_amount'), 2, ',', '.'))
+                        ->getStateUsing(fn (TableSession $record): string => 'R$ '.number_format($record->items()->sum('total_amount'), 2, ',', '.'))
                         ->color('primary'),
 
                     TextEntry::make('surcharge_preview')
@@ -101,7 +101,13 @@ class TableSessionResource extends Resource
 
                     TextEntry::make('total_preview')
                         ->label('Total final')
-                        ->getStateUsing(fn (TableSession $record): string => 'R$ '.number_format($record->total_amount ?? $record->items()->sum('total_amount'), 2, ',', '.'))
+                        ->getStateUsing(function (TableSession $record): string {
+                            $total = $record->isOpen()
+                                ? $record->items()->sum('total_amount')
+                                : $record->total_amount;
+
+                            return 'R$ '.number_format((float) $total, 2, ',', '.');
+                        })
                         ->color('success')
                         ->weight('bold'),
 
