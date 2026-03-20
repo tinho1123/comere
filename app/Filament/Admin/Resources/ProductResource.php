@@ -67,7 +67,7 @@ class ProductResource extends Resource
                             ->disabled()
                             ->dehydrated(),
                     ]),
-                Forms\Components\Grid::make(2)
+                Forms\Components\Grid::make(3)
                     ->schema([
                         Forms\Components\TextInput::make('quantity')
                             ->label('Quantidade')
@@ -80,6 +80,13 @@ class ProductResource extends Resource
                             ->searchable()
                             ->preload()
                             ->required(),
+                        Forms\Components\Select::make('subcategory_id')
+                            ->label('Subcategoria')
+                            ->relationship('subcategory', 'name', fn ($query) => $query->where('company_id', Filament::getTenant()->id)->where('active', true))
+                            ->searchable()
+                            ->preload()
+                            ->nullable()
+                            ->placeholder('Nenhuma'),
                     ]),
                 Forms\Components\Section::make('Configurações de Fiado')
                     ->schema([

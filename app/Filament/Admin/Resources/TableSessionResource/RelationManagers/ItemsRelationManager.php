@@ -31,12 +31,20 @@ class ItemsRelationManager extends RelationManager
                 ->options(function (): array {
                     $companyId = $this->getOwnerRecord()->company_id;
 
-                    return Product::where('company_id', $companyId)
+                    $products = Product::with('subcategory')
+                        ->where('company_id', $companyId)
                         ->where('active', true)
                         ->orderBy('name')
-                        ->get()
-                        ->mapWithKeys(fn ($p) => [$p->id => $p->name.' — R$ '.number_format($p->amount, 2, ',', '.')])
-                        ->toArray();
+                        ->get();
+
+                    $grouped = [];
+                    foreach ($products as $p) {
+                        $group = $p->subcategory?->name ?? 'Outros';
+                        $grouped[$group][$p->id] = $p->name.' — R$ '.number_format($p->amount, 2, ',', '.');
+                    }
+                    ksort($grouped);
+
+                    return $grouped;
                 })
                 ->searchable()
                 ->required()

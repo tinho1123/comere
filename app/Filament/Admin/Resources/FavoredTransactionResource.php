@@ -92,13 +92,21 @@ class FavoredTransactionResource extends Resource
                         ->options(function (): array {
                             $companyId = Filament::getTenant()->id;
 
-                            return Product::where('company_id', $companyId)
+                            $products = Product::with('subcategory')
+                                ->where('company_id', $companyId)
                                 ->where('is_for_favored', true)
                                 ->where('active', true)
                                 ->orderBy('name')
-                                ->get()
-                                ->mapWithKeys(fn ($p) => [$p->id => $p->name.' — R$ '.number_format($p->favored_price ?? $p->amount, 2, ',', '.')])
-                                ->toArray();
+                                ->get();
+
+                            $grouped = [];
+                            foreach ($products as $p) {
+                                $group = $p->subcategory?->name ?? 'Outros';
+                                $grouped[$group][$p->id] = $p->name.' — R$ '.number_format($p->favored_price ?? $p->amount, 2, ',', '.');
+                            }
+                            ksort($grouped);
+
+                            return $grouped;
                         })
                         ->searchable()
                         ->required()

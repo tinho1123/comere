@@ -35,6 +35,7 @@ class Product extends Model
         'is_marketplace',
         'payment_surcharges',
         'category_id',
+        'subcategory_id',
         'active',
         'uuid',
     ];
@@ -71,6 +72,11 @@ class Product extends Model
     public function category()
     {
         return $this->belongsTo(ProductsCategories::class, 'category_id');
+    }
+
+    public function subcategory()
+    {
+        return $this->belongsTo(ProductSubcategory::class, 'subcategory_id');
     }
 
     public function transactions(): HasMany
