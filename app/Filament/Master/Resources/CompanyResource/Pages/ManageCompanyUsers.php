@@ -14,7 +14,6 @@ use Filament\Tables\Actions\CreateAction;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Hash;
 
 class ManageCompanyUsers extends ManageRelatedRecords
@@ -83,16 +82,10 @@ class ManageCompanyUsers extends ManageRelatedRecords
             ->headerActions([
                 CreateAction::make()
                     ->label('Novo usuário')
-                    ->using(function (array $data): Model {
-                        $user = User::create([
-                            'name' => $data['name'],
-                            'email' => $data['email'],
-                            'password' => Hash::make($data['password']),
-                        ]);
+                    ->mutateFormDataUsing(function (array $data): array {
+                        $data['password'] = Hash::make($data['password']);
 
-                        $this->getOwnerRecord()->users()->attach($user->id);
-
-                        return $user;
+                        return $data;
                     }),
             ])
             ->actions([
