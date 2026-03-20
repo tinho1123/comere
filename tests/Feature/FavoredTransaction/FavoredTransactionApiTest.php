@@ -74,8 +74,8 @@ class FavoredTransactionApiTest extends TestCase
         $client1 = Client::factory()->create(['company_id' => $this->company->id]);
         $client2 = Client::factory()->create(['company_id' => $this->company->id]);
 
-        FavoredTransaction::factory()->count(2)->create(['client_id' => $client1->id]);
-        FavoredTransaction::factory()->count(3)->create(['client_id' => $client2->id]);
+        FavoredTransaction::factory()->count(2)->create(['client_id' => $client1->id, 'company_id' => $this->company->id]);
+        FavoredTransaction::factory()->count(3)->create(['client_id' => $client2->id, 'company_id' => $this->company->id]);
 
         $response = $this->getJson("/api/favored-transactions/{$client1->uuid}");
 

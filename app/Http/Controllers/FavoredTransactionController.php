@@ -31,13 +31,16 @@ class FavoredTransactionController extends Controller
 
     public function showByClient(Client $client): JsonResponse
     {
+        $companyId = auth()->user()->companies->first()->id;
+
         $transactions = FavoredTransaction::with(['client'])
             ->where('client_id', $client->id)
+            ->where('company_id', $companyId)
             ->orderBy('created_at', 'desc')
             ->get();
 
         return response()->json([
-            'client' => $client,
+            'client' => $client->only(['uuid', 'name', 'email', 'phone', 'active']),
             'transactions' => $transactions,
         ]);
     }
@@ -70,6 +73,8 @@ class FavoredTransactionController extends Controller
 
     public function update(Request $request, FavoredTransaction $transaction): JsonResponse
     {
+        abort_unless($transaction->company_id === auth()->user()->companies->first()->id, 403);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -92,6 +97,8 @@ class FavoredTransactionController extends Controller
 
     public function destroy(FavoredTransaction $transaction): JsonResponse
     {
+        abort_unless($transaction->company_id === auth()->user()->companies->first()->id, 403);
+
         $transaction->delete();
 
         return response()->json([
@@ -101,6 +108,8 @@ class FavoredTransactionController extends Controller
 
     public function payDebt(Request $request, FavoredTransaction $transaction): JsonResponse
     {
+        abort_unless($transaction->company_id === auth()->user()->companies->first()->id, 403);
+
         $validated = $request->validate([
             'amount' => 'required|numeric|min:0.01|max:'.$transaction->getRemainingBalance(),
         ]);

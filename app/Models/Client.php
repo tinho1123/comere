@@ -5,7 +5,6 @@ namespace App\Models;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasTenants;
 use Filament\Panel;
-use Filament\Panel\Concerns\HasTenancy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -15,7 +14,7 @@ use Illuminate\Support\Collection;
 
 class Client extends AuthenticatableUser implements FilamentUser, HasTenants
 {
-    use HasFactory, HasTenancy;
+    use HasFactory;
 
     protected $fillable = [
         'uuid',
@@ -35,6 +34,10 @@ class Client extends AuthenticatableUser implements FilamentUser, HasTenants
     protected $hidden = [
         'password',
         'remember_token',
+        'clerk_id',
+        'login_attempts',
+        'locked_until',
+        'document_number',
     ];
 
     protected $casts = [

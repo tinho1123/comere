@@ -22,12 +22,8 @@ class SSOCallbackController extends Controller
         $name = $request->input('name');
 
         if (! $clerkId) {
-            \Log::warning('SSO Callback acessado sem clerk_id');
-
             return redirect()->route('marketplace.index');
         }
-
-        \Log::info('Iniciando sincronização SSO para Clerk ID: '.$clerkId);
 
         // 1. Verificar se o cliente já existe pelo clerk_id
         $client = Client::where('clerk_id', $clerkId)->first();
@@ -36,14 +32,12 @@ class SSOCallbackController extends Controller
         if (! $client && $email) {
             $client = Client::where('email', $email)->first();
             if ($client) {
-                \Log::info('Cliente encontrado por e-mail. Vinculando Clerk ID.');
                 $client->update(['clerk_id' => $clerkId]);
             }
         }
 
         // 3. Se ainda não existir, criar um registro temporário/novo
         if (! $client) {
-            \Log::info('Criando novo cliente para Clerk ID: '.$clerkId);
             $client = Client::create([
                 'uuid' => (string) Str::uuid(),
                 'clerk_id' => $clerkId,
@@ -56,19 +50,14 @@ class SSOCallbackController extends Controller
 
         // 4. LOGAR O CLIENTE NO LARAVEL
         auth()->guard('client')->login($client);
-        \Log::info('Cliente autenticado no Laravel: '.$client->name);
 
         // 5. Verificar se o CPF está preenchido
         if (empty($client->document_number)) {
-            \Log::info('Perfil incompleto. Solicitando CPF.');
-
             return response()->json([
                 'status' => 'incomplete_profile',
                 'redirect_url' => route('marketplace.complete-profile'),
             ]);
         }
-
-        \Log::info('Perfil completo. Redirecionando para Home.');
 
         return response()->json([
             'status' => 'success',
@@ -84,11 +73,12 @@ class SSOCallbackController extends Controller
     public function storeProfile(Request $request)
     {
         $request->validate([
-            'cpf' => 'required|string|size:11', // Validação bruta por enquanto
-            'clerk_id' => 'required|string',
+            'cpf' => 'required|string|size:11',
         ]);
 
-        $client = Client::where('clerk_id', $request->clerk_id)->firstOrFail();
+        $client = auth()->guard('client')->user();
+
+        abort_unless($client !== null, 403);
 
         $client->update([
             'document_number' => $request->cpf,

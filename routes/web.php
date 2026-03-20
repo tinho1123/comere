@@ -19,7 +19,7 @@ Route::post('/table/{uuid}/item', [TableController::class, 'addItem'])->name('ta
 Route::get('/', [MarketplaceController::class, 'index'])->name('marketplace.index');
 Route::get('/store/{company:uuid}', [MarketplaceController::class, 'show'])->name('marketplace.show');
 
-Route::post('/marketplace/login', [MarketplaceLoginController::class, 'login'])->name('marketplace.login');
+Route::post('/marketplace/login', [MarketplaceLoginController::class, 'login'])->name('marketplace.login')->middleware('throttle:10,1');
 Route::post('/marketplace/logout', [MarketplaceLoginController::class, 'logout'])->name('marketplace.logout');
 
 // Fluxo SSO e Cadastro Completo

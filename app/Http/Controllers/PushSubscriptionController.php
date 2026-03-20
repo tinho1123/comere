@@ -19,6 +19,11 @@ class PushSubscriptionController extends Controller
 
         $user = auth()->user();
 
+        abort_unless(
+            $user->companies()->where('companies.id', $request->company_id)->exists(),
+            403
+        );
+
         PushSubscription::updateOrCreate(
             [
                 'user_id' => $user->id,

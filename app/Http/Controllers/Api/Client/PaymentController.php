@@ -34,9 +34,8 @@ class PaymentController extends Controller
                 'currency' => 'brl',
                 'description' => $request->get('description') ?? "Payment for Comere - {$company->name}",
                 'metadata' => [
-                    'company_id' => $company->id,
-                    'client_user_id' => $clientUser->id,
-                    'client_id' => $clientUser->client_id,
+                    'company_uuid' => $company->uuid,
+                    'client_uuid' => $clientUser->uuid,
                 ],
             ]);
 
@@ -46,9 +45,11 @@ class PaymentController extends Controller
                 'intent_id' => $paymentIntent->id,
             ]);
         } catch (\Exception $e) {
+            \Log::error('Stripe createIntent failed', ['company_uuid' => $company->uuid, 'error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create payment intent: '.$e->getMessage(),
+                'message' => 'Não foi possível processar o pagamento. Tente novamente.',
             ], 400);
         }
     }
@@ -91,9 +92,11 @@ class PaymentController extends Controller
                 'amount' => $request->get('amount'),
             ]);
         } catch (\Exception $e) {
+            \Log::error('Stripe confirm failed', ['company_uuid' => $company->uuid, 'error' => $e->getMessage()]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to confirm payment: '.$e->getMessage(),
+                'message' => 'Não foi possível confirmar o pagamento. Tente novamente.',
             ], 400);
         }
     }

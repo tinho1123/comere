@@ -12,6 +12,11 @@ class TableQrController extends Controller
     {
         $table = TableModel::where('uuid', $uuid)->firstOrFail();
 
+        abort_unless(
+            auth()->user()->companies()->where('companies.id', $table->company_id)->exists(),
+            403
+        );
+
         $url = route('table.show', $table->uuid);
 
         $response = Http::timeout(10)->get('https://api.qrserver.com/v1/create-qr-code/', [

@@ -45,7 +45,7 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        $shared = [
+        return [
             ...parent::share($request),
             'auth' => [
                 'user' => auth()->guard('client')->user(),
@@ -62,13 +62,5 @@ class HandleInertiaRequests extends Middleware
                 ? auth()->guard('client')->user()->addresses()->where('is_default', true)->first()
                 : null,
         ];
-
-        \Log::info('Inertia Shared Data:', [
-            'client_logged_in' => auth()->guard('client')->check(),
-            'client_id' => auth()->guard('client')->id(),
-            'url' => $request->fullUrl(),
-        ]);
-
-        return $shared;
     }
 }
