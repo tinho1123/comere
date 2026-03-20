@@ -2,7 +2,6 @@
 
 namespace App\Providers\Filament;
 
-use App\Filament\Admin\Pages\Login;
 use App\Http\Middleware\RemoveTenantScopes;
 use App\Models\Company;
 use Filament\Enums\ThemeMode;
@@ -39,7 +38,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->login(Login::class)
+            ->login()
             ->colors([
                 'danger' => Color::Rose,
                 'gray' => Color::Gray,
