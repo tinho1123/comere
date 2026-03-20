@@ -4,16 +4,22 @@ namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\OrderResource\Pages;
 use App\Models\Client;
+use App\Models\Delivery;
+use App\Models\Driver;
 use App\Models\Order;
 use App\Models\Product;
+use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Set;
 use Filament\Infolists;
 use Filament\Infolists\Infolist;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class OrderResource extends Resource
 {
@@ -280,6 +286,10 @@ class OrderResource extends Resource
                     ->label('Total')
                     ->money('BRL')
                     ->sortable(),
+                Tables\Columns\TextColumn::make('delivery.driver.name')
+                    ->label('Motorista')
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Data')
                     ->dateTime()
@@ -314,8 +324,59 @@ class OrderResource extends Resource
                     ->icon('heroicon-o-truck')
                     ->color('primary')
                     ->visible(fn (Order $record): bool => $record->canBeShipped())
-                    ->action(fn (Order $record) => $record->ship())
-                    ->requiresConfirmation(),
+                    ->modalHeading('Despachar Pedido')
+                    ->form(function (): array {
+                        $companyId = Filament::getTenant()->id;
+
+                        $drivers = Driver::where('company_id', $companyId)
+                            ->where('is_active', true)
+                            ->whereDoesntHave('deliveries', fn ($q) => $q->where('status', Delivery::STATUS_DISPATCHED))
+                            ->get()
+                            ->mapWithKeys(fn (Driver $d) => [
+                                $d->id => $d->name.' — '.($d->vehicle_type === Driver::VEHICLE_MOTOBOY ? 'Motoboy' : 'Carro')
+                                    .' — R$ '.number_format((float) $d->delivery_fee, 2, ',', '.'),
+                            ])
+                            ->toArray();
+
+                        return [
+                            Forms\Components\Select::make('driver_id')
+                                ->label('Motorista disponível')
+                                ->options($drivers)
+                                ->native(false)
+                                ->required()
+                                ->helperText('Apenas motoristas ativos sem entrega em andamento.'),
+
+                            Forms\Components\Textarea::make('notes')
+                                ->label('Observações para o motorista')
+                                ->rows(2)
+                                ->nullable(),
+                        ];
+                    })
+                    ->action(function (Order $record, array $data): void {
+                        $driver = Driver::findOrFail($data['driver_id']);
+
+                        DB::transaction(function () use ($record, $driver, $data): void {
+                            $record->ship();
+
+                            Delivery::create([
+                                'uuid' => (string) Str::uuid(),
+                                'company_id' => $record->company_id,
+                                'order_id' => $record->id,
+                                'driver_id' => $driver->id,
+                                'status' => Delivery::STATUS_DISPATCHED,
+                                'driver_fee' => $driver->delivery_fee,
+                                'is_paid' => false,
+                                'dispatched_at' => now(),
+                                'notes' => $data['notes'] ?? null,
+                            ]);
+                        });
+
+                        Notification::make()
+                            ->success()
+                            ->title('Pedido despachado!')
+                            ->body("Motorista: {$driver->name}")
+                            ->send();
+                    }),
                 Tables\Actions\Action::make('deliver')
                     ->label('Concluir pedido')
                     ->icon('heroicon-o-check-badge')

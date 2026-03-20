@@ -180,7 +180,10 @@ class ProductResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('category.name')
                     ->label('Categoria')
-                    ->numeric()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('subcategory.name')
+                    ->label('Subcategoria')
+                    ->placeholder('—')
                     ->sortable(),
                 Tables\Columns\IconColumn::make('active')
                     ->label('Ativo')
