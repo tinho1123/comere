@@ -104,6 +104,11 @@ class Company extends Model
         return $this->hasMany(Table::class);
     }
 
+    public function getRouteKeyName(): string
+    {
+        return 'uuid';
+    }
+
     public function getTenantKeyName(): string
     {
         return 'id';
