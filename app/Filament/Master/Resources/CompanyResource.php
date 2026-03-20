@@ -480,7 +480,7 @@ class CompanyResource extends Resource
                     ->label('Usuários')
                     ->icon('heroicon-o-users')
                     ->color('info')
-                    ->url(fn (Company $record): string => static::getUrl('edit', ['record' => $record])),
+                    ->url(fn (Company $record): string => static::getUrl('users', ['record' => $record])),
                 EditAction::make(),
             ]);
     }
@@ -499,6 +499,7 @@ class CompanyResource extends Resource
             'create' => Pages\CreateCompany::route('/create'),
             'edit' => Pages\EditCompany::route('/{record}/edit'),
             'view' => Pages\ViewCompany::route('/{record}'),
+            'users' => Pages\ManageCompanyUsers::route('/{record}/users'),
         ];
     }
 }
