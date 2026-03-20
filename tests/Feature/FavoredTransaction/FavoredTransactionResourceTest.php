@@ -95,33 +95,46 @@ class FavoredTransactionResourceTest extends TestCase
         ]);
 
         Livewire::test(ListFavoredTransactions::class)
-            ->assertTableColumnExists('remaining_balance')
-            ->assertTableColumnFormattedStateSet('remaining_balance', 70.00, $transaction);
+            ->assertTableColumnExists('remaining')
+            ->assertTableColumnStateSet('remaining', 70.00, $transaction);
     }
 
     /** @test */
     public function it_can_create_favored_transaction_via_form()
     {
-        $transactionData = [
-            'client_id' => $this->client->id,
-            'name' => 'New Test Transaction',
-            'description' => 'Test description',
-            'favored_total' => 150.50,
-            'favored_paid_amount' => 0,
-            'quantity' => 2,
+        $product = \App\Models\Product::forceCreate([
+            'uuid' => \Illuminate\Support\Str::uuid(),
+            'company_id' => $this->company->id,
+            'name' => 'Produto Fiado',
+            'amount' => 50.00,
+            'favored_price' => 45.00,
+            'total_amount' => 50.00,
+            'is_for_favored' => true,
+            'quantity' => 10,
             'active' => true,
-        ];
+        ]);
 
         Livewire::test(CreateFavoredTransaction::class)
-            ->fillForm($transactionData)
+            ->fillForm([
+                'is_registered_client' => true,
+                'client_id' => $this->client->id,
+                'items' => [
+                    [
+                        'product_id' => $product->id,
+                        'quantity' => 2,
+                        'favored_price' => 45.00,
+                        'product_name' => $product->name,
+                    ],
+                ],
+            ])
             ->call('create')
             ->assertHasNoFormErrors();
 
         $this->assertDatabaseHas('favored_transactions', [
-            'name' => 'New Test Transaction',
             'client_id' => $this->client->id,
             'company_id' => $this->company->id,
-            'favored_total' => 150.50,
+            'name' => $product->name,
+            'favored_total' => 90.00,
         ]);
     }
 
@@ -129,13 +142,9 @@ class FavoredTransactionResourceTest extends TestCase
     public function it_validates_required_fields_on_create()
     {
         Livewire::test(CreateFavoredTransaction::class)
+            ->fillForm(['is_registered_client' => true])
             ->call('create')
-            ->assertHasFormErrors([
-                'client_id',
-                'name',
-                'favored_total',
-                'quantity',
-            ]);
+            ->assertHasFormErrors(['client_id']);
     }
 
     /** @test */
@@ -149,10 +158,9 @@ class FavoredTransactionResourceTest extends TestCase
         ]);
 
         $editData = [
-            'client_id' => $this->client->id,
-            'name' => 'Updated Name',
             'favored_total' => 200.00,
             'favored_paid_amount' => 50.00,
+            'quantity' => 3,
         ];
 
         Livewire::test(EditFavoredTransaction::class, [
@@ -164,7 +172,6 @@ class FavoredTransactionResourceTest extends TestCase
 
         $this->assertDatabaseHas('favored_transactions', [
             'id' => $transaction->id,
-            'name' => 'Updated Name',
             'favored_total' => 200.00,
             'favored_paid_amount' => 50.00,
         ]);
