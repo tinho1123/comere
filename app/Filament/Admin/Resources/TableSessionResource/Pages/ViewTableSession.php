@@ -9,11 +9,15 @@ use App\Models\Product;
 use App\Models\TableSession;
 use App\Models\TableSessionItem;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
+use Illuminate\Support\HtmlString;
 
 class ViewTableSession extends ViewRecord
 {
@@ -115,6 +119,109 @@ class ViewTableSession extends ViewRecord
                         ->title('Mesa fechada com sucesso!')
                         ->body('Pagamento: '.$paymentLabel.'. Total: R$ '.number_format($session->fresh()->total_amount, 2, ',', '.'))
                         ->success()
+                        ->send();
+
+                    $this->redirect(TableResource::getUrl('index'));
+                }),
+
+            Action::make('close_favored')
+                ->label('Fechar - Fiado')
+                ->icon('heroicon-o-banknotes')
+                ->color('warning')
+                ->modalHeading('Fechar Mesa como Fiado')
+                ->modalDescription('Selecione como os itens serão cobrados no fiado. O débito será registrado no nome do cliente da mesa.')
+                ->visible(fn (): bool => $this->record->isOpen())
+                ->form(function (): array {
+                    $items = $this->record->items()->with('product')->get();
+
+                    $normalTotal = (float) $items->sum('total_amount');
+                    $favoredTotal = (float) $items->sum(function ($item) {
+                        if ($item->product && $item->product->favored_price) {
+                            return (float) $item->product->favored_price * $item->quantity;
+                        }
+
+                        return (float) $item->total_amount;
+                    });
+
+                    $normalLabel = 'Preço normal — R$ '.number_format($normalTotal, 2, ',', '.');
+                    $favoredLabel = 'Preço fiado — R$ '.number_format($favoredTotal, 2, ',', '.');
+
+                    return [
+                        Radio::make('pricing_mode')
+                            ->label('Modo de cobrança')
+                            ->options([
+                                'normal' => $normalLabel,
+                                'favored' => $favoredLabel,
+                            ])
+                            ->required()
+                            ->live()
+                            ->descriptions([
+                                'normal' => 'Cobra o preço cheio de cada item.',
+                                'favored' => 'Cobra o preço de fiado cadastrado em cada produto (fallback para preço normal quando não definido).',
+                            ]),
+
+                        Placeholder::make('items_preview')
+                            ->label('Detalhes dos itens')
+                            ->content(function (Get $get) use ($items): HtmlString {
+                                $mode = $get('pricing_mode');
+
+                                $rows = $items->map(function ($item) use ($mode) {
+                                    $useFavored = $mode === 'favored'
+                                        && $item->product
+                                        && $item->product->favored_price;
+
+                                    $unitPrice = $useFavored
+                                        ? (float) $item->product->favored_price
+                                        : (float) $item->unit_price;
+
+                                    $lineTotal = $unitPrice * $item->quantity;
+
+                                    $priceTag = $useFavored
+                                        ? '<span class="text-yellow-600 font-semibold">fiado</span>'
+                                        : '<span class="text-gray-400">normal</span>';
+
+                                    return '<tr>
+                                        <td class="py-1 pr-4 text-gray-700">'.e($item->product_name).'</td>
+                                        <td class="py-1 pr-4 text-center text-gray-500">'.$item->quantity.'x</td>
+                                        <td class="py-1 pr-4 text-right text-gray-600">R$ '.number_format($unitPrice, 2, ',', '.').'</td>
+                                        <td class="py-1 pr-4 text-right font-semibold text-gray-800">R$ '.number_format($lineTotal, 2, ',', '.').'</td>
+                                        <td class="py-1 text-right text-xs">'.$priceTag.'</td>
+                                    </tr>';
+                                })->implode('');
+
+                                return new HtmlString('
+                                    <div class="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm">
+                                        <table class="w-full">
+                                            <thead>
+                                                <tr class="text-xs text-gray-400 border-b border-gray-200">
+                                                    <th class="pb-1 text-left">Produto</th>
+                                                    <th class="pb-1 text-center">Qtd</th>
+                                                    <th class="pb-1 text-right">Unitário</th>
+                                                    <th class="pb-1 text-right">Total</th>
+                                                    <th class="pb-1 text-right">Tipo</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>'.$rows.'</tbody>
+                                        </table>
+                                    </div>
+                                ');
+                            }),
+                    ];
+                })
+                ->action(function (array $data): void {
+                    /** @var TableSession $session */
+                    $session = $this->record;
+                    $session->closeAsFavored($data['pricing_mode']);
+
+                    $fresh = $session->fresh();
+                    $clientName = $session->client_display_name !== '—'
+                        ? $session->client_display_name
+                        : ($session->guest_name ?? 'Mesa');
+
+                    Notification::make()
+                        ->title('Mesa fechada como Fiado!')
+                        ->body('Fiado registrado para "'.$clientName.'". Total: R$ '.number_format($fresh->total_amount, 2, ',', '.'))
+                        ->warning()
                         ->send();
 
                     $this->redirect(TableResource::getUrl('index'));

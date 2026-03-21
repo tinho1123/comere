@@ -41,6 +41,7 @@ class Order extends Model
             self::PAYMENT_DEBIT => 'Cartão de Débito',
             self::PAYMENT_CREDIT => 'Cartão de Crédito',
             self::PAYMENT_PIX => 'Pix',
+            'favored' => 'Fiado',
         ];
     }
 

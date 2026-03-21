@@ -7,6 +7,7 @@ use App\Filament\Admin\Resources\TableSessionResource\RelationManagers\ItemsRela
 use App\Models\Order;
 use App\Models\TableSession;
 use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
@@ -180,6 +181,97 @@ class TableSessionResource extends Resource
             ])
             ->actions([
                 ViewAction::make()->label('Ver'),
+
+                Action::make('close_favored')
+                    ->label('Fechar - Fiado')
+                    ->icon('heroicon-o-banknotes')
+                    ->color('warning')
+                    ->modalHeading('Fechar Mesa como Fiado')
+                    ->visible(fn (TableSession $record): bool => $record->isOpen())
+                    ->form(function (TableSession $record): array {
+                        $items = $record->items()->with('product')->get();
+
+                        $normalTotal = (float) $items->sum('total_amount');
+                        $favoredTotal = (float) $items->sum(function ($item) {
+                            if ($item->product && $item->product->favored_price) {
+                                return (float) $item->product->favored_price * $item->quantity;
+                            }
+
+                            return (float) $item->total_amount;
+                        });
+
+                        return [
+                            Radio::make('pricing_mode')
+                                ->label('Modo de cobrança')
+                                ->options([
+                                    'normal' => 'Preço normal — R$ '.number_format($normalTotal, 2, ',', '.'),
+                                    'favored' => 'Preço fiado — R$ '.number_format($favoredTotal, 2, ',', '.'),
+                                ])
+                                ->descriptions([
+                                    'normal' => 'Cobra o preço cheio de cada item.',
+                                    'favored' => 'Cobra o preço de fiado cadastrado em cada produto.',
+                                ])
+                                ->required()
+                                ->live(),
+
+                            Placeholder::make('items_preview')
+                                ->label('Detalhes dos itens')
+                                ->content(function (Get $get) use ($items): HtmlString {
+                                    $mode = $get('pricing_mode');
+
+                                    $rows = $items->map(function ($item) use ($mode) {
+                                        $useFavored = $mode === 'favored'
+                                            && $item->product
+                                            && $item->product->favored_price;
+
+                                        $unitPrice = $useFavored
+                                            ? (float) $item->product->favored_price
+                                            : (float) $item->unit_price;
+
+                                        $lineTotal = $unitPrice * $item->quantity;
+
+                                        $priceTag = $useFavored
+                                            ? '<span class="text-yellow-600 font-semibold">fiado</span>'
+                                            : '<span class="text-gray-400">normal</span>';
+
+                                        return '<tr>
+                                            <td class="py-1 pr-4 text-gray-700">'.e($item->product_name).'</td>
+                                            <td class="py-1 pr-4 text-center text-gray-500">'.$item->quantity.'x</td>
+                                            <td class="py-1 pr-4 text-right font-semibold text-gray-800">R$ '.number_format($lineTotal, 2, ',', '.').'</td>
+                                            <td class="py-1 text-right text-xs">'.$priceTag.'</td>
+                                        </tr>';
+                                    })->implode('');
+
+                                    return new HtmlString('
+                                        <div class="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm">
+                                            <table class="w-full">
+                                                <thead><tr class="text-xs text-gray-400 border-b border-gray-200">
+                                                    <th class="pb-1 text-left">Produto</th>
+                                                    <th class="pb-1 text-center">Qtd</th>
+                                                    <th class="pb-1 text-right">Total</th>
+                                                    <th class="pb-1 text-right">Tipo</th>
+                                                </tr></thead>
+                                                <tbody>'.$rows.'</tbody>
+                                            </table>
+                                        </div>
+                                    ');
+                                }),
+                        ];
+                    })
+                    ->action(function (TableSession $record, array $data): void {
+                        $record->closeAsFavored($data['pricing_mode']);
+
+                        $fresh = $record->fresh();
+                        $clientName = $record->client_display_name !== '—'
+                            ? $record->client_display_name
+                            : ($record->guest_name ?? 'Mesa');
+
+                        Notification::make()
+                            ->title('Mesa fechada como Fiado!')
+                            ->body('Fiado para "'.$clientName.'". Total: R$ '.number_format($fresh->total_amount, 2, ',', '.'))
+                            ->warning()
+                            ->send();
+                    }),
 
                 Action::make('close')
                     ->label('Fechar Mesa')

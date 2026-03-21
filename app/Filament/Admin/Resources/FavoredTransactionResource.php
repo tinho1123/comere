@@ -9,7 +9,6 @@ use App\Models\Product;
 use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Forms\Form;
-use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -35,16 +34,17 @@ class FavoredTransactionResource extends Resource
     public static function form(Form $form): Form
     {
         return $form->schema([
-            Forms\Components\Section::make('Pessoa')
+            Forms\Components\Section::make('Devedor')
                 ->schema([
-                    Forms\Components\Toggle::make('is_registered_client')
-                        ->label('Cliente cadastrado?')
-                        ->default(true)
-                        ->live()
-                        ->dehydrated(false),
+                    Forms\Components\TextInput::make('client_name')
+                        ->label('Nome de quem está devendo')
+                        ->required()
+                        ->maxLength(255)
+                        ->placeholder('Ex: João da Padaria')
+                        ->helperText('Digite o nome livremente — não precisa ser um cliente cadastrado.'),
 
                     Forms\Components\Select::make('client_id')
-                        ->label('Cliente')
+                        ->label('Vincular a cliente cadastrado (opcional)')
                         ->options(function (): array {
                             $companyId = Filament::getTenant()->id;
 
@@ -55,26 +55,20 @@ class FavoredTransactionResource extends Resource
                                 ->toArray();
                         })
                         ->searchable()
+                        ->nullable()
+                        ->placeholder('Nenhum — apenas nome livre')
                         ->live()
                         ->afterStateUpdated(function ($state, Set $set): void {
                             if ($state) {
                                 $client = Client::find($state);
                                 $set('client_name', $client?->name);
                             }
-                        })
-                        ->visible(fn (Get $get): bool => (bool) $get('is_registered_client'))
-                        ->required(fn (Get $get): bool => (bool) $get('is_registered_client')),
-
-                    Forms\Components\TextInput::make('client_name')
-                        ->label('Nome da pessoa')
-                        ->required(fn (Get $get): bool => ! (bool) $get('is_registered_client'))
-                        ->maxLength(255)
-                        ->visible(fn (Get $get): bool => ! (bool) $get('is_registered_client')),
+                        }),
                 ])
                 ->visibleOn('create'),
 
             Forms\Components\TextInput::make('client_name')
-                ->label('Pessoa')
+                ->label('Devedor')
                 ->disabled()
                 ->dehydrated(false)
                 ->visibleOn('edit'),

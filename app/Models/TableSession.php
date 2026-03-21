@@ -121,7 +121,69 @@ class TableSession extends Model
         return round($total, 2);
     }
 
-    private function createOrder(Collection $items, float $subtotal, float $surchargeAmount, float $total, ?string $paymentMethod): void
+    public function closeAsFavored(string $pricingMode): void
+    {
+        $items = $this->items()->with('product')->get();
+
+        foreach ($items as $item) {
+            if ($item->product) {
+                $item->product->decrement('quantity', $item->quantity);
+            }
+        }
+
+        $subtotal = (float) $items->sum(function ($item) use ($pricingMode) {
+            if ($pricingMode === 'favored' && $item->product && $item->product->favored_price) {
+                return (float) $item->product->favored_price * $item->quantity;
+            }
+
+            return (float) $item->total_amount;
+        });
+
+        $this->update([
+            'status' => 'closed',
+            'closed_at' => now(),
+            'subtotal' => $subtotal,
+            'surcharge_amount' => 0,
+            'total_amount' => $subtotal,
+            'payment_method' => 'favored',
+        ]);
+
+        $order = $this->createOrder($items, $subtotal, 0, $subtotal, 'favored');
+
+        $clientName = ($this->client_display_name !== '—')
+            ? $this->client_display_name
+            : ($this->guest_name ?? 'Mesa');
+
+        foreach ($items as $item) {
+            $useFavoredPrice = $pricingMode === 'favored'
+                && $item->product
+                && $item->product->favored_price;
+
+            $unitPrice = $useFavoredPrice
+                ? (float) $item->product->favored_price
+                : (float) $item->unit_price;
+
+            $itemTotal = $unitPrice * $item->quantity;
+
+            FavoredTransaction::create([
+                'company_id' => $this->company_id,
+                'client_id' => null,
+                'client_name' => $clientName,
+                'product_id' => $item->product_id,
+                'name' => $item->product_name,
+                'quantity' => $item->quantity,
+                'amount' => $unitPrice,
+                'total_amount' => $itemTotal,
+                'favored_total' => $itemTotal,
+                'favored_paid_amount' => 0,
+                'order_id' => $order->id,
+                'due_date' => now()->addDays(30),
+                'active' => true,
+            ]);
+        }
+    }
+
+    protected function createOrder(Collection $items, float $subtotal, float $surchargeAmount, float $total, ?string $paymentMethod): Order
     {
         $this->loadMissing('table');
 
@@ -157,5 +219,7 @@ class TableSession extends Model
                 'total_amount' => $item->total_amount,
             ]);
         }
+
+        return $order;
     }
 }
