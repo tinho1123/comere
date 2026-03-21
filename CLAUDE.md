@@ -159,6 +159,19 @@ php artisan config:clear && php artisan cache:clear && php artisan route:clear &
 
 ---
 
+## Timezone (OBRIGATÓRIO)
+
+**O projeto opera exclusivamente no fuso horário do Brasil (America/Sao_Paulo, UTC-3).**
+
+- `config/app.php` → `'timezone' => env('APP_TIMEZONE', 'America/Sao_Paulo')`
+- `config/database.php` (MySQL) → `'timezone' => env('DB_TIMEZONE', '-03:00')`
+- `.env` → `APP_TIMEZONE=America/Sao_Paulo`
+- **Nunca** use `'timezone' => 'UTC'` fixo em `config/app.php`
+- Todo `now()`, `Carbon::now()`, `created_at`, `updated_at` devem refletir o horário de Brasília
+- Ao criar novos projetos ou ambientes, configurar o timezone é o **primeiro passo obrigatório**
+
+---
+
 ## Pre-commit Checklist
 
 **MANDATORY: After every code change, always run in this order:**
