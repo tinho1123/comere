@@ -18,18 +18,11 @@ class FavoredTransactionResource extends Resource
 {
     protected static ?string $model = FavoredTransaction::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-credit-card';
-
-    protected static ?string $navigationLabel = 'Fiados';
-
     protected static ?string $modelLabel = 'Fiado';
 
     protected static ?string $pluralModelLabel = 'Fiados';
 
-    public static function getNavigationGroup(): ?string
-    {
-        return 'Gestão';
-    }
+    protected static bool $shouldRegisterNavigation = false;
 
     public static function form(Form $form): Form
     {

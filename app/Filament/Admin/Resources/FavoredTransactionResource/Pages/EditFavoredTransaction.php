@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\FavoredTransactionResource\Pages;
 
+use App\Filament\Admin\Pages\FiadoPage;
 use App\Filament\Admin\Resources\FavoredTransactionResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
@@ -21,7 +22,7 @@ class EditFavoredTransaction extends EditRecord
 
     protected function getRedirectUrl(): string
     {
-        return $this->getResource()::getUrl('index');
+        return FiadoPage::getUrl();
     }
 
     protected function mutateFormDataBeforeFill(array $data): array

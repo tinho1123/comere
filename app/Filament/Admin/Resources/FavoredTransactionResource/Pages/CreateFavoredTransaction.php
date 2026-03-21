@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\FavoredTransactionResource\Pages;
 
+use App\Filament\Admin\Pages\FiadoPage;
 use App\Filament\Admin\Resources\FavoredTransactionResource;
 use App\Models\Client;
 use App\Models\FavoredTransaction;
@@ -58,6 +59,6 @@ class CreateFavoredTransaction extends CreateRecord
 
     protected function getRedirectUrl(): string
     {
-        return $this->getResource()::getUrl('index');
+        return FiadoPage::getUrl();
     }
 }
