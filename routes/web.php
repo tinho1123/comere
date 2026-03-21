@@ -5,6 +5,8 @@ use App\Http\Controllers\Admin\TableQrController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Marketplace\ClientAddressController;
+use App\Http\Controllers\Marketplace\ClientFavoriteController;
+use App\Http\Controllers\Marketplace\CompanyRatingController;
 use App\Http\Controllers\Marketplace\MarketplaceController;
 use App\Http\Controllers\Marketplace\MarketplaceLoginController;
 use App\Http\Controllers\Marketplace\SSOCallbackController;
@@ -34,6 +36,8 @@ Route::post('/complete-profile', [SSOCallbackController::class, 'storeProfile'])
 Route::middleware('auth:client')->group(function () {
     Route::get('/meus-pedidos', [MarketplaceController::class, 'orders'])->name('marketplace.orders');
     Route::post('/store/{company:uuid}/orders', [MarketplaceController::class, 'storeOrder'])->name('marketplace.order.store');
+    Route::post('/favorites/{company:uuid}', [ClientFavoriteController::class, 'toggle'])->name('marketplace.favorite.toggle');
+    Route::post('/store/{company:uuid}/rate', [CompanyRatingController::class, 'store'])->name('marketplace.rate');
 
     Route::get('/addresses', [ClientAddressController::class, 'index'])->name('client.addresses.index');
     Route::post('/addresses', [ClientAddressController::class, 'store'])->name('client.addresses.store');

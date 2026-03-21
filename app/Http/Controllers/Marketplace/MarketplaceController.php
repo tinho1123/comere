@@ -80,12 +80,17 @@ class MarketplaceController extends Controller
             ->orderBy('name')
             ->get(['uuid', 'name', 'icon']);
 
+        $favoriteUuids = $client
+            ? $client->favoriteCompanies()->pluck('companies.uuid')->toArray()
+            : [];
+
         return Inertia::render('Marketplace/Index', [
             'companies' => $companies,
             'promotedProducts' => $promotedProducts,
             'lastVisited' => $lastVisited,
             'selectedCategory' => $categoryUuid,
             'categories' => $categories,
+            'favoriteUuids' => $favoriteUuids,
         ]);
     }
 
@@ -121,6 +126,16 @@ class MarketplaceController extends Controller
             $deliveryFee = $distanceService->getFeeForDistance($distance, $company->deliveryFeeRanges);
         }
 
+        $isFavorited = $client
+            ? $client->favoriteCompanies()->where('company_id', $company->id)->exists()
+            : false;
+
+        $userRating = $client
+            ? $company->ratings()->where('client_id', $client->id)->first()
+            : null;
+
+        $ratingsCount = $company->ratings()->count();
+
         return Inertia::render('Marketplace/Show', [
             'company' => [
                 'uuid' => $company->uuid,
@@ -130,6 +145,7 @@ class MarketplaceController extends Controller
                 'logo' => $company->logo_path ? Storage::url($company->logo_path) : '/default-store-logo.png',
                 'banner' => $company->banner_path ? Storage::url($company->banner_path) : '/default-store-banner.png',
                 'rating' => $company->rating,
+                'ratings_count' => $ratingsCount,
                 'delivery_time' => $company->delivery_time ?? '20-30 min',
                 'distance_km' => $distance,
                 'delivery_fee' => $deliveryFee,
@@ -138,6 +154,8 @@ class MarketplaceController extends Controller
                     'fee' => $r->fee,
                     'is_active' => $r->is_active,
                 ]),
+                'is_favorited' => $isFavorited,
+                'user_rating' => $userRating ? ['rating' => $userRating->rating, 'comment' => $userRating->comment] : null,
             ],
             'productsByCategory' => $company->products
                 ->map(fn ($product) => [
@@ -167,6 +185,7 @@ class MarketplaceController extends Controller
                 'uuid' => $order->uuid,
                 'status' => $order->status,
                 'total_amount' => $order->total_amount,
+                'payment_method' => $order->payment_method,
                 'created_at' => $order->created_at->format('d/m/Y H:i'),
                 'company' => [
                     'name' => $order->company->name,

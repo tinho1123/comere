@@ -56,6 +56,17 @@ class Company extends Model
         return $this->belongsTo(CompanyType::class);
     }
 
+    public function ratings(): HasMany
+    {
+        return $this->hasMany(CompanyRating::class);
+    }
+
+    public function recalculateRating(): void
+    {
+        $avg = $this->ratings()->avg('rating');
+        $this->update(['rating' => $avg ? round($avg, 1) : null]);
+    }
+
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'companies_users');

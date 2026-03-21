@@ -2,7 +2,116 @@ import { useState } from 'react';
 import MarketplaceLayout from '../../Layouts/MarketplaceLayout';
 import { Head, router, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, X, Plus, Minus, Trash2, LogIn, MapPin, Truck } from 'lucide-react';
+import { ShoppingCart, X, Plus, Minus, Trash2, LogIn, MapPin, Truck, Heart, Star } from 'lucide-react';
+import axios from 'axios';
+
+function RatingSection({ company }) {
+    const { auth } = usePage().props;
+    const [hovered, setHovered] = useState(0);
+    const [selected, setSelected] = useState(company.user_rating?.rating ?? 0);
+    const [comment, setComment] = useState(company.user_rating?.comment ?? '');
+    const [average, setAverage] = useState(company.rating);
+    const [count, setCount] = useState(company.ratings_count);
+    const [loading, setLoading] = useState(false);
+    const [submitted, setSubmitted] = useState(!!company.user_rating);
+
+    const submit = async () => {
+        if (!selected || loading) return;
+        setLoading(true);
+        try {
+            const res = await axios.post(`/store/${company.uuid}/rate`, { rating: selected, comment });
+            setAverage(res.data.average);
+            setCount(res.data.count);
+            setSubmitted(true);
+        } catch {
+            // silently ignore
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const displayStars = hovered || selected;
+
+    return (
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 mt-6">
+            <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-900">Avaliações</h3>
+                {average && (
+                    <div className="flex items-center gap-2">
+                        <Star size={18} className="text-yellow-400" fill="currentColor" />
+                        <span className="text-lg font-black text-gray-900">{Number(average).toFixed(1)}</span>
+                        <span className="text-sm text-gray-400">({count} {count === 1 ? 'avaliação' : 'avaliações'})</span>
+                    </div>
+                )}
+            </div>
+
+            {!auth ? (
+                <p className="text-gray-500 text-sm">
+                    <button
+                        onClick={() => window.dispatchEvent(new Event('open-auth-modal'))}
+                        className="text-red-500 font-bold hover:underline"
+                    >
+                        Entre
+                    </button>{' '}
+                    para avaliar esta loja.
+                </p>
+            ) : (
+                <div>
+                    {submitted && (
+                        <p className="text-sm text-emerald-600 font-semibold mb-4">
+                            ✓ Sua avaliação foi salva!{' '}
+                            <button onClick={() => setSubmitted(false)} className="text-gray-400 font-normal hover:underline text-xs">Editar</button>
+                        </p>
+                    )}
+
+                    {!submitted && (
+                        <div className="space-y-4">
+                            <div>
+                                <p className="text-sm font-semibold text-gray-700 mb-2">
+                                    {selected ? `Sua nota: ${selected} estrela${selected > 1 ? 's' : ''}` : 'Selecione uma nota'}
+                                </p>
+                                <div className="flex gap-1">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                        <button
+                                            key={star}
+                                            onMouseEnter={() => setHovered(star)}
+                                            onMouseLeave={() => setHovered(0)}
+                                            onClick={() => setSelected(star)}
+                                            className="transition-transform hover:scale-110 active:scale-95"
+                                        >
+                                            <Star
+                                                size={32}
+                                                className={star <= displayStars ? 'text-yellow-400' : 'text-gray-200'}
+                                                fill={star <= displayStars ? 'currentColor' : 'none'}
+                                            />
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <textarea
+                                value={comment}
+                                onChange={(e) => setComment(e.target.value)}
+                                placeholder="Deixe um comentário (opcional)..."
+                                maxLength={500}
+                                rows={3}
+                                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 resize-none focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent"
+                            />
+
+                            <button
+                                onClick={submit}
+                                disabled={!selected || loading}
+                                className="bg-red-500 hover:bg-red-600 disabled:opacity-40 text-white font-bold px-6 py-2.5 rounded-xl transition-all active:scale-95 text-sm"
+                            >
+                                {loading ? 'Enviando...' : 'Enviar avaliação'}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
 
 export default function MarketplaceShow({ company, productsByCategory }) {
     const { auth } = usePage().props;
@@ -10,6 +119,21 @@ export default function MarketplaceShow({ company, productsByCategory }) {
     const [cart, setCart] = useState({});
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [isCheckingOut, setIsCheckingOut] = useState(false);
+    const [favorited, setFavorited] = useState(company.is_favorited);
+    const [favLoading, setFavLoading] = useState(false);
+
+    const toggleFavorite = async () => {
+        if (!auth || favLoading) return;
+        setFavLoading(true);
+        try {
+            const res = await axios.post(`/favorites/${company.uuid}`);
+            setFavorited(res.data.favorited);
+        } catch {
+            // silently ignore
+        } finally {
+            setFavLoading(false);
+        }
+    };
 
     const cartItems = Object.values(cart);
     const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -70,6 +194,19 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                     <img src={company.banner} className="w-full h-full object-cover" alt="Banner" />
                 </div>
 
+                {auth && (
+                    <button
+                        onClick={toggleFavorite}
+                        disabled={favLoading}
+                        className={`absolute top-4 right-4 z-10 w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all ${
+                            favorited ? 'bg-red-500 text-white' : 'bg-white text-gray-400 hover:text-red-400'
+                        }`}
+                        aria-label={favorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                    >
+                        <Heart size={18} fill={favorited ? 'currentColor' : 'none'} />
+                    </button>
+                )}
+
                 <div className="absolute -bottom-16 left-8 flex items-end gap-6">
                     <div className="w-32 h-32 rounded-2xl border-4 border-white shadow-xl overflow-hidden bg-white">
                         <img src={company.logo} className="w-full h-full object-cover" alt="Logo" />
@@ -77,7 +214,7 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                     <div className="mb-4">
                         <h1 className="text-3xl font-black text-white drop-shadow-md select-none">{company.name}</h1>
                         <div className="flex items-center gap-3 mt-1 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full border border-gray-100 shadow-sm w-max">
-                            <span className="text-yellow-500 font-bold">★ {company.rating}</span>
+                            <span className="text-yellow-500 font-bold">★ {company.rating ?? '—'}{company.ratings_count > 0 && <span className="text-gray-400 font-normal text-xs ml-1">({company.ratings_count})</span>}</span>
                             <span className="text-gray-300">|</span>
                             <span className="text-xs font-semibold text-gray-600 uppercase tracking-tighter">{company.type}</span>
                             <span className="text-gray-300">|</span>
@@ -201,6 +338,8 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                     </div>
                 </div>
             </div>
+
+            <RatingSection company={company} />
 
             {/* Barra flutuante do carrinho */}
             <AnimatePresence>

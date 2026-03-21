@@ -74,6 +74,17 @@ class Client extends AuthenticatableUser implements FilamentUser, HasTenants
             ->withTimestamps();
     }
 
+    public function favoriteCompanies(): BelongsToMany
+    {
+        return $this->belongsToMany(Company::class, 'client_favorite_companies')
+            ->withTimestamps();
+    }
+
+    public function companyRatings(): HasMany
+    {
+        return $this->hasMany(CompanyRating::class);
+    }
+
     /**
      * Implementação de HasTenants para Filament
      */

@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import MarketplaceLayout from '@/Layouts/MarketplaceLayout';
 import { Head, Link } from '@inertiajs/react';
-import { motion } from 'framer-motion';
-import { Package, Clock, CheckCircle2, Truck, AlertCircle, ChevronRight, ShoppingBag } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Package, Clock, CheckCircle2, Truck, AlertCircle, ChevronDown, ShoppingBag } from 'lucide-react';
 
 const statusConfig = {
     pending: { label: 'Aguardando Aprovação', color: 'text-amber-500', bg: 'bg-amber-50', icon: Clock },
@@ -11,6 +11,107 @@ const statusConfig = {
     delivered: { label: 'Entregue', color: 'text-emerald-500', bg: 'bg-emerald-50', icon: CheckCircle2 },
     cancelled: { label: 'Cancelado', color: 'text-red-500', bg: 'bg-red-50', icon: AlertCircle },
 };
+
+const paymentLabels = {
+    cash: 'Dinheiro',
+    debit: 'Débito',
+    credit: 'Crédito',
+    pix: 'Pix',
+};
+
+function OrderCard({ order, index }) {
+    const [expanded, setExpanded] = useState(false);
+    const config = statusConfig[order.status] || statusConfig.pending;
+    const StatusIcon = config.icon;
+
+    return (
+        <motion.div
+            key={order.uuid}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+            className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+        >
+            <div className="p-6">
+                <div className="flex flex-wrap justify-between items-start gap-4 mb-4">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center p-2 overflow-hidden">
+                            <img src={order.company.logo} alt={order.company.name} className="w-full h-full object-contain" />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-lg text-gray-900">{order.company.name}</h3>
+                            <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Pedido #{order.uuid.substring(0, 8)}</p>
+                        </div>
+                    </div>
+                    <div className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm ${config.bg} ${config.color}`}>
+                        <StatusIcon size={18} />
+                        {config.label}
+                    </div>
+                </div>
+
+                <div className="flex justify-between items-center">
+                    <div>
+                        <span className="text-xs text-gray-400 font-medium block">Realizado em {order.created_at}</span>
+                        <span className="text-lg font-extrabold text-red-500">
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.total_amount)}
+                        </span>
+                    </div>
+                    <button
+                        onClick={() => setExpanded(!expanded)}
+                        className="flex items-center gap-1 text-sm font-bold text-red-500 hover:text-red-600 transition-colors"
+                    >
+                        Detalhes do Pedido
+                        <motion.span animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                            <ChevronDown size={16} />
+                        </motion.span>
+                    </button>
+                </div>
+
+                <AnimatePresence>
+                    {expanded && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                        >
+                            <div className="bg-gray-50 rounded-2xl p-4 mt-4">
+                                <div className="space-y-2 mb-3">
+                                    {order.items.map((item, i) => (
+                                        <div key={i} className="flex justify-between items-center text-sm">
+                                            <span className="text-gray-600">
+                                                <span className="font-bold text-gray-900">{item.quantity}x</span> {item.product_name}
+                                            </span>
+                                            <span className="font-medium text-gray-900">
+                                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.total_amount)}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="border-t border-gray-200 pt-3 flex justify-between items-center">
+                                    <span className="text-xs text-gray-500 font-medium uppercase tracking-widest">Total</span>
+                                    <span className="text-lg font-extrabold text-red-500">
+                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.total_amount)}
+                                    </span>
+                                </div>
+                                {order.payment_method && (
+                                    <div className="border-t border-gray-200 mt-3 pt-3 flex justify-between items-center text-sm">
+                                        <span className="text-gray-500 font-medium">Forma de pagamento</span>
+                                        <span className="font-bold text-gray-800">
+                                            {paymentLabels[order.payment_method] ?? order.payment_method}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+            <div className="bg-gradient-to-r from-red-500 to-red-600 h-1.5 w-full opacity-10" />
+        </motion.div>
+    );
+}
 
 export default function Orders({ orders }) {
     return (
@@ -43,67 +144,9 @@ export default function Orders({ orders }) {
                     </motion.div>
                 ) : (
                     <div className="space-y-6">
-                        {orders.map((order, index) => {
-                            const config = statusConfig[order.status] || statusConfig.pending;
-                            const StatusIcon = config.icon;
-
-                            return (
-                                <motion.div
-                                    key={order.uuid}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: index * 0.1 }}
-                                    className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
-                                >
-                                    <div className="p-6">
-                                        <div className="flex flex-wrap justify-between items-start gap-4 mb-6">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-14 h-14 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center p-2 overflow-hidden">
-                                                    <img src={order.company.logo} alt={order.company.name} className="w-full h-full object-contain" />
-                                                </div>
-                                                <div>
-                                                    <h3 className="font-bold text-lg text-gray-900">{order.company.name}</h3>
-                                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Pedido #{order.uuid.substring(0, 8)}</p>
-                                                </div>
-                                            </div>
-                                            <div className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm ${config.bg} ${config.color}`}>
-                                                <StatusIcon size={18} />
-                                                {config.label}
-                                            </div>
-                                        </div>
-
-                                        <div className="bg-gray-50 rounded-2xl p-4 mb-6">
-                                            <div className="space-y-2">
-                                                {order.items.map((item, i) => (
-                                                    <div key={i} className="flex justify-between items-center text-sm">
-                                                        <span className="text-gray-600">
-                                                            <span className="font-bold text-gray-900">{item.quantity}x</span> {item.product_name}
-                                                        </span>
-                                                        <span className="font-medium text-gray-900">
-                                                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.total_amount)}
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            <div className="border-t border-gray-200 mt-3 pt-3 flex justify-between items-center">
-                                                <span className="text-gray-500 font-medium text-xs uppercase tracking-widest">Total do Pedido</span>
-                                                <span className="text-lg font-extrabold text-red-500">
-                                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.total_amount)}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-xs text-gray-400 font-medium">Realizado em {order.created_at}</span>
-                                            <button className="text-red-500 font-bold text-sm flex items-center gap-1 hover:underline">
-                                                Detalhes do Pedido <ChevronRight size={16} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div className="bg-gradient-to-r from-red-500 to-red-600 h-1.5 w-full opacity-10" />
-                                </motion.div>
-                            );
-                        })}
+                        {orders.map((order, index) => (
+                            <OrderCard key={order.uuid} order={order} index={index} />
+                        ))}
                     </div>
                 )}
             </div>
