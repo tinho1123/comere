@@ -5,43 +5,27 @@ export default function MarketplaceIndex({ companies, lastVisited, categories, s
     return (
         <MarketplaceLayout>
             {/* Categorias */}
-            <div className="flex gap-4 overflow-x-auto pb-4 mb-8 no-scrollbar">
-                {categories.map((cat) => (
-                    <Link
-                        key={cat}
-                        href={`/?category=${cat}`}
-                        className={`flex-shrink-0 px-6 py-8 rounded-2xl border transition-all hover:shadow-lg flex flex-col items-center gap-2 group ${selectedCategory === cat
-                                ? 'bg-red-50 border-red-200 ring-2 ring-red-500/20'
-                                : 'bg-white border-gray-100 hover:border-red-100'
-                            }`}
-                    >
-                        <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                            {/* Ícones simplificados por tipo */}
-                            {cat === 'Restaurantes' && '🍔'}
-                            {cat === 'Mercados' && '🛒'}
-                            {cat === 'Farmácias' && '💊'}
-                            {cat === 'Bebidas' && '🍺'}
-                        </div>
-                        <span className={`text-sm font-semibold ${selectedCategory === cat ? 'text-red-600' : 'text-gray-600'}`}>
-                            {cat}
-                        </span>
-                    </Link>
-                ))}
-            </div>
-
-            {/* Banners Promocionais */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-                <div className="h-48 rounded-3xl bg-gradient-to-br from-red-600 to-orange-500 p-8 flex flex-col justify-center text-white shadow-xl shadow-red-500/10 active:scale-[0.99] transition-transform cursor-pointer">
-                    <span className="text-sm font-bold uppercase tracking-widest opacity-80 decoration-white">Cupom de Boas-vindas</span>
-                    <h2 className="text-3xl font-black mt-1">R$ 20 OFF</h2>
-                    <p className="mt-2 text-red-100 font-medium italic">No seu primeiro pedido fiado</p>
+            {categories.length > 0 && (
+                <div className="flex gap-4 overflow-x-auto pb-4 mb-8 no-scrollbar">
+                    {categories.map((cat) => (
+                        <Link
+                            key={cat.uuid}
+                            href={`/?category=${cat.uuid}`}
+                            className={`flex-shrink-0 px-6 py-8 rounded-2xl border transition-all hover:shadow-lg flex flex-col items-center gap-2 group ${selectedCategory === cat.uuid
+                                    ? 'bg-red-50 border-red-200 ring-2 ring-red-500/20'
+                                    : 'bg-white border-gray-100 hover:border-red-100'
+                                }`}
+                        >
+                            <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform text-2xl">
+                                {cat.icon}
+                            </div>
+                            <span className={`text-sm font-semibold ${selectedCategory === cat.uuid ? 'text-red-600' : 'text-gray-600'}`}>
+                                {cat.name}
+                            </span>
+                        </Link>
+                    ))}
                 </div>
-                <div className="h-48 rounded-3xl bg-gradient-to-br from-gray-800 to-gray-900 p-8 flex flex-col justify-center text-white shadow-xl shadow-gray-900/10 active:scale-[0.99] transition-transform cursor-pointer">
-                    <span className="text-sm font-bold uppercase tracking-widest opacity-80">Parceria VIP</span>
-                    <h2 className="text-3xl font-black mt-1">TAXA ZERO</h2>
-                    <p className="mt-2 text-gray-300 font-medium italic">Para os parceiros de destaque da semana</p>
-                </div>
-            </div>
+            )}
 
             {/* Histórico: Lojas Frequentadas */}
             {lastVisited.length > 0 && (

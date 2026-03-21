@@ -5,6 +5,7 @@ namespace App\Filament\Master\Resources;
 use App\Filament\Master\Resources\CompanyResource\Pages;
 use App\Filament\Master\Resources\CompanyResource\RelationManagers\UsersRelationManager;
 use App\Models\Company;
+use App\Models\CompanyType;
 use App\Services\BillingService;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
@@ -78,6 +79,15 @@ class CompanyResource extends Resource
                         ->label('Nome da loja')
                         ->required()
                         ->maxLength(255),
+
+                    Select::make('company_type_id')
+                        ->label('Tipo de loja')
+                        ->relationship('companyType', 'name')
+                        ->options(CompanyType::orderBy('name')->pluck('name', 'id'))
+                        ->searchable()
+                        ->preload()
+                        ->placeholder('Selecione o tipo')
+                        ->nullable(),
 
                     TextInput::make('admin_email')
                         ->label('E-mail do administrador')

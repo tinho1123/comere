@@ -12,7 +12,7 @@
             <div class="grid gap-y-2">
                 @foreach ($this->companyOptions as $option)
                     <a
-                        href="{{ route('admin.select-company') }}?uuid={{ $option['uuid'] }}"
+                        href="{{ route('filament.admin.pages.dashboard', ['tenant' => $option['uuid']]) }}"
                         class="flex items-center gap-4 rounded-xl border border-gray-200 dark:border-white/10 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 hover:border-primary-500 transition no-underline"
                     >
                         @if ($option['logo_path'])

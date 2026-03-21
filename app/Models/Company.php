@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -22,6 +23,7 @@ class Company extends Model
         'name',
         'description',
         'type',
+        'company_type_id',
         'logo_path',
         'banner_path',
         'foundation_date',
@@ -48,6 +50,11 @@ class Company extends Model
         'latitude' => 'float',
         'longitude' => 'float',
     ];
+
+    public function companyType(): BelongsTo
+    {
+        return $this->belongsTo(CompanyType::class);
+    }
 
     public function users(): BelongsToMany
     {

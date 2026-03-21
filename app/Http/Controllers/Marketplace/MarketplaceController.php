@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Marketplace;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Models\CompanyType;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -17,14 +18,14 @@ class MarketplaceController extends Controller
 {
     public function index(Request $request)
     {
-        $category = $request->query('category');
+        $categoryUuid = $request->query('category');
         $distanceService = new DistanceService;
         $client = auth()->guard('client')->user();
         $defaultAddress = $client?->addresses()->where('is_default', true)->first();
 
         $companies = Company::where('active', true)
-            ->with('deliveryFeeRanges')
-            ->when($category, fn ($q, $cat) => $q->where('type', $cat))
+            ->with(['deliveryFeeRanges', 'companyType'])
+            ->when($categoryUuid, fn ($q) => $q->whereHas('companyType', fn ($q) => $q->where('uuid', $categoryUuid)))
             ->get()
             ->map(function ($company) use ($distanceService, $defaultAddress) {
                 $distance = null;
@@ -44,7 +45,7 @@ class MarketplaceController extends Controller
                 return [
                     'uuid' => $company->uuid,
                     'name' => $company->name,
-                    'type' => $company->type,
+                    'type' => $company->companyType?->name ?? $company->type,
                     'logo' => $company->logo_path ? Storage::url($company->logo_path) : '/default-store-logo.png',
                     'banner' => $company->banner_path ? Storage::url($company->banner_path) : '/default-store-banner.png',
                     'rating' => $company->rating,
@@ -65,21 +66,26 @@ class MarketplaceController extends Controller
 
         $lastVisitedUuids = session()->get('last_visited_stores', []);
         $lastVisited = Company::whereIn('uuid', $lastVisitedUuids)
+            ->with('companyType')
             ->get()
             ->sortBy(fn ($c) => array_search($c->uuid, $lastVisitedUuids))
             ->map(fn ($c) => [
                 'uuid' => $c->uuid,
                 'name' => $c->name,
                 'logo' => $c->logo_path ? Storage::url($c->logo_path) : '/default-store-logo.png',
-                'type' => $c->type,
+                'type' => $c->companyType?->name ?? $c->type,
             ]);
+
+        $categories = CompanyType::whereHas('companies', fn ($q) => $q->where('active', true))
+            ->orderBy('name')
+            ->get(['uuid', 'name', 'icon']);
 
         return Inertia::render('Marketplace/Index', [
             'companies' => $companies,
             'promotedProducts' => $promotedProducts,
             'lastVisited' => $lastVisited,
-            'selectedCategory' => $category,
-            'categories' => ['Restaurantes', 'Mercados', 'Farmácias', 'Bebidas'],
+            'selectedCategory' => $categoryUuid,
+            'categories' => $categories,
         ]);
     }
 
