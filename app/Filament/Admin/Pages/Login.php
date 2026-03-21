@@ -19,9 +19,11 @@ class Login extends BaseLogin
         }
 
         $user = auth()->user();
-        $tenants = $user->getTenants(filament()->getCurrentPanel());
+        $companies = $user->isMaster()
+            ? Company::all()
+            : $user->companies()->get();
 
-        if ($tenants->count() <= 1) {
+        if ($companies->count() <= 1) {
             return $response;
         }
 
@@ -46,9 +48,15 @@ class Login extends BaseLogin
                         ->options(function (): array {
                             $user = auth()->user();
 
-                            return $user->getTenants(filament()->getCurrentPanel())
-                                ->pluck('name', 'uuid')
-                                ->toArray();
+                            if (! $user) {
+                                return [];
+                            }
+
+                            if ($user->isMaster()) {
+                                return Company::orderBy('name')->pluck('name', 'uuid')->toArray();
+                            }
+
+                            return $user->companies()->orderBy('name')->pluck('name', 'uuid')->toArray();
                         })
                         ->required()
                         ->searchable()
