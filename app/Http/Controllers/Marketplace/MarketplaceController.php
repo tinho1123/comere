@@ -262,4 +262,41 @@ class MarketplaceController extends Controller
 
         return redirect()->route('marketplace.orders');
     }
+
+    public function search(Request $request)
+    {
+        $q = trim($request->query('q', ''));
+
+        if (strlen($q) < 2) {
+            return response()->json(['companies' => [], 'products' => []]);
+        }
+
+        $companies = Company::where('active', true)
+            ->where('name', 'like', "%{$q}%")
+            ->limit(5)
+            ->get()
+            ->map(fn ($c) => [
+                'uuid' => $c->uuid,
+                'name' => $c->name,
+                'logo' => $c->logo_path ? Storage::url($c->logo_path) : '/default-store-logo.png',
+                'type' => $c->type,
+            ]);
+
+        $products = Product::where('active', true)
+            ->where('is_marketplace', true)
+            ->where('name', 'like', "%{$q}%")
+            ->whereHas('company', fn ($q) => $q->where('active', true))
+            ->with('company:id,uuid,name,logo_path')
+            ->limit(5)
+            ->get()
+            ->map(fn ($p) => [
+                'name' => $p->name,
+                'company_uuid' => $p->company->uuid,
+                'company_name' => $p->company->name,
+                'logo' => $p->company->logo_path ? Storage::url($p->company->logo_path) : '/default-store-logo.png',
+                'amount' => $p->amount,
+            ]);
+
+        return response()->json(['companies' => $companies, 'products' => $products]);
+    }
 }

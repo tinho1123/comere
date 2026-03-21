@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, LogIn, X, Mail, LogOut, ShoppingCart, Search, Package, MapPin, ChevronDown, Plus, Check, Trash2 } from 'lucide-react';
@@ -25,6 +25,43 @@ export default function MarketplaceLayout({ children }) {
 
     const isAuthenticated = !!auth.user;
     const displayUser = auth.user;
+    const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+    const userMenuRef = useRef(null);
+    const searchRef = useRef(null);
+    const searchTimerRef = useRef(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState(null);
+    const [isSearching, setIsSearching] = useState(false);
+
+    useEffect(() => {
+        const handler = (e) => {
+            if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+                setIsUserMenuOpen(false);
+            }
+            if (searchRef.current && !searchRef.current.contains(e.target)) {
+                setSearchResults(null);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    const handleSearchChange = (e) => {
+        const q = e.target.value;
+        setSearchQuery(q);
+        clearTimeout(searchTimerRef.current);
+        if (q.length < 2) { setSearchResults(null); return; }
+        setIsSearching(true);
+        searchTimerRef.current = setTimeout(async () => {
+            try {
+                const res = await axios.get(`/search?q=${encodeURIComponent(q)}`);
+                setSearchResults(res.data);
+            } catch {}
+            finally { setIsSearching(false); }
+        }, 300);
+    };
+
+    const clearSearch = () => { setSearchQuery(''); setSearchResults(null); };
 
     useEffect(() => {
         const handler = () => setIsAuthOpen(true);
@@ -151,17 +188,96 @@ export default function MarketplaceLayout({ children }) {
                                 <span className="text-2xl font-bold bg-gradient-to-r from-red-600 to-red-500 bg-clip-text text-transparent italic">Comere</span>
                             </Link>
 
-                            <div className="hidden md:block w-96">
+                            <div className="hidden md:block w-96 relative" ref={searchRef}>
                                 <div className="relative">
-                                    <input type="text" placeholder="Busque por produtos ou lojas" className="w-full bg-gray-100 border-none rounded-lg py-2 pl-4 pr-10 focus:ring-2 focus:ring-red-500/20 focus:bg-white transition-all text-sm" />
-                                    <div className="absolute right-3 top-2.5 text-red-500"><Search size={18} /></div>
+                                    <input
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={handleSearchChange}
+                                        placeholder="Busque por produtos ou lojas"
+                                        className="w-full bg-gray-100 border-none rounded-lg py-2 pl-4 pr-10 focus:ring-2 focus:ring-red-500/20 focus:bg-white transition-all text-sm outline-none"
+                                    />
+                                    <div className="absolute right-3 top-2.5 text-red-400">
+                                        {isSearching ? (
+                                            <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                                        ) : (
+                                            <Search size={16} />
+                                        )}
+                                    </div>
                                 </div>
+
+                                <AnimatePresence>
+                                    {searchResults && (searchResults.companies.length > 0 || searchResults.products.length > 0) && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -6 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -6 }}
+                                            transition={{ duration: 0.15 }}
+                                            className="absolute top-full mt-2 left-0 right-0 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50"
+                                        >
+                                            {searchResults.companies.length > 0 && (
+                                                <div>
+                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-4 pt-3 pb-1">Lojas</p>
+                                                    {searchResults.companies.map((c) => (
+                                                        <Link
+                                                            key={c.uuid}
+                                                            href={`/store/${c.uuid}`}
+                                                            onClick={clearSearch}
+                                                            className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors"
+                                                        >
+                                                            <img src={c.logo} alt={c.name} className="w-8 h-8 rounded-lg object-cover border border-gray-100 flex-shrink-0" />
+                                                            <div className="min-w-0">
+                                                                <p className="text-sm font-semibold text-gray-900 truncate">{c.name}</p>
+                                                                <p className="text-xs text-gray-400">{c.type}</p>
+                                                            </div>
+                                                        </Link>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {searchResults.products.length > 0 && (
+                                                <div className={searchResults.companies.length > 0 ? 'border-t border-gray-100' : ''}>
+                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-4 pt-3 pb-1">Produtos</p>
+                                                    {searchResults.products.map((p, i) => (
+                                                        <Link
+                                                            key={i}
+                                                            href={`/store/${p.company_uuid}`}
+                                                            onClick={clearSearch}
+                                                            className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors"
+                                                        >
+                                                            <img src={p.logo} alt={p.company_name} className="w-8 h-8 rounded-lg object-cover border border-gray-100 flex-shrink-0" />
+                                                            <div className="flex-grow min-w-0">
+                                                                <p className="text-sm font-semibold text-gray-900 truncate">{p.name}</p>
+                                                                <p className="text-xs text-gray-400 truncate">{p.company_name}</p>
+                                                            </div>
+                                                            <span className="text-sm font-bold text-gray-700 flex-shrink-0">
+                                                                R$ {Number(p.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                            </span>
+                                                        </Link>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </motion.div>
+                                    )}
+
+                                    {searchResults && searchResults.companies.length === 0 && searchResults.products.length === 0 && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -6 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -6 }}
+                                            transition={{ duration: 0.15 }}
+                                            className="absolute top-full mt-2 left-0 right-0 bg-white rounded-2xl shadow-xl border border-gray-100 px-4 py-6 text-center z-50"
+                                        >
+                                            <p className="text-sm text-gray-400">Nenhum resultado para "<span className="font-semibold text-gray-600">{searchQuery}</span>"</p>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         </div>
 
                         <div className="flex items-center gap-4">
                             {isAuthenticated ? (
-                                <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-3">
                                     {/* Endereço */}
                                     <button
                                         onClick={openAddressModal}
@@ -172,27 +288,61 @@ export default function MarketplaceLayout({ children }) {
                                         <ChevronDown size={13} className="flex-shrink-0" />
                                     </button>
 
-                                    <Link href="/meus-pedidos" className={`relative flex items-center gap-2 text-sm font-semibold transition-colors py-2 px-1 rounded-lg ${window.location.pathname === '/meus-pedidos' ? 'text-red-500' : 'text-gray-600 hover:text-red-500'}`}>
-                                        <Package size={18} />
-                                        <span className="hidden lg:inline">Meus Pedidos</span>
-                                        {orders_count?.unfinished > 0 && (
-                                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center animate-pulse">{orders_count.unfinished}</span>
-                                        )}
-                                    </Link>
-
-                                    <div className="flex items-center gap-3">
-                                        <div className="text-right hidden sm:block">
-                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">Bem-vindo</p>
-                                            <p className="text-sm font-bold text-gray-900 leading-none">{displayUser?.name || 'Usuário'}</p>
-                                        </div>
-                                        <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-red-500 to-red-400 p-0.5 shadow-sm">
-                                            <div className="h-full w-full rounded-full bg-white flex items-center justify-center">
-                                                <User size={18} className="text-red-500" />
+                                    {/* User menu */}
+                                    <div className="relative" ref={userMenuRef}>
+                                        <button
+                                            onClick={() => setIsUserMenuOpen((v) => !v)}
+                                            className="flex items-center gap-2 rounded-full hover:bg-gray-100 pr-2 transition-colors"
+                                        >
+                                            <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-red-500 to-red-400 p-0.5 shadow-sm">
+                                                <div className="h-full w-full rounded-full bg-white flex items-center justify-center">
+                                                    <User size={18} className="text-red-500" />
+                                                </div>
                                             </div>
-                                        </div>
-                                        <button onClick={handleLogout} title="Sair" className="text-gray-400 hover:text-red-500 transition-colors p-1">
-                                            <LogOut size={18} />
+                                            <span className="hidden sm:block text-sm font-semibold text-gray-700 max-w-[100px] truncate">
+                                                {displayUser?.name?.split(' ')[0] || 'Usuário'}
+                                            </span>
+                                            <ChevronDown size={14} className={`text-gray-400 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
                                         </button>
+
+                                        <AnimatePresence>
+                                            {isUserMenuOpen && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                    exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                                                    transition={{ duration: 0.15 }}
+                                                    className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50"
+                                                >
+                                                    <div className="px-4 py-3 border-b border-gray-100">
+                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Bem-vindo</p>
+                                                        <p className="text-sm font-bold text-gray-900 truncate">{displayUser?.name || 'Usuário'}</p>
+                                                    </div>
+
+                                                    <Link
+                                                        href="/meus-pedidos"
+                                                        onClick={() => setIsUserMenuOpen(false)}
+                                                        className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors relative"
+                                                    >
+                                                        <Package size={16} className="text-gray-400" />
+                                                        Meus Pedidos
+                                                        {orders_count?.unfinished > 0 && (
+                                                            <span className="ml-auto bg-red-500 text-white text-[10px] font-bold h-4 px-1.5 rounded-full flex items-center justify-center animate-pulse">
+                                                                {orders_count.unfinished}
+                                                            </span>
+                                                        )}
+                                                    </Link>
+
+                                                    <button
+                                                        onClick={() => { setIsUserMenuOpen(false); handleLogout(); }}
+                                                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-500 hover:bg-red-50 transition-colors border-t border-gray-100"
+                                                    >
+                                                        <LogOut size={16} />
+                                                        Sair
+                                                    </button>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
                                     </div>
                                 </div>
                             ) : (

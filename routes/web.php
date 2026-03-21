@@ -20,6 +20,7 @@ Route::post('/table/{uuid}/name', [TableController::class, 'registerName'])->nam
 Route::post('/table/{uuid}/item', [TableController::class, 'addItem'])->name('table.add-item');
 
 Route::get('/', [MarketplaceController::class, 'index'])->name('marketplace.index');
+Route::get('/search', [MarketplaceController::class, 'search'])->name('marketplace.search');
 Route::get('/store/{company:uuid}', [MarketplaceController::class, 'show'])->name('marketplace.show');
 
 Route::post('/marketplace/login', [MarketplaceLoginController::class, 'login'])->name('marketplace.login')->middleware('throttle:10,1');

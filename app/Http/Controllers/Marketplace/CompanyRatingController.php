@@ -14,14 +14,13 @@ class CompanyRatingController extends Controller
     {
         $request->validate([
             'rating' => ['required', 'integer', 'min:1', 'max:5'],
-            'comment' => ['nullable', 'string', 'max:500'],
         ]);
 
         $client = auth('client')->user();
 
         CompanyRating::updateOrCreate(
             ['client_id' => $client->id, 'company_id' => $company->id],
-            ['rating' => $request->rating, 'comment' => $request->comment]
+            ['rating' => $request->rating]
         );
 
         $company->recalculateRating();

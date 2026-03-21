@@ -5,109 +5,59 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, X, Plus, Minus, Trash2, LogIn, MapPin, Truck, Heart, Star } from 'lucide-react';
 import axios from 'axios';
 
-function RatingSection({ company }) {
+function StarRating({ company }) {
     const { auth } = usePage().props;
     const [hovered, setHovered] = useState(0);
     const [selected, setSelected] = useState(company.user_rating?.rating ?? 0);
-    const [comment, setComment] = useState(company.user_rating?.comment ?? '');
-    const [average, setAverage] = useState(company.rating);
+    const [average, setAverage] = useState(Number(company.rating) || 0);
     const [count, setCount] = useState(company.ratings_count);
     const [loading, setLoading] = useState(false);
-    const [submitted, setSubmitted] = useState(!!company.user_rating);
 
-    const submit = async () => {
-        if (!selected || loading) return;
+    const rate = async (star) => {
+        if (loading) return;
+        setSelected(star);
         setLoading(true);
         try {
-            const res = await axios.post(`/store/${company.uuid}/rate`, { rating: selected, comment });
-            setAverage(res.data.average);
+            const res = await axios.post(`/store/${company.uuid}/rate`, { rating: star });
+            setAverage(Number(res.data.average) || 0);
             setCount(res.data.count);
-            setSubmitted(true);
         } catch {
-            // silently ignore
+            setSelected(company.user_rating?.rating ?? 0);
         } finally {
             setLoading(false);
         }
     };
 
-    const displayStars = hovered || selected;
+    const display = hovered || selected;
 
     return (
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 mt-6">
-            <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-900">Avaliações</h3>
-                {average && (
-                    <div className="flex items-center gap-2">
-                        <Star size={18} className="text-yellow-400" fill="currentColor" />
-                        <span className="text-lg font-black text-gray-900">{Number(average).toFixed(1)}</span>
-                        <span className="text-sm text-gray-400">({count} {count === 1 ? 'avaliação' : 'avaliações'})</span>
-                    </div>
-                )}
-            </div>
-
-            {!auth ? (
-                <p className="text-gray-500 text-sm">
+        <div className="flex items-center gap-3 mt-1 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-100 shadow-sm w-max">
+            <div
+                className="flex items-center gap-0.5"
+                onMouseLeave={() => setHovered(0)}
+                title={auth ? 'Clique para avaliar' : 'Entre para avaliar'}
+            >
+                {[1, 2, 3, 4, 5].map((star) => (
                     <button
-                        onClick={() => window.dispatchEvent(new Event('open-auth-modal'))}
-                        className="text-red-500 font-bold hover:underline"
+                        key={star}
+                        disabled={!auth || loading}
+                        onMouseEnter={() => auth && setHovered(star)}
+                        onClick={() => auth && rate(star)}
+                        className={`transition-transform ${auth ? 'hover:scale-125 cursor-pointer active:scale-95' : 'cursor-default'}`}
                     >
-                        Entre
-                    </button>{' '}
-                    para avaliar esta loja.
-                </p>
-            ) : (
-                <div>
-                    {submitted && (
-                        <p className="text-sm text-emerald-600 font-semibold mb-4">
-                            ✓ Sua avaliação foi salva!{' '}
-                            <button onClick={() => setSubmitted(false)} className="text-gray-400 font-normal hover:underline text-xs">Editar</button>
-                        </p>
-                    )}
-
-                    {!submitted && (
-                        <div className="space-y-4">
-                            <div>
-                                <p className="text-sm font-semibold text-gray-700 mb-2">
-                                    {selected ? `Sua nota: ${selected} estrela${selected > 1 ? 's' : ''}` : 'Selecione uma nota'}
-                                </p>
-                                <div className="flex gap-1">
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                        <button
-                                            key={star}
-                                            onMouseEnter={() => setHovered(star)}
-                                            onMouseLeave={() => setHovered(0)}
-                                            onClick={() => setSelected(star)}
-                                            className="transition-transform hover:scale-110 active:scale-95"
-                                        >
-                                            <Star
-                                                size={32}
-                                                className={star <= displayStars ? 'text-yellow-400' : 'text-gray-200'}
-                                                fill={star <= displayStars ? 'currentColor' : 'none'}
-                                            />
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <textarea
-                                value={comment}
-                                onChange={(e) => setComment(e.target.value)}
-                                placeholder="Deixe um comentário (opcional)..."
-                                maxLength={500}
-                                rows={3}
-                                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 resize-none focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent"
-                            />
-
-                            <button
-                                onClick={submit}
-                                disabled={!selected || loading}
-                                className="bg-red-500 hover:bg-red-600 disabled:opacity-40 text-white font-bold px-6 py-2.5 rounded-xl transition-all active:scale-95 text-sm"
-                            >
-                                {loading ? 'Enviando...' : 'Enviar avaliação'}
-                            </button>
-                        </div>
-                    )}
-                </div>
+                        <Star
+                            size={16}
+                            className={star <= display ? 'text-yellow-400' : 'text-gray-300'}
+                            fill={star <= display ? 'currentColor' : 'none'}
+                        />
+                    </button>
+                ))}
+            </div>
+            <span className="text-xs font-bold text-gray-700">
+                {average ? average.toFixed(1) : '—'}
+            </span>
+            {count > 0 && (
+                <span className="text-xs text-gray-400">({count})</span>
             )}
         </div>
     );
@@ -213,12 +163,13 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                     </div>
                     <div className="mb-4">
                         <h1 className="text-3xl font-black text-white drop-shadow-md select-none">{company.name}</h1>
-                        <div className="flex items-center gap-3 mt-1 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full border border-gray-100 shadow-sm w-max">
-                            <span className="text-yellow-500 font-bold">★ {company.rating ?? '—'}{company.ratings_count > 0 && <span className="text-gray-400 font-normal text-xs ml-1">({company.ratings_count})</span>}</span>
-                            <span className="text-gray-300">|</span>
-                            <span className="text-xs font-semibold text-gray-600 uppercase tracking-tighter">{company.type}</span>
-                            <span className="text-gray-300">|</span>
-                            <span className="text-xs font-medium text-gray-500">{company.delivery_time}</span>
+                        <div className="flex items-center gap-2 flex-wrap mt-1">
+                            <StarRating company={company} />
+                            <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-100 shadow-sm">
+                                <span className="text-xs font-semibold text-gray-600 uppercase tracking-tighter">{company.type}</span>
+                                <span className="text-gray-300">|</span>
+                                <span className="text-xs font-medium text-gray-500">{company.delivery_time}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -338,8 +289,6 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                     </div>
                 </div>
             </div>
-
-            <RatingSection company={company} />
 
             {/* Barra flutuante do carrinho */}
             <AnimatePresence>
