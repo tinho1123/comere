@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\SelectCompanyController;
 use App\Http\Controllers\Admin\TableQrController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
@@ -41,11 +42,13 @@ Route::middleware('auth:client')->group(function () {
     Route::delete('/addresses/{clientAddress:uuid}', [ClientAddressController::class, 'destroy'])->name('client.addresses.destroy');
 });
 
-// Push Notifications (admin users only)
+// Push Notifications + Admin utilities (admin users only)
 Route::middleware('auth')->group(function () {
     Route::post('/push/subscribe', [PushSubscriptionController::class, 'subscribe'])->name('push.subscribe');
     Route::post('/push/unsubscribe', [PushSubscriptionController::class, 'unsubscribe'])->name('push.unsubscribe');
     Route::get('/admin/table/{uuid}/qr-image', [TableQrController::class, 'image'])->name('table.qr-image');
+    Route::get('/admin/select-company', [SelectCompanyController::class, 'show'])->name('admin.select-company');
+    Route::post('/admin/select-company', [SelectCompanyController::class, 'store'])->name('admin.select-company.store');
 });
 
 // Rotas do Admin (existente)
