@@ -3,13 +3,20 @@
 namespace App\Filament\Admin\Pages;
 
 use App\Models\Company;
-use Filament\Actions\Action;
-use Filament\Forms\Components\Select;
 use Filament\Http\Responses\Auth\Contracts\LoginResponse;
 use Filament\Pages\Auth\Login as BaseLogin;
 
 class Login extends BaseLogin
 {
+    protected static string $view = 'filament.admin.pages.login';
+
+    public bool $showCompanySelector = false;
+
+    /** @var array<int, array{uuid: string, name: string}> */
+    public array $companyOptions = [];
+
+    public ?string $selectedCompanyUuid = null;
+
     public function authenticate(): ?LoginResponse
     {
         $response = parent::authenticate();
@@ -19,56 +26,33 @@ class Login extends BaseLogin
         }
 
         $user = auth()->user();
+
         $companies = $user->isMaster()
-            ? Company::all()
-            : $user->companies()->get();
+            ? Company::orderBy('name')->get()
+            : $user->companies()->orderBy('name')->get();
 
         if ($companies->count() <= 1) {
             return $response;
         }
 
-        $this->mountAction('selectCompany');
+        $this->companyOptions = $companies
+            ->map(fn (Company $c) => ['uuid' => $c->uuid, 'name' => $c->name])
+            ->values()
+            ->toArray();
+
+        $this->showCompanySelector = true;
 
         return null;
     }
 
-    protected function getActions(): array
+    public function selectCompany(): void
     {
-        return [
-            Action::make('selectCompany')
-                ->label('Selecionar loja')
-                ->modalHeading('Selecione uma loja')
-                ->modalDescription('Você tem acesso a múltiplas lojas. Selecione em qual deseja entrar.')
-                ->modalSubmitActionLabel('Entrar')
-                ->modalCancelAction(false)
-                ->closeModalByClickingAway(false)
-                ->form([
-                    Select::make('company_uuid')
-                        ->label('Loja')
-                        ->options(function (): array {
-                            $user = auth()->user();
+        $this->validate(['selectedCompanyUuid' => ['required', 'string']]);
 
-                            if (! $user) {
-                                return [];
-                            }
+        $company = Company::where('uuid', $this->selectedCompanyUuid)->firstOrFail();
 
-                            if ($user->isMaster()) {
-                                return Company::orderBy('name')->pluck('name', 'uuid')->toArray();
-                            }
+        abort_unless(auth()->user()->canAccessTenant($company), 403);
 
-                            return $user->companies()->orderBy('name')->pluck('name', 'uuid')->toArray();
-                        })
-                        ->required()
-                        ->searchable()
-                        ->placeholder('Escolha uma loja para continuar'),
-                ])
-                ->action(function (array $data): void {
-                    $company = Company::where('uuid', $data['company_uuid'])->firstOrFail();
-
-                    abort_unless(auth()->user()->canAccessTenant($company), 403);
-
-                    $this->redirect('/admin/'.$company->uuid);
-                }),
-        ];
+        $this->redirect('/admin/'.$company->uuid);
     }
 }
