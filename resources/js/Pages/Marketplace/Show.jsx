@@ -2,7 +2,7 @@ import { useState } from 'react';
 import MarketplaceLayout from '../../Layouts/MarketplaceLayout';
 import { Head, router, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, X, Plus, Minus, Trash2, LogIn, MapPin, Truck, Heart, Star } from 'lucide-react';
+import { ShoppingCart, X, Plus, Minus, Trash2, LogIn, MapPin, Truck, Heart, Star, ChevronDown } from 'lucide-react';
 import axios from 'axios';
 
 function StarRating({ company }) {
@@ -180,6 +180,14 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                     {company.description ?? 'Bem-vindo à nossa loja! Oferecemos os melhores produtos com a qualidade que você já conhece. Peça agora e aproveite nosso sistema de fiado exclusivo.'}
                 </p>
 
+                {/* Status de funcionamento */}
+                {company.is_open !== null && (
+                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-bold mb-6 ${company.is_open ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-500 border border-gray-200'}`}>
+                        <span className={`w-2 h-2 rounded-full ${company.is_open ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
+                        {company.is_open ? 'Aberto agora' : 'Fechado no momento'}
+                    </div>
+                )}
+
                 {/* Distância e entrega */}
                 <div className="flex flex-wrap gap-3 mb-8">
                     {company.distance_km !== null && (
@@ -212,6 +220,38 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                         </div>
                     )}
                 </div>
+
+                {/* Horário de Funcionamento */}
+                {company.hours?.length > 0 && (
+                    <details className="mb-8 group">
+                        <summary className="cursor-pointer list-none flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-red-500 transition-colors select-none w-max">
+                            <span>🕐 Horário de funcionamento</span>
+                            <ChevronDown size={15} className="group-open:rotate-180 transition-transform" />
+                        </summary>
+                        <div className="mt-3 rounded-2xl border border-gray-100 overflow-hidden">
+                            {company.hours.map((h) => {
+                                const isToday = new Date().getDay() === h.day_of_week;
+                                return (
+                                    <div
+                                        key={h.day_of_week}
+                                        className={`flex items-center justify-between px-4 py-2.5 text-sm border-b border-gray-50 last:border-0 ${isToday ? 'bg-red-50' : ''}`}
+                                    >
+                                        <span className={`font-semibold ${isToday ? 'text-red-600' : 'text-gray-700'}`}>
+                                            {h.day_name}{isToday && <span className="ml-2 text-[10px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full">hoje</span>}
+                                        </span>
+                                        {h.is_closed ? (
+                                            <span className="text-gray-400 font-medium">Fechado</span>
+                                        ) : (
+                                            <span className={isToday ? 'text-red-600 font-bold' : 'text-gray-600'}>
+                                                {h.opens_at} – {h.closes_at}
+                                            </span>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </details>
+                )}
 
                 <div className="flex flex-col md:flex-row gap-12">
                     {/* Menu Lateral de Categorias */}

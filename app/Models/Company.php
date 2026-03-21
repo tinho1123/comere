@@ -61,6 +61,31 @@ class Company extends Model
         return $this->hasMany(CompanyRating::class);
     }
 
+    public function hours(): HasMany
+    {
+        return $this->hasMany(CompanyHour::class)->orderBy('day_of_week');
+    }
+
+    public function isOpenNow(): bool
+    {
+        $now = now();
+        $dayOfWeek = (int) $now->format('w'); // 0=Dom, 6=Sáb
+        $currentTime = $now->format('H:i:s');
+
+        $schedule = $this->hours->firstWhere('day_of_week', $dayOfWeek);
+
+        if (! $schedule || $schedule->is_closed || ! $schedule->opens_at || ! $schedule->closes_at) {
+            return false;
+        }
+
+        // Suporte a horários que cruzam meia-noite (ex: 22:00 → 02:00)
+        if ($schedule->closes_at < $schedule->opens_at) {
+            return $currentTime >= $schedule->opens_at || $currentTime <= $schedule->closes_at;
+        }
+
+        return $currentTime >= $schedule->opens_at && $currentTime <= $schedule->closes_at;
+    }
+
     public function recalculateRating(): void
     {
         $avg = $this->ratings()->avg('rating');

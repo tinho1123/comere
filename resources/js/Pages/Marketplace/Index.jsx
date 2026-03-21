@@ -41,18 +41,31 @@ function FavoriteButton({ uuid, initialFavorited, onToggle }) {
 }
 
 function StoreCard({ store, isFavorited, onToggleFavorite }) {
+    const isClosed = store.is_open === false;
+
     return (
         <Link
             href={`/store/${store.uuid}`}
-            className="relative bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-xl hover:-translate-y-1 transition-all group flex gap-4"
+            className={`relative bg-white rounded-2xl border p-4 hover:shadow-xl hover:-translate-y-1 transition-all group flex gap-4 ${isClosed ? 'border-gray-200 opacity-60' : 'border-gray-100'}`}
         >
             <FavoriteButton uuid={store.uuid} initialFavorited={isFavorited} onToggle={onToggleFavorite} />
+
             <div className="w-20 h-20 rounded-xl overflow-hidden shadow-inner border border-gray-50 bg-gray-50 flex-shrink-0">
-                <img src={store.logo} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={store.name} />
+                <img
+                    src={store.logo}
+                    className={`w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ${isClosed ? 'grayscale' : ''}`}
+                    alt={store.name}
+                />
             </div>
+
             <div className="flex-grow min-w-0 py-1 flex flex-col justify-between">
                 <div>
-                    <h4 className="font-bold text-gray-900 truncate group-hover:text-red-500 transition-colors">{store.name}</h4>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-bold text-gray-900 truncate group-hover:text-red-500 transition-colors">{store.name}</h4>
+                        {isClosed && (
+                            <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0">Fechado</span>
+                        )}
+                    </div>
                     <div className="flex items-center gap-2 text-xs text-gray-500 font-medium mt-1">
                         <span className="text-yellow-500">★ {store.rating}</span>
                         <span>•</span>
@@ -71,7 +84,7 @@ function StoreCard({ store, isFavorited, onToggleFavorite }) {
                         </div>
                     )}
                 </div>
-                {store.is_promoted && (
+                {store.is_promoted && !isClosed && (
                     <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded italic w-max">PROMOÇÃO</span>
                 )}
             </div>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Marketplace;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Models\CompanyHour;
 use App\Models\CompanyType;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -24,7 +25,7 @@ class MarketplaceController extends Controller
         $defaultAddress = $client?->addresses()->where('is_default', true)->first();
 
         $companies = Company::where('active', true)
-            ->with(['deliveryFeeRanges', 'companyType'])
+            ->with(['deliveryFeeRanges', 'companyType', 'hours'])
             ->when($categoryUuid, fn ($q) => $q->whereHas('companyType', fn ($q) => $q->where('uuid', $categoryUuid)))
             ->get()
             ->map(function ($company) use ($distanceService, $defaultAddress) {
@@ -42,6 +43,8 @@ class MarketplaceController extends Controller
                     $deliveryFee = $distanceService->getFeeForDistance($distance, $company->deliveryFeeRanges);
                 }
 
+                $hasHours = $company->hours->isNotEmpty();
+
                 return [
                     'uuid' => $company->uuid,
                     'name' => $company->name,
@@ -54,6 +57,7 @@ class MarketplaceController extends Controller
                     'distance_km' => $distance,
                     'delivery_fee' => $deliveryFee,
                     'has_address' => $company->latitude !== null,
+                    'is_open' => $hasHours ? $company->isOpenNow() : null,
                 ];
             });
 
@@ -106,6 +110,7 @@ class MarketplaceController extends Controller
         $company->load([
             'products' => fn ($q) => $q->where('active', true)->where('is_marketplace', true)->with('category'),
             'deliveryFeeRanges',
+            'hours',
         ]);
 
         $distanceService = new DistanceService;
@@ -156,6 +161,14 @@ class MarketplaceController extends Controller
                 ]),
                 'is_favorited' => $isFavorited,
                 'user_rating' => $userRating ? ['rating' => $userRating->rating, 'comment' => $userRating->comment] : null,
+                'is_open' => $company->hours->isNotEmpty() ? $company->isOpenNow() : null,
+                'hours' => $company->hours->map(fn ($h) => [
+                    'day_of_week' => $h->day_of_week,
+                    'day_name' => CompanyHour::DAY_NAMES[$h->day_of_week],
+                    'opens_at' => $h->opens_at ? substr($h->opens_at, 0, 5) : null,
+                    'closes_at' => $h->closes_at ? substr($h->closes_at, 0, 5) : null,
+                    'is_closed' => $h->is_closed,
+                ])->values(),
             ],
             'productsByCategory' => $company->products
                 ->map(fn ($product) => [
