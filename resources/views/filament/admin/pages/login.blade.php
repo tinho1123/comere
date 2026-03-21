@@ -1,32 +1,20 @@
 <x-filament-panels::page.simple>
     @if ($this->showCompanySelector)
         {{--
-            Formulário HTML puro (sem Livewire) para evitar o 419 causado pelo
+            Links GET simples (sem CSRF) para evitar o 419 causado pelo
             session()->regenerate() que ocorre dentro de parent::authenticate().
-            O @csrf aqui já usa o token da sessão regenerada.
         --}}
-        <form
-            method="POST"
-            action="{{ route('admin.select-company.store') }}"
-            class="grid gap-y-4"
-        >
-            @csrf
-
+        <div class="grid gap-y-4">
             <p class="text-center text-sm text-gray-500 dark:text-gray-400">
                 Você tem acesso a múltiplas lojas. Selecione em qual deseja entrar.
             </p>
 
             <div class="grid gap-y-2">
-                @foreach ($this->companyOptions as $i => $option)
-                    <label class="flex items-center gap-4 rounded-xl border border-gray-200 dark:border-white/10 px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50 dark:has-[:checked]:bg-primary-500/10 transition">
-                        <input
-                            type="radio"
-                            name="company_uuid"
-                            value="{{ $option['uuid'] }}"
-                            class="accent-primary-600 shrink-0"
-                            @if ($i === 0) checked @endif
-                        >
-
+                @foreach ($this->companyOptions as $option)
+                    <a
+                        href="{{ route('admin.select-company') }}?uuid={{ $option['uuid'] }}"
+                        class="flex items-center gap-4 rounded-xl border border-gray-200 dark:border-white/10 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 hover:border-primary-500 transition no-underline"
+                    >
                         @if ($option['logo_path'])
                             <img
                                 src="{{ \Illuminate\Support\Facades\Storage::url($option['logo_path']) }}"
@@ -44,18 +32,10 @@
                         <span class="text-sm font-medium text-gray-900 dark:text-white leading-tight">
                             {{ $option['name'] }}
                         </span>
-                    </label>
+                    </a>
                 @endforeach
             </div>
-
-            @error('company_uuid')
-                <p class="text-sm text-danger-600 dark:text-danger-400">{{ $message }}</p>
-            @enderror
-
-            <x-filament::button type="submit" size="lg" class="w-full">
-                Entrar na loja
-            </x-filament::button>
-        </form>
+        </div>
     @else
         @if (filament()->hasRegistration())
             <x-slot name="subheading">

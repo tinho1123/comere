@@ -8,9 +8,16 @@ use Illuminate\Http\Request;
 
 class SelectCompanyController extends Controller
 {
-    public function show()
+    public function show(Request $request)
     {
         $user = auth()->user();
+
+        if ($request->filled('uuid')) {
+            $company = Company::where('uuid', $request->uuid)->firstOrFail();
+            abort_unless($user->canAccessTenant($company), 403);
+
+            return redirect('/admin/'.$company->uuid);
+        }
 
         $companies = $user->isMaster()
             ? Company::orderBy('name')->get(['uuid', 'name', 'logo_path'])
