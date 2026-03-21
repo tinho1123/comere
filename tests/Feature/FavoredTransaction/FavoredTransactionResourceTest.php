@@ -133,9 +133,8 @@ class FavoredTransactionResourceTest extends TestCase
     public function it_validates_required_fields_on_create()
     {
         Livewire::test(CreateFavoredTransaction::class)
-            ->fillForm(['is_registered_client' => true])
             ->call('create')
-            ->assertHasFormErrors(['client_id']);
+            ->assertHasFormErrors(['client_name']);
     }
 
     /** @test */
