@@ -16,7 +16,7 @@ class SelectCompanyController extends Controller
             $company = Company::where('uuid', $request->uuid)->firstOrFail();
             abort_unless($user->canAccessTenant($company), 403);
 
-            return redirect('/admin/'.$company->uuid);
+            return redirect()->to(route('filament.admin.pages.dashboard', ['tenant' => $company->uuid]));
         }
 
         $companies = $user->isMaster()
@@ -24,7 +24,7 @@ class SelectCompanyController extends Controller
             : $user->companies()->orderBy('name')->get(['companies.uuid', 'companies.name', 'companies.logo_path']);
 
         if ($companies->count() === 1) {
-            return redirect('/admin/'.$companies->first()->uuid);
+            return redirect()->to(route('filament.admin.pages.dashboard', ['tenant' => $companies->first()->uuid]));
         }
 
         return view('admin.select-company', compact('companies'));
@@ -38,6 +38,6 @@ class SelectCompanyController extends Controller
 
         abort_unless(auth()->user()->canAccessTenant($company), 403);
 
-        return redirect('/admin/'.$company->uuid);
+        return redirect()->to(route('filament.admin.pages.dashboard', ['tenant' => $company->uuid]));
     }
 }
