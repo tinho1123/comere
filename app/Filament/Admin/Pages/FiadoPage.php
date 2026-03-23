@@ -16,6 +16,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
+use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class FiadoPage extends Page implements HasTable
 {
@@ -91,6 +92,24 @@ class FiadoPage extends Page implements HasTable
                 (SUM(favored_total) - SUM(favored_paid_amount)) as remaining_balance
             ')
             ->first();
+    }
+
+    public function getClientStats(): array
+    {
+        $summary = $this->getClientSummary();
+
+        return [
+            Stat::make('Total Fiado', 'R$ '.number_format($summary?->total_debt ?? 0, 2, ',', '.'))
+                ->icon('heroicon-o-credit-card'),
+
+            Stat::make('Pago', 'R$ '.number_format($summary?->total_paid ?? 0, 2, ',', '.'))
+                ->icon('heroicon-o-check-circle')
+                ->color('success'),
+
+            Stat::make('Saldo Devedor', 'R$ '.number_format($summary?->remaining_balance ?? 0, 2, ',', '.'))
+                ->icon('heroicon-o-banknotes')
+                ->color(($summary?->remaining_balance ?? 0) > 0 ? 'danger' : 'success'),
+        ];
     }
 
     public function table(Table $table): Table
