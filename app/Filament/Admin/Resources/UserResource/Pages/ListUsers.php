@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\UserResource\Pages;
 
 use App\Filament\Admin\Resources\UserResource;
+use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 
 class ListUsers extends ListRecords
@@ -11,6 +12,8 @@ class ListUsers extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [];
+        return [
+            CreateAction::make(),
+        ];
     }
 }
