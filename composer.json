@@ -70,9 +70,9 @@
         "policy": {
             "advisories": {
                 "ignore-id": {
-                    "PKSA-m5cs-t1y6-qpcs": "Laravel Framework: Temporary Signed URL Path Confusion — sem patch na serie 10.x (so a partir do 12.61.1); projeto nao usa URL::temporarySignedRoute/signedRoute.",
-                    "PKSA-3r5d-mb8f-1qw9": "CVE-2026-48019 CRLF injection na regra 'email' — sem patch na serie 10.x (so a partir do 12.60.0); projeto nao envia e-mail (sem uso de Mail:: no codigo).",
-                    "PKSA-mdq4-51ck-6kdq": "Mesma CVE-2026-48019 reportada por outra fonte de advisory — mesma justificativa do PKSA-3r5d-mb8f-1qw9."
+                    "GHSA-crmm-hgp2-wgrp": "PKSA-m5cs-t1y6-qpcs — Laravel Framework: Temporary Signed URL Path Confusion — sem patch na serie 10.x (so a partir do 12.61.1); projeto nao usa URL::temporarySignedRoute/signedRoute.",
+                    "GHSA-5vg9-5847-vvmq": "PKSA-3r5d-mb8f-1qw9 — CRLF injection na regra 'email' — sem patch na serie 10.x (so a partir do 12.60.0); projeto nao envia e-mail (sem uso de Mail:: no codigo).",
+                    "CVE-2026-48019": "PKSA-mdq4-51ck-6kdq — mesma CRLF injection acima, reportada por outra fonte de advisory (FriendsOfPHP) — mesma justificativa."
                 }
             }
         }
