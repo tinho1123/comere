@@ -26,7 +26,7 @@ class CreateOrder extends CreateRecord
         $order = Order::create([
             'uuid' => Str::uuid(),
             'company_id' => $company->id,
-            'client_id' => $data['client_id'],
+            'client_id' => $data['client_id'] ?? null,
             'subtotal' => $subtotal,
             'discount_amount' => $discountAmount,
             'fee_amount' => 0,
