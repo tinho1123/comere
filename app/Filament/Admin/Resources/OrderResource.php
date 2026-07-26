@@ -584,6 +584,23 @@ class OrderResource extends Resource
                     ->visible(fn (Order $record): bool => $record->canBeDelivered())
                     ->action(fn (Order $record) => $record->deliver())
                     ->requiresConfirmation(),
+                Tables\Actions\Action::make('cancel')
+                    ->label('Cancelar')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->visible(fn (Order $record): bool => $record->canBeCancelled())
+                    ->requiresConfirmation()
+                    ->modalHeading('Cancelar pedido')
+                    ->modalDescription('Tem certeza que deseja cancelar este pedido? Essa ação não pode ser desfeita.')
+                    ->modalSubmitActionLabel('Cancelar pedido')
+                    ->action(function (Order $record): void {
+                        $record->cancel();
+
+                        Notification::make()
+                            ->success()
+                            ->title('Pedido cancelado!')
+                            ->send();
+                    }),
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
             ])

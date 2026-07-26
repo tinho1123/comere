@@ -160,6 +160,18 @@ class Order extends Model
     }
 
     /**
+     * Check if the order can be cancelled (still open, not yet finalized).
+     */
+    public function canBeCancelled(): bool
+    {
+        return in_array($this->status, [
+            self::STATUS_PENDING,
+            self::STATUS_PROCESSING,
+            self::STATUS_SHIPPED,
+        ], true);
+    }
+
+    /**
      * Approve the order.
      */
     public function approve(): void
@@ -199,6 +211,29 @@ class Order extends Model
             $this->delivered_at = now();
             $this->save();
         }
+    }
+
+    /**
+     * Cancel the order.
+     */
+    public function cancel(): void
+    {
+        if (! $this->canBeCancelled()) {
+            return;
+        }
+
+        // O estoque só foi debitado se o pedido já tinha sido despachado (ship()).
+        if ($this->status === self::STATUS_SHIPPED) {
+            foreach ($this->items()->with('product')->get() as $item) {
+                if ($item->product) {
+                    $item->product->increment('quantity', $item->quantity);
+                }
+            }
+        }
+
+        $this->status = self::STATUS_CANCELLED;
+        $this->cancelled_at = now();
+        $this->save();
     }
 
     /**
