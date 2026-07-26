@@ -77,7 +77,10 @@ class OrderResource extends Resource
                                 ->mapWithKeys(fn ($c) => [$c->id => $c->name.' — '.$c->document_number]);
                         })
                         ->searchable()
-                        ->required()
+                        ->nullable()
+                        ->placeholder('Cliente não cadastrado (balcão)')
+                        ->helperText('Opcional. Deixe em branco para um pedido sem cliente cadastrado.')
+                        ->required(fn (Get $get): bool => $get('payment_method') === 'favored')
                         ->live()
                         ->afterStateUpdated(fn (Set $set) => $set('client_address_id', null))
                         ->visibleOn('create'),
@@ -85,6 +88,7 @@ class OrderResource extends Resource
                     Forms\Components\TextInput::make('client.name')
                         ->label('Cliente')
                         ->disabled()
+                        ->placeholder('—')
                         ->visibleOn('edit'),
                 ]),
 
@@ -319,7 +323,9 @@ class OrderResource extends Resource
                     Forms\Components\Select::make('payment_method')
                         ->label('Método de pagamento')
                         ->options(Order::paymentOptions())
-                        ->native(false),
+                        ->native(false)
+                        ->live()
+                        ->helperText('Fiado exige um cliente cadastrado selecionado acima.'),
 
                     Forms\Components\TextInput::make('discount_amount')
                         ->label('Desconto (R$)')
