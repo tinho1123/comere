@@ -55,20 +55,22 @@ jobs:
           script: |
             cd ~/domains/comere.com.br/comere
 
+            PHP=/opt/alt/php84/usr/bin/php
+
             echo "→ Criando estrutura de diretórios..."
             mkdir -p public/storage/store storage/framework/cache storage/framework/sessions storage/framework/views storage/logs
 
             echo "→ Executando migrations..."
-            php artisan migrate --force
+            $PHP artisan migrate --force
 
             echo "→ Otimizando aplicação..."
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
-            php artisan event:cache
-            php artisan icons:cache
-            php artisan filament:cache-components
-            php artisan optimize
+            $PHP artisan config:cache
+            $PHP artisan route:cache
+            $PHP artisan view:cache
+            $PHP artisan event:cache
+            $PHP artisan icons:cache
+            $PHP artisan filament:cache-components
+            $PHP artisan optimize
 
             echo "→ Linkando storage público..."
-            php artisan storage:link --force || true
+            $PHP artisan storage:link --force || true
