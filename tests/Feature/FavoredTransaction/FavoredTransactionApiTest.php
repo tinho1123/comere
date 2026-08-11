@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class FavoredTransactionApiTest extends TestCase
@@ -33,7 +34,7 @@ class FavoredTransactionApiTest extends TestCase
         $this->user->companies()->attach($this->company->id);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_list_favored_transactions()
     {
         Sanctum::actingAs($this->user);
@@ -66,7 +67,7 @@ class FavoredTransactionApiTest extends TestCase
             ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_list_favored_transactions_for_specific_client()
     {
         Sanctum::actingAs($this->user);
@@ -84,7 +85,7 @@ class FavoredTransactionApiTest extends TestCase
             ->assertJsonPath('client.uuid', $client1->uuid);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_create_favored_transaction()
     {
         Sanctum::actingAs($this->user);
@@ -112,7 +113,7 @@ class FavoredTransactionApiTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_validates_required_fields_on_create()
     {
         Sanctum::actingAs($this->user);
@@ -128,7 +129,7 @@ class FavoredTransactionApiTest extends TestCase
             ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_validates_client_exists_on_create()
     {
         Sanctum::actingAs($this->user);
@@ -144,7 +145,7 @@ class FavoredTransactionApiTest extends TestCase
             ->assertJsonValidationErrors(['client_id']);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_update_favored_transaction()
     {
         Sanctum::actingAs($this->user);
@@ -175,7 +176,7 @@ class FavoredTransactionApiTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_delete_favored_transaction()
     {
         Sanctum::actingAs($this->user);
@@ -196,7 +197,7 @@ class FavoredTransactionApiTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_register_payment()
     {
         Sanctum::actingAs($this->user);
@@ -225,7 +226,7 @@ class FavoredTransactionApiTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_validates_payment_amount_does_not_exceed_balance()
     {
         Sanctum::actingAs($this->user);
@@ -246,7 +247,7 @@ class FavoredTransactionApiTest extends TestCase
             ->assertJsonValidationErrors(['amount']);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_list_clients_with_transactions()
     {
         Sanctum::actingAs($this->user);
@@ -287,7 +288,7 @@ class FavoredTransactionApiTest extends TestCase
             ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_filters_transactions_by_company()
     {
         // Create transaction for our company
@@ -313,7 +314,7 @@ class FavoredTransactionApiTest extends TestCase
             ->assertJsonPath('transactions.0.id', $otherTransaction->id);
     }
 
-    /** @test */
+    #[Test]
     public function it_handles_transaction_not_found()
     {
         Sanctum::actingAs($this->user);
@@ -325,7 +326,7 @@ class FavoredTransactionApiTest extends TestCase
         $response->assertNotFound();
     }
 
-    /** @test */
+    #[Test]
     public function it_handles_unauthorized_access()
     {
         $response = $this->getJson('/api/favored-transactions');

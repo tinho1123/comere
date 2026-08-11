@@ -12,6 +12,7 @@ use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class FavoredTransactionResourceTest extends TestCase
@@ -40,7 +41,7 @@ class FavoredTransactionResourceTest extends TestCase
         Filament::setTenant($this->company);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_render_favored_transactions_list_page()
     {
         $response = $this->get("/admin/{$this->company->uuid}/favored-transactions");
@@ -48,7 +49,7 @@ class FavoredTransactionResourceTest extends TestCase
         $response->assertOk();
     }
 
-    /** @test */
+    #[Test]
     public function it_can_render_favored_transactions_create_page()
     {
         $response = $this->get("/admin/{$this->company->uuid}/favored-transactions/create");
@@ -56,7 +57,7 @@ class FavoredTransactionResourceTest extends TestCase
         $response->assertOk();
     }
 
-    /** @test */
+    #[Test]
     public function it_can_render_favored_transactions_edit_page()
     {
         $transaction = FavoredTransaction::factory()->create([
@@ -69,7 +70,7 @@ class FavoredTransactionResourceTest extends TestCase
         $response->assertOk();
     }
 
-    /** @test */
+    #[Test]
     public function it_displays_client_relationship_in_table()
     {
         $transaction = FavoredTransaction::factory()->create([
@@ -84,7 +85,7 @@ class FavoredTransactionResourceTest extends TestCase
             ->assertTableColumnStateSet('person_name', $this->client->name, $transaction);
     }
 
-    /** @test */
+    #[Test]
     public function it_displays_remaining_balance_in_table()
     {
         $transaction = FavoredTransaction::factory()->create([
@@ -99,7 +100,7 @@ class FavoredTransactionResourceTest extends TestCase
             ->assertTableColumnStateSet('remaining', 70.00, $transaction);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_create_favored_transaction_via_form()
     {
         // The create page uses a Repeater (dehydrated: false) that iterates items
@@ -129,7 +130,7 @@ class FavoredTransactionResourceTest extends TestCase
             ->assertFormExists();
     }
 
-    /** @test */
+    #[Test]
     public function it_validates_required_fields_on_create()
     {
         Livewire::test(CreateFavoredTransaction::class)
@@ -137,7 +138,7 @@ class FavoredTransactionResourceTest extends TestCase
             ->assertHasFormErrors(['client_name']);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_edit_favored_transaction_via_form()
     {
         $transaction = FavoredTransaction::factory()->create([
@@ -167,7 +168,7 @@ class FavoredTransactionResourceTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_delete_favored_transaction()
     {
         $transaction = FavoredTransaction::factory()->create([
@@ -180,7 +181,7 @@ class FavoredTransactionResourceTest extends TestCase
         $this->assertModelMissing($transaction);
     }
 
-    /** @test */
+    #[Test]
     public function it_filters_transactions_by_company()
     {
         // Create transaction for our company
@@ -201,7 +202,7 @@ class FavoredTransactionResourceTest extends TestCase
             ->assertCanNotSeeTableRecords([$otherTransaction]);
     }
 
-    /** @test */
+    #[Test]
     public function it_shows_money_columns_with_brl_formatting()
     {
         $transaction = FavoredTransaction::factory()->create([
@@ -216,7 +217,7 @@ class FavoredTransactionResourceTest extends TestCase
             ->assertTableColumnFormattedStateSet('favored_paid_amount', "R\$\xc2\xa0789,10", $transaction);
     }
 
-    /** @test */
+    #[Test]
     public function it_searches_by_client_name()
     {
         $client1 = Client::factory()->create(['company_id' => $this->company->id, 'name' => 'João Silva']);
@@ -231,7 +232,7 @@ class FavoredTransactionResourceTest extends TestCase
             ->assertCanNotSeeTableRecords([$transaction2]);
     }
 
-    /** @test */
+    #[Test]
     public function it_searches_by_transaction_name()
     {
         $transaction1 = FavoredTransaction::factory()->create([

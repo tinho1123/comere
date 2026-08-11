@@ -37,11 +37,7 @@ return new class extends Migration
 
         // 2. Alterar a tabela para remover company_id e adicionar unique no name
         Schema::table('products_categories', function (Blueprint $table) {
-            // MySQL requires dropping the foreign key before the column;
-            // SQLite handles column removal via table recreation so skip dropForeign.
-            if (DB::getDriverName() !== 'sqlite') {
-                $table->dropForeign(['company_id']);
-            }
+            $table->dropForeign(['company_id']);
             // Depois a coluna
             $table->dropColumn('company_id');
             // Adicionamos unique no nome para garantir que o sistema não crie duplicadas globais
