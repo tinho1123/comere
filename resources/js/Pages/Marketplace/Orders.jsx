@@ -1,8 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import MarketplaceLayout from '@/Layouts/MarketplaceLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Package, Clock, CheckCircle2, Truck, AlertCircle, ChevronDown, ShoppingBag, RotateCcw, X } from 'lucide-react';
+import axios from 'axios';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 const statusConfig = {
     pending: { label: 'Aguardando Aprovação', color: 'text-amber-500', bg: 'bg-amber-50', icon: Clock },
@@ -90,6 +93,124 @@ function EtaBadge({ order }) {
     );
 }
 
+function markerIcon(color) {
+    return L.divIcon({
+        className: '',
+        html: `<div style="width:16px;height:16px;background:${color};border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>`,
+        iconAnchor: [8, 8],
+    });
+}
+
+function DeliveryMap({ order }) {
+    const mapRef = useRef(null);
+    const mapInstance = useRef(null);
+    const markersRef = useRef({});
+    const [tracking, setTracking] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const fetchTracking = async () => {
+            try {
+                const res = await axios.get(`/meus-pedidos/${order.uuid}/rastreio`);
+                if (!cancelled) setTracking(res.data);
+            } catch {
+                // silently ignore, keep last known state
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        };
+
+        fetchTracking();
+        const interval = setInterval(fetchTracking, 10000);
+
+        return () => {
+            cancelled = true;
+            clearInterval(interval);
+        };
+    }, [order.uuid]);
+
+    useEffect(() => {
+        if (!tracking?.tracking_available || !mapRef.current) return;
+
+        if (!mapInstance.current) {
+            mapInstance.current = L.map(mapRef.current);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap',
+            }).addTo(mapInstance.current);
+        }
+
+        const map = mapInstance.current;
+        const { origin, destination, driver_position: driverPosition } = tracking;
+        const bounds = [];
+
+        if (origin?.latitude && origin?.longitude) {
+            if (!markersRef.current.origin) {
+                markersRef.current.origin = L.marker([origin.latitude, origin.longitude], { icon: markerIcon('#3b82f6') })
+                    .addTo(map)
+                    .bindTooltip('Loja');
+            }
+            bounds.push([origin.latitude, origin.longitude]);
+        }
+
+        if (destination?.latitude && destination?.longitude) {
+            if (!markersRef.current.destination) {
+                markersRef.current.destination = L.marker([destination.latitude, destination.longitude], { icon: markerIcon('#10b981') })
+                    .addTo(map)
+                    .bindTooltip('Endereço de entrega');
+            }
+            bounds.push([destination.latitude, destination.longitude]);
+        }
+
+        if (driverPosition) {
+            if (markersRef.current.driver) {
+                markersRef.current.driver.setLatLng([driverPosition.latitude, driverPosition.longitude]);
+            } else {
+                markersRef.current.driver = L.marker([driverPosition.latitude, driverPosition.longitude], { icon: markerIcon('#ef4444') })
+                    .addTo(map)
+                    .bindTooltip(tracking.driver_name, { permanent: true, direction: 'top', offset: [0, -10] });
+            }
+            bounds.push([driverPosition.latitude, driverPosition.longitude]);
+        }
+
+        if (bounds.length === 1) {
+            map.setView(bounds[0], 14);
+        } else if (bounds.length > 1) {
+            map.fitBounds(bounds, { padding: [40, 40] });
+        }
+
+        setTimeout(() => map.invalidateSize(), 100);
+    }, [tracking]);
+
+    useEffect(() => () => {
+        if (mapInstance.current) {
+            mapInstance.current.remove();
+            mapInstance.current = null;
+            markersRef.current = {};
+        }
+    }, []);
+
+    if (loading) {
+        return <div className="h-48 rounded-xl bg-gray-100 animate-pulse mt-3" />;
+    }
+
+    if (!tracking?.tracking_available) {
+        return null;
+    }
+
+    return (
+        <div className="mt-3">
+            <div ref={mapRef} className="h-56 w-full rounded-xl overflow-hidden border border-gray-200" />
+            <p className="text-xs text-gray-400 mt-2 text-center">
+                {tracking.driver_position
+                    ? `${tracking.driver_name} · atualizado às ${new Date(tracking.driver_position.updated_at).toLocaleTimeString('pt-BR')}`
+                    : `Aguardando ${tracking.driver_name} iniciar o compartilhamento de localização...`}
+            </p>
+        </div>
+    );
+}
+
 function OrderCard({ order, index }) {
     const [expanded, setExpanded] = useState(false);
     const [reordering, setReordering] = useState(false);
@@ -161,6 +282,7 @@ function OrderCard({ order, index }) {
                         >
                             <div className="bg-gray-50 rounded-2xl p-4 mt-4">
                                 <OrderTimeline order={order} />
+                                {order.status === 'shipped' && <DeliveryMap order={order} />}
                                 <div className="space-y-2 mb-3 border-t border-gray-200 pt-3">
                                     {order.items.map((item, i) => (
                                         <div key={i} className="flex justify-between items-center text-sm">

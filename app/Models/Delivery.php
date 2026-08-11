@@ -28,6 +28,9 @@ class Delivery extends Model
         'dispatched_at',
         'delivered_at',
         'notes',
+        'current_latitude',
+        'current_longitude',
+        'location_updated_at',
     ];
 
     protected $casts = [
@@ -35,6 +38,9 @@ class Delivery extends Model
         'is_paid' => 'boolean',
         'dispatched_at' => 'datetime',
         'delivered_at' => 'datetime',
+        'current_latitude' => 'float',
+        'current_longitude' => 'float',
+        'location_updated_at' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -43,7 +49,15 @@ class Delivery extends Model
             if (empty($delivery->uuid)) {
                 $delivery->uuid = (string) Str::uuid();
             }
+            if (empty($delivery->tracking_token)) {
+                $delivery->tracking_token = Str::random(40);
+            }
         });
+    }
+
+    public function trackingUrl(): string
+    {
+        return route('delivery.tracking.show', $this->tracking_token);
     }
 
     public function getRouteKeyName(): string

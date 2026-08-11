@@ -137,6 +137,14 @@ class DeliveryResource extends Resource
                     ->falseLabel('Pendente'),
             ])
             ->actions([
+                Actions\Action::make('tracking_link')
+                    ->label('Link de rastreio')
+                    ->icon('heroicon-o-map-pin')
+                    ->color('gray')
+                    ->visible(fn (Delivery $record): bool => $record->status === Delivery::STATUS_DISPATCHED)
+                    ->url(fn (Delivery $record): string => $record->trackingUrl())
+                    ->openUrlInNewTab(),
+
                 Actions\Action::make('mark_delivered')
                     ->label('Marcar entregue')
                     ->icon('heroicon-o-check-badge')

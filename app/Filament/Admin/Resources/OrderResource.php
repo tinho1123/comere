@@ -11,6 +11,7 @@ use App\Models\Order;
 use App\Models\Product;
 use BackedEnum;
 use Filament\Actions;
+use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Infolists;
@@ -199,7 +200,7 @@ class OrderResource extends Resource
                     Forms\Components\Hidden::make('delivery_longitude'),
 
                     Schemas\Components\Actions::make([
-                        Actions\Action::make('geocode')
+                        Action::make('geocode')
                             ->label('Buscar no mapa')
                             ->icon('heroicon-o-map-pin')
                             ->color('info')
@@ -514,14 +515,14 @@ class OrderResource extends Resource
                     ]),
             ])
             ->actions([
-                Actions\Action::make('approve')
+                Action::make('approve')
                     ->label('Aprovar')
                     ->icon('heroicon-o-check-circle')
                     ->color('info')
                     ->visible(fn (Order $record): bool => $record->canBeApproved())
                     ->action(fn (Order $record) => $record->approve())
                     ->requiresConfirmation(),
-                Actions\Action::make('ship')
+                Action::make('ship')
                     ->label('Despachar')
                     ->icon('heroicon-o-truck')
                     ->color('primary')
@@ -557,10 +558,10 @@ class OrderResource extends Resource
                     ->action(function (Order $record, array $data): void {
                         $driver = Driver::findOrFail($data['driver_id']);
 
-                        DB::transaction(function () use ($record, $driver, $data): void {
+                        $delivery = DB::transaction(function () use ($record, $driver, $data): Delivery {
                             $record->ship();
 
-                            Delivery::create([
+                            return Delivery::create([
                                 'uuid' => (string) Str::uuid(),
                                 'company_id' => $record->company_id,
                                 'order_id' => $record->id,
@@ -576,17 +577,24 @@ class OrderResource extends Resource
                         Notification::make()
                             ->success()
                             ->title('Pedido despachado!')
-                            ->body("Motorista: {$driver->name}")
+                            ->body("Motorista: {$driver->name}. Envie o link de rastreio para o celular dele.")
+                            ->actions([
+                                Action::make('open_tracking_link')
+                                    ->label('Abrir link de rastreio')
+                                    ->url($delivery->trackingUrl())
+                                    ->openUrlInNewTab(),
+                            ])
+                            ->persistent()
                             ->send();
                     }),
-                Actions\Action::make('deliver')
+                Action::make('deliver')
                     ->label('Concluir pedido')
                     ->icon('heroicon-o-check-badge')
                     ->color('success')
                     ->visible(fn (Order $record): bool => $record->canBeDelivered())
                     ->action(fn (Order $record) => $record->deliver())
                     ->requiresConfirmation(),
-                Actions\Action::make('cancel')
+                Action::make('cancel')
                     ->label('Cancelar')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')

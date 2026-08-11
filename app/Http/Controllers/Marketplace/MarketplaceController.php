@@ -332,6 +332,40 @@ class MarketplaceController extends Controller
         return redirect()->route('marketplace.orders');
     }
 
+    public function trackOrder(Order $order)
+    {
+        $client = auth('client')->user();
+
+        if ($order->client_id !== $client->id) {
+            abort(403);
+        }
+
+        $delivery = $order->delivery()->with(['driver', 'company'])->first();
+
+        if (! $delivery) {
+            return response()->json(['tracking_available' => false]);
+        }
+
+        return response()->json([
+            'tracking_available' => true,
+            'status' => $delivery->status,
+            'driver_name' => $delivery->driver->name,
+            'origin' => [
+                'latitude' => $delivery->company->latitude,
+                'longitude' => $delivery->company->longitude,
+            ],
+            'destination' => [
+                'latitude' => $order->delivery_latitude,
+                'longitude' => $order->delivery_longitude,
+            ],
+            'driver_position' => $delivery->current_latitude && $delivery->current_longitude ? [
+                'latitude' => $delivery->current_latitude,
+                'longitude' => $delivery->current_longitude,
+                'updated_at' => $delivery->location_updated_at?->toIso8601String(),
+            ] : null,
+        ]);
+    }
+
     public function reorder(Company $company, Order $order)
     {
         $client = auth('client')->user();

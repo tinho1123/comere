@@ -17,6 +17,7 @@
         "@tailwindcss/vite": "^4.1.8",
         "@vitejs/plugin-react": "^4.5.1",
         "framer-motion": "^12.31.0",
+        "leaflet": "^1.9.4",
         "lucide-react": "^0.563.0",
         "react": "^19.1.0",
         "react-dom": "^19.1.0"

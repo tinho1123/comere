@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Marketplace\ClientAddressController;
 use App\Http\Controllers\Marketplace\ClientFavoriteController;
 use App\Http\Controllers\Marketplace\CompanyRatingController;
+use App\Http\Controllers\Marketplace\DeliveryTrackingController;
 use App\Http\Controllers\Marketplace\MarketplaceController;
 use App\Http\Controllers\Marketplace\MarketplaceLoginController;
 use App\Http\Controllers\Marketplace\SSOCallbackController;
@@ -18,6 +19,9 @@ Route::get('/table/{uuid}', [TableController::class, 'show'])->name('table.show'
 Route::post('/table/{uuid}/open', [TableController::class, 'open'])->name('table.open');
 Route::post('/table/{uuid}/name', [TableController::class, 'registerName'])->name('table.register-name');
 Route::post('/table/{uuid}/item', [TableController::class, 'addItem'])->name('table.add-item');
+
+Route::get('/entrega/{token}', [DeliveryTrackingController::class, 'show'])->name('delivery.tracking.show');
+Route::post('/entrega/{token}/localizacao', [DeliveryTrackingController::class, 'updateLocation'])->name('delivery.tracking.update-location');
 
 Route::get('/', [MarketplaceController::class, 'index'])->name('marketplace.index');
 Route::get('/search', [MarketplaceController::class, 'search'])->name('marketplace.search');
@@ -36,6 +40,7 @@ Route::post('/complete-profile', [SSOCallbackController::class, 'storeProfile'])
 
 Route::middleware('auth:client')->group(function () {
     Route::get('/meus-pedidos', [MarketplaceController::class, 'orders'])->name('marketplace.orders');
+    Route::get('/meus-pedidos/{order:uuid}/rastreio', [MarketplaceController::class, 'trackOrder'])->name('marketplace.order.track');
     Route::post('/store/{company:uuid}/orders', [MarketplaceController::class, 'storeOrder'])->name('marketplace.order.store');
     Route::post('/store/{company:uuid}/orders/{order:uuid}/reorder', [MarketplaceController::class, 'reorder'])->name('marketplace.order.reorder');
     Route::post('/store/{company:uuid}/coupons/validate', [MarketplaceController::class, 'validateCoupon'])->name('marketplace.coupon.validate');
