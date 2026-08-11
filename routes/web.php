@@ -37,6 +37,8 @@ Route::post('/complete-profile', [SSOCallbackController::class, 'storeProfile'])
 Route::middleware('auth:client')->group(function () {
     Route::get('/meus-pedidos', [MarketplaceController::class, 'orders'])->name('marketplace.orders');
     Route::post('/store/{company:uuid}/orders', [MarketplaceController::class, 'storeOrder'])->name('marketplace.order.store');
+    Route::post('/store/{company:uuid}/orders/{order:uuid}/reorder', [MarketplaceController::class, 'reorder'])->name('marketplace.order.reorder');
+    Route::post('/store/{company:uuid}/coupons/validate', [MarketplaceController::class, 'validateCoupon'])->name('marketplace.coupon.validate');
     Route::post('/favorites/{company:uuid}', [ClientFavoriteController::class, 'toggle'])->name('marketplace.favorite.toggle');
     Route::post('/store/{company:uuid}/rate', [CompanyRatingController::class, 'store'])->name('marketplace.rate');
 

@@ -29,6 +29,7 @@ class Company extends Model
         'foundation_date',
         'rating',
         'delivery_time',
+        'avg_preparation_minutes',
         'is_promoted',
         'active',
         'address_zip',
@@ -47,6 +48,7 @@ class Company extends Model
         'rating' => 'decimal:1',
         'active' => 'boolean',
         'is_promoted' => 'boolean',
+        'avg_preparation_minutes' => 'integer',
         'latitude' => 'float',
         'longitude' => 'float',
     ];

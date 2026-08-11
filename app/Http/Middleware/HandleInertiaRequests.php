@@ -61,6 +61,10 @@ class HandleInertiaRequests extends Middleware
             'default_address' => auth()->guard('client')->check()
                 ? auth()->guard('client')->user()->addresses()->where('is_default', true)->first()
                 : null,
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
+            ],
         ];
     }
 }

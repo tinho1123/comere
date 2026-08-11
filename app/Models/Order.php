@@ -49,6 +49,8 @@ class Order extends Model
         'uuid',
         'company_id',
         'client_id',
+        'coupon_id',
+        'estimated_ready_at',
         'subtotal',
         'discount_amount',
         'fee_amount',
@@ -83,6 +85,7 @@ class Order extends Model
         'shipped_at' => 'datetime',
         'delivered_at' => 'datetime',
         'cancelled_at' => 'datetime',
+        'estimated_ready_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -93,6 +96,14 @@ class Order extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    /**
+     * Get the coupon applied to this order, if any.
+     */
+    public function coupon(): BelongsTo
+    {
+        return $this->belongsTo(Coupon::class);
     }
 
     /**

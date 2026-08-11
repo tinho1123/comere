@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import MarketplaceLayout from '@/Layouts/MarketplaceLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, Clock, CheckCircle2, Truck, AlertCircle, ChevronDown, ShoppingBag } from 'lucide-react';
+import { Package, Clock, CheckCircle2, Truck, AlertCircle, ChevronDown, ShoppingBag, RotateCcw, X } from 'lucide-react';
 
 const statusConfig = {
     pending: { label: 'Aguardando Aprovação', color: 'text-amber-500', bg: 'bg-amber-50', icon: Clock },
@@ -19,10 +19,90 @@ const paymentLabels = {
     pix: 'Pix',
 };
 
+const timelineSteps = [
+    { key: 'created_at', status: 'pending', label: 'Pedido recebido', icon: Clock },
+    { key: 'confirmed_at', status: 'processing', label: 'Em separação', icon: Package },
+    { key: 'shipped_at', status: 'shipped', label: 'Saiu para entrega', icon: Truck },
+    { key: 'delivered_at', status: 'delivered', label: 'Entregue', icon: CheckCircle2 },
+];
+
+const statusOrder = ['pending', 'processing', 'shipped', 'delivered'];
+
+function OrderTimeline({ order }) {
+    if (order.status === 'cancelled') {
+        return (
+            <div className="flex items-center gap-2 text-red-500 font-bold text-sm bg-red-50 rounded-xl px-4 py-3">
+                <AlertCircle size={16} />
+                Pedido cancelado{order.cancelled_at ? ` em ${order.cancelled_at}` : ''}
+            </div>
+        );
+    }
+
+    const currentIndex = statusOrder.indexOf(order.status);
+
+    return (
+        <div className="flex flex-col gap-0">
+            {timelineSteps.map((step, i) => {
+                const done = i <= currentIndex;
+                const Icon = step.icon;
+                const timestamp = order[step.key];
+                return (
+                    <div key={step.key} className="flex gap-3">
+                        <div className="flex flex-col items-center">
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${done ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-300'}`}>
+                                <Icon size={14} />
+                            </div>
+                            {i < timelineSteps.length - 1 && (
+                                <div className={`w-0.5 flex-grow min-h-[16px] ${i < currentIndex ? 'bg-red-500' : 'bg-gray-100'}`} />
+                            )}
+                        </div>
+                        <div className="pb-4">
+                            <p className={`text-sm font-bold ${done ? 'text-gray-900' : 'text-gray-300'}`}>{step.label}</p>
+                            {timestamp && <p className="text-xs text-gray-400">{timestamp}</p>}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+function EtaBadge({ order }) {
+    const [now, setNow] = useState(() => Date.now());
+
+    useEffect(() => {
+        if (order.status === 'delivered' || order.status === 'cancelled' || !order.estimated_ready_at) return;
+        const timer = setInterval(() => setNow(Date.now()), 30000);
+        return () => clearInterval(timer);
+    }, [order.status, order.estimated_ready_at]);
+
+    if (!order.estimated_ready_at || order.status === 'delivered' || order.status === 'cancelled') {
+        return null;
+    }
+
+    const diffMinutes = Math.round((new Date(order.estimated_ready_at).getTime() - now) / 60000);
+
+    return (
+        <div className="flex items-center gap-1.5 text-xs font-bold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full w-max">
+            <Clock size={12} />
+            {diffMinutes > 0 ? `Previsão: ~${diffMinutes} min` : 'Previsão: a qualquer momento'}
+        </div>
+    );
+}
+
 function OrderCard({ order, index }) {
     const [expanded, setExpanded] = useState(false);
+    const [reordering, setReordering] = useState(false);
     const config = statusConfig[order.status] || statusConfig.pending;
     const StatusIcon = config.icon;
+
+    const handleReorder = () => {
+        if (reordering) return;
+        setReordering(true);
+        router.post(`/store/${order.company.uuid}/orders/${order.uuid}/reorder`, {}, {
+            onFinish: () => setReordering(false),
+        });
+    };
 
     return (
         <motion.div
@@ -43,9 +123,12 @@ function OrderCard({ order, index }) {
                             <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Pedido #{order.uuid.substring(0, 8)}</p>
                         </div>
                     </div>
-                    <div className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm ${config.bg} ${config.color}`}>
-                        <StatusIcon size={18} />
-                        {config.label}
+                    <div className="flex flex-col items-end gap-1.5">
+                        <div className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm ${config.bg} ${config.color}`}>
+                            <StatusIcon size={18} />
+                            {config.label}
+                        </div>
+                        <EtaBadge order={order} />
                     </div>
                 </div>
 
@@ -77,7 +160,8 @@ function OrderCard({ order, index }) {
                             className="overflow-hidden"
                         >
                             <div className="bg-gray-50 rounded-2xl p-4 mt-4">
-                                <div className="space-y-2 mb-3">
+                                <OrderTimeline order={order} />
+                                <div className="space-y-2 mb-3 border-t border-gray-200 pt-3">
                                     {order.items.map((item, i) => (
                                         <div key={i} className="flex justify-between items-center text-sm">
                                             <span className="text-gray-600">
@@ -103,12 +187,48 @@ function OrderCard({ order, index }) {
                                         </span>
                                     </div>
                                 )}
+
+                                {order.can_reorder && (
+                                    <button
+                                        onClick={handleReorder}
+                                        disabled={reordering}
+                                        className="mt-4 w-full flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-700 font-bold py-3 rounded-xl hover:border-red-400 hover:text-red-500 transition-colors disabled:opacity-50"
+                                    >
+                                        <RotateCcw size={16} className={reordering ? 'animate-spin' : ''} />
+                                        {reordering ? 'Recriando pedido...' : 'Pedir novamente'}
+                                    </button>
+                                )}
                             </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
             </div>
             <div className="bg-gradient-to-r from-red-500 to-red-600 h-1.5 w-full opacity-10" />
+        </motion.div>
+    );
+}
+
+function FlashToast() {
+    const { flash } = usePage().props;
+    const [dismissed, setDismissed] = useState(false);
+    const message = flash?.success || flash?.error;
+
+    useEffect(() => setDismissed(false), [flash?.success, flash?.error]);
+
+    if (!message || dismissed) return null;
+
+    const isError = Boolean(flash?.error);
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`mb-6 flex items-center justify-between gap-3 rounded-2xl px-5 py-3.5 font-bold text-sm ${isError ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700'}`}
+        >
+            {message}
+            <button onClick={() => setDismissed(true)} className="opacity-60 hover:opacity-100">
+                <X size={16} />
+            </button>
         </motion.div>
     );
 }
@@ -123,6 +243,8 @@ export default function Orders({ orders }) {
                     <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Meus Pedidos</h1>
                     <p className="text-gray-500 mt-2 font-medium">Acompanhe suas compras e o status da entrega em tempo real.</p>
                 </header>
+
+                <FlashToast />
 
                 {orders.length === 0 ? (
                     <motion.div

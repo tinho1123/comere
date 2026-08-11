@@ -51,6 +51,7 @@ class StoreSettings extends Page implements HasForms
             'description' => $company->description,
             'company_type_id' => $company->company_type_id,
             'delivery_time' => $company->delivery_time,
+            'avg_preparation_minutes' => $company->avg_preparation_minutes,
             'logo_path' => $company->logo_path,
             'banner_path' => $company->banner_path,
             'address_zip' => $company->address_zip,
@@ -120,6 +121,15 @@ class StoreSettings extends Page implements HasForms
                             ->label('Tempo de entrega')
                             ->placeholder('Ex: 30-45 min')
                             ->maxLength(50),
+
+                        TextInput::make('avg_preparation_minutes')
+                            ->label('Tempo médio de preparo (minutos)')
+                            ->helperText('Usado para calcular a previsão exibida ao cliente após finalizar o pedido.')
+                            ->numeric()
+                            ->minValue(1)
+                            ->suffix('min')
+                            ->placeholder('30')
+                            ->nullable(),
                     ])
                     ->columns(2),
 
@@ -287,6 +297,7 @@ class StoreSettings extends Page implements HasForms
             'description' => $data['description'] ?? null,
             'company_type_id' => $data['company_type_id'] ?? null,
             'delivery_time' => $data['delivery_time'] ?? null,
+            'avg_preparation_minutes' => $data['avg_preparation_minutes'] ?? null,
             'logo_path' => $data['logo_path'] ?? $company->logo_path,
             'banner_path' => $data['banner_path'] ?? $company->banner_path,
             'address_zip' => $data['address_zip'] ?? null,

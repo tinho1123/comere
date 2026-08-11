@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\CompanyHour;
 use App\Models\CompanyType;
+use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -198,9 +199,17 @@ class MarketplaceController extends Controller
                 'uuid' => $order->uuid,
                 'status' => $order->status,
                 'total_amount' => $order->total_amount,
+                'discount_amount' => $order->discount_amount,
                 'payment_method' => $order->payment_method,
                 'created_at' => $order->created_at->format('d/m/Y H:i'),
+                'confirmed_at' => $order->confirmed_at?->format('d/m/Y H:i'),
+                'shipped_at' => $order->shipped_at?->format('d/m/Y H:i'),
+                'delivered_at' => $order->delivered_at?->format('d/m/Y H:i'),
+                'cancelled_at' => $order->cancelled_at?->format('d/m/Y H:i'),
+                'estimated_ready_at' => $order->estimated_ready_at?->toIso8601String(),
+                'can_reorder' => $order->items->isNotEmpty(),
                 'company' => [
+                    'uuid' => $order->company->uuid,
                     'name' => $order->company->name,
                     'logo' => $order->company->logo_path ? Storage::url($order->company->logo_path) : '/default-store-logo.png',
                 ],
@@ -213,6 +222,33 @@ class MarketplaceController extends Controller
 
         return Inertia::render('Marketplace/Orders', [
             'orders' => $orders,
+        ]);
+    }
+
+    public function validateCoupon(Request $request, Company $company)
+    {
+        $request->validate([
+            'code' => 'required|string|max:50',
+            'subtotal' => 'required|numeric|min:0',
+        ]);
+
+        $coupon = Coupon::where('company_id', $company->id)
+            ->where('code', strtoupper($request->code))
+            ->first();
+
+        if (! $coupon || ! $coupon->isValidFor((float) $request->subtotal)) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'Cupom inválido ou expirado.',
+            ]);
+        }
+
+        $discount = $coupon->calculateDiscount((float) $request->subtotal);
+
+        return response()->json([
+            'valid' => true,
+            'discount_amount' => $discount,
+            'message' => 'Cupom aplicado!',
         ]);
     }
 
@@ -229,6 +265,7 @@ class MarketplaceController extends Controller
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
             'notes' => 'nullable|string|max:1000',
+            'coupon_code' => 'nullable|string|max:50',
         ]);
 
         $order = Order::create([
@@ -242,6 +279,7 @@ class MarketplaceController extends Controller
             'discount_amount' => 0,
             'fee_amount' => 0,
             'total_amount' => 0,
+            'estimated_ready_at' => now()->addMinutes($company->avg_preparation_minutes ?? 30),
         ]);
 
         $subtotal = 0;
@@ -268,12 +306,96 @@ class MarketplaceController extends Controller
             $subtotal += $itemTotal;
         }
 
+        $discountAmount = 0;
+        $coupon = null;
+
+        if ($request->filled('coupon_code')) {
+            $coupon = Coupon::where('company_id', $company->id)
+                ->where('code', strtoupper($request->coupon_code))
+                ->first();
+
+            if ($coupon && $coupon->isValidFor($subtotal)) {
+                $discountAmount = $coupon->calculateDiscount($subtotal);
+                $coupon->increment('used_count');
+            } else {
+                $coupon = null;
+            }
+        }
+
         $order->update([
+            'subtotal' => $subtotal,
+            'discount_amount' => $discountAmount,
+            'coupon_id' => $coupon?->id,
+            'total_amount' => $subtotal - $discountAmount,
+        ]);
+
+        return redirect()->route('marketplace.orders');
+    }
+
+    public function reorder(Company $company, Order $order)
+    {
+        $client = auth('client')->user();
+
+        if ($order->client_id !== $client->id || $order->company_id !== $company->id) {
+            abort(403, 'Pedido não encontrado.');
+        }
+
+        $previousItems = $order->items()->with('product')->get();
+
+        $availableItems = $previousItems->filter(
+            fn ($item) => $item->product && $item->product->company_id === $company->id && $item->product->active
+        );
+
+        if ($availableItems->isEmpty()) {
+            return redirect()->route('marketplace.orders')
+                ->with('error', 'Nenhum item deste pedido está disponível no momento.');
+        }
+
+        $newOrder = Order::create([
+            'uuid' => Str::uuid(),
+            'company_id' => $company->id,
+            'client_id' => $client->id,
+            'status' => Order::STATUS_PENDING,
+            'channel' => Order::CHANNEL_ONLINE,
+            'subtotal' => 0,
+            'discount_amount' => 0,
+            'fee_amount' => 0,
+            'total_amount' => 0,
+            'estimated_ready_at' => now()->addMinutes($company->avg_preparation_minutes ?? 30),
+        ]);
+
+        $subtotal = 0;
+
+        foreach ($availableItems as $item) {
+            $product = $item->product;
+            $itemTotal = $product->amount * $item->quantity;
+
+            OrderItem::create([
+                'uuid' => Str::uuid(),
+                'order_id' => $newOrder->id,
+                'product_id' => $product->id,
+                'product_name' => $product->name,
+                'quantity' => $item->quantity,
+                'unit_price' => $product->amount,
+                'discount_percent' => 0,
+                'discount_amount' => 0,
+                'total_amount' => $itemTotal,
+            ]);
+
+            $subtotal += $itemTotal;
+        }
+
+        $newOrder->update([
             'subtotal' => $subtotal,
             'total_amount' => $subtotal,
         ]);
 
-        return redirect()->route('marketplace.orders');
+        $skippedCount = $previousItems->count() - $availableItems->count();
+
+        return redirect()->route('marketplace.orders')
+            ->with('success', $skippedCount > 0
+                ? "Pedido recriado! {$skippedCount} item(ns) não estava(m) mais disponível(is)."
+                : 'Pedido recriado com sucesso!');
     }
 
     public function search(Request $request)

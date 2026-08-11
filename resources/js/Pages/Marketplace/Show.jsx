@@ -2,7 +2,7 @@ import { useState } from 'react';
 import MarketplaceLayout from '../../Layouts/MarketplaceLayout';
 import { Head, router, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, X, Plus, Minus, Trash2, LogIn, MapPin, Truck, Heart, Star, ChevronDown } from 'lucide-react';
+import { ShoppingCart, X, Plus, Minus, Trash2, LogIn, MapPin, Truck, Heart, Star, ChevronDown, Tag, Check } from 'lucide-react';
 import axios from 'axios';
 
 function StarRating({ company }) {
@@ -71,6 +71,10 @@ export default function MarketplaceShow({ company, productsByCategory }) {
     const [isCheckingOut, setIsCheckingOut] = useState(false);
     const [favorited, setFavorited] = useState(company.is_favorited);
     const [favLoading, setFavLoading] = useState(false);
+    const [couponCode, setCouponCode] = useState('');
+    const [couponStatus, setCouponStatus] = useState('idle'); // idle | checking | valid | invalid
+    const [couponDiscount, setCouponDiscount] = useState(0);
+    const [couponMessage, setCouponMessage] = useState('');
 
     const toggleFavorite = async () => {
         if (!auth || favLoading) return;
@@ -88,6 +92,38 @@ export default function MarketplaceShow({ company, productsByCategory }) {
     const cartItems = Object.values(cart);
     const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
     const cartTotal = cartItems.reduce((sum, item) => sum + Number(item.product.amount) * item.quantity, 0);
+    const finalTotal = Math.max(cartTotal - couponDiscount, 0);
+
+    const applyCoupon = async () => {
+        if (!couponCode.trim() || couponStatus === 'checking') return;
+        setCouponStatus('checking');
+        try {
+            const res = await axios.post(`/store/${company.uuid}/coupons/validate`, {
+                code: couponCode.trim(),
+                subtotal: cartTotal,
+            });
+            if (res.data.valid) {
+                setCouponDiscount(Number(res.data.discount_amount));
+                setCouponStatus('valid');
+                setCouponMessage(res.data.message);
+            } else {
+                setCouponDiscount(0);
+                setCouponStatus('invalid');
+                setCouponMessage(res.data.message);
+            }
+        } catch {
+            setCouponDiscount(0);
+            setCouponStatus('invalid');
+            setCouponMessage('Não foi possível validar o cupom.');
+        }
+    };
+
+    const clearCoupon = () => {
+        setCouponCode('');
+        setCouponStatus('idle');
+        setCouponDiscount(0);
+        setCouponMessage('');
+    };
 
     const addToCart = (product) => {
         setCart(prev => ({
@@ -125,10 +161,12 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                 product_id: item.product.id,
                 quantity: item.quantity,
             })),
+            coupon_code: couponStatus === 'valid' ? couponCode.trim() : undefined,
         }, {
             onSuccess: () => {
                 setCart({});
                 setIsCartOpen(false);
+                clearCoupon();
             },
             onFinish: () => setIsCheckingOut(false),
         });
@@ -408,12 +446,73 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                             </div>
 
                             <div className="p-6 border-t border-gray-100 flex flex-col gap-4">
+                                {/* Cupom de desconto */}
+                                {auth.user && (
+                                    <div>
+                                        {couponStatus === 'valid' ? (
+                                            <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5">
+                                                <div className="flex items-center gap-2 text-emerald-700 text-sm font-bold">
+                                                    <Check size={16} />
+                                                    Cupom {couponCode.trim().toUpperCase()} aplicado
+                                                </div>
+                                                <button onClick={clearCoupon} className="text-emerald-600 hover:text-emerald-800">
+                                                    <X size={16} />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col gap-1.5">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="flex-grow relative">
+                                                        <Tag size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                                        <input
+                                                            type="text"
+                                                            value={couponCode}
+                                                            onChange={(e) => { setCouponCode(e.target.value); setCouponStatus('idle'); }}
+                                                            onKeyDown={(e) => e.key === 'Enter' && applyCoupon()}
+                                                            placeholder="Cupom de desconto"
+                                                            className="w-full pl-9 pr-3 py-2.5 text-sm font-medium rounded-xl border border-gray-200 focus:border-red-400 focus:outline-none uppercase"
+                                                        />
+                                                    </div>
+                                                    <button
+                                                        onClick={applyCoupon}
+                                                        disabled={!couponCode.trim() || couponStatus === 'checking'}
+                                                        className="px-4 py-2.5 text-sm font-bold rounded-xl bg-gray-900 text-white hover:bg-gray-800 transition-colors disabled:opacity-40"
+                                                    >
+                                                        {couponStatus === 'checking' ? '...' : 'Aplicar'}
+                                                    </button>
+                                                </div>
+                                                {couponStatus === 'invalid' && (
+                                                    <span className="text-xs font-medium text-red-500">{couponMessage}</span>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
                                 {/* Resumo financeiro */}
-                                <div className="flex justify-between items-center">
-                                    <span className="font-bold text-gray-700">Total</span>
-                                    <span className="text-2xl font-black text-gray-900">
-                                        R$ {cartTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                    </span>
+                                <div className="flex flex-col gap-1.5">
+                                    {couponDiscount > 0 && (
+                                        <>
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span className="text-gray-500 font-medium">Subtotal</span>
+                                                <span className="text-gray-700 font-medium">
+                                                    R$ {cartTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span className="text-emerald-600 font-medium">Desconto</span>
+                                                <span className="text-emerald-600 font-bold">
+                                                    - R$ {couponDiscount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                </span>
+                                            </div>
+                                        </>
+                                    )}
+                                    <div className="flex justify-between items-center">
+                                        <span className="font-bold text-gray-700">Total</span>
+                                        <span className="text-2xl font-black text-gray-900">
+                                            R$ {finalTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
                                 </div>
 
                                 {auth.user ? (
