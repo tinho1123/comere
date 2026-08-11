@@ -1,11 +1,11 @@
 ---
 name: Filament Resource Development
-description: Guidelines for creating and managing Filament 3.x resources in Comere multi-tenant admin panel
+description: Guidelines for creating and managing Filament 4.x resources in Comere multi-tenant admin panel
 ---
 
 # Filament Resource Development
 
-This skill provides guidelines for creating Filament 3.x resources following Comere patterns for multi-tenant administration.
+This skill provides guidelines for creating Filament 4.x resources following Comere patterns for multi-tenant administration. See `.agent/skills/filament-v4.md` for the full v3→v4 migration notes and gotchas.
 
 ## Resource Structure
 
@@ -17,9 +17,11 @@ This skill provides guidelines for creating Filament 3.x resources following Com
 namespace App\Filament\Client\Resources;
 
 use App\Models\Product;
+use BackedEnum;
+use Filament\Actions;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 
@@ -27,15 +29,15 @@ class ProductResource extends Resource
 {
     protected static ?string $model = Product::class;
     
-    protected static ?string $navigationIcon = 'heroicon-o-shopping-bag';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-shopping-bag';
     
     protected static ?string $navigationGroup = 'Catalog';
     
     protected static ?int $navigationSort = 1;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->schema([
             Forms\Components\TextInput::make('name')
                 ->required()
                 ->maxLength(255),
@@ -98,12 +100,12 @@ class ProductResource extends Resource
                 Tables\Filters\TernaryFilter::make('featured'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Actions\EditAction::make(),
+                Actions\DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -322,12 +324,12 @@ Tables\Filters\Filter::make('created_at')
 ### Table Actions
 
 ```php
-Tables\Actions\EditAction::make(),
+Actions\EditAction::make(),
 
-Tables\Actions\DeleteAction::make()
+Actions\DeleteAction::make()
     ->requiresConfirmation(),
 
-Tables\Actions\Action::make('activate')
+Actions\Action::make('activate')
     ->icon('heroicon-o-check')
     ->action(fn ($record) => $record->update(['active' => true]))
     ->requiresConfirmation()
@@ -337,10 +339,10 @@ Tables\Actions\Action::make('activate')
 ### Bulk Actions
 
 ```php
-Tables\Actions\BulkActionGroup::make([
-    Tables\Actions\DeleteBulkAction::make(),
+Actions\BulkActionGroup::make([
+    Actions\DeleteBulkAction::make(),
     
-    Tables\Actions\BulkAction::make('activate')
+    Actions\BulkAction::make('activate')
         ->icon('heroicon-o-check')
         ->action(fn (Collection $records) => $records->each->update(['active' => true]))
         ->deselectRecordsAfterCompletion(),
@@ -424,7 +426,8 @@ use Filament\Widgets\ChartWidget;
 
 class SalesChart extends ChartWidget
 {
-    protected static ?string $heading = 'Sales Trend';
+    // Note: $heading is NOT static in ChartWidget on Filament v4 (unlike TableWidget).
+    protected ?string $heading = 'Sales Trend';
 
     protected function getData(): array
     {
