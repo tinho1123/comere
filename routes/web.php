@@ -58,5 +58,5 @@ Route::middleware('auth')->group(function () {
 
 // Rotas do Admin (existente)
 Route::get('/login', [LoginController::class, 'index'])->middleware('guest');
-Route::post('/login', [LoginController::class, 'authenticate'])->middleware('guest');
+Route::post('/login', [LoginController::class, 'authenticate'])->middleware(['guest', 'throttle:10,1']);
 Route::post('/logout', [LogoutController::class, 'logout'])->middleware('auth');

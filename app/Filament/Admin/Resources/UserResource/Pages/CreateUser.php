@@ -7,6 +7,8 @@ use App\Models\User;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 class CreateUser extends CreateRecord
 {
@@ -18,10 +20,18 @@ class CreateUser extends CreateRecord
 
         unset($data['_email_exists']);
 
-        // E-mail já cadastrado: vincula usuário existente sem criar novo
+        // E-mail já cadastrado: só vincula o usuário existente a esta loja se a senha
+        // informada corresponder à senha real daquela conta — evita que qualquer admin
+        // vincule (e ganhe exposição de dados para) uma conta de terceiro só por saber o e-mail.
         $existing = User::where('email', $data['email'])->first();
 
         if ($existing) {
+            if (! Hash::check($data['password'] ?? '', $existing->password)) {
+                throw ValidationException::withMessages([
+                    'data.password' => 'Senha incorreta para a conta já cadastrada com este e-mail.',
+                ]);
+            }
+
             $company->users()->syncWithoutDetaching([$existing->id]);
 
             Notification::make()

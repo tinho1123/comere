@@ -19,7 +19,9 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    // CORS_ALLOWED_ORIGINS aceita uma lista separada por vírgula (ex: "https://app.comere.com.br,https://comere.com.br").
+    // Mantém "*" por padrão para não quebrar ambientes existentes; recomenda-se restringir em produção.
+    'allowed_origins' => array_map('trim', explode(',', env('CORS_ALLOWED_ORIGINS', '*'))),
 
     'allowed_origins_patterns' => [],
 

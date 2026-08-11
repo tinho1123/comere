@@ -52,40 +52,37 @@ class UserResource extends Resource
                                 return;
                             }
 
-                            $existing = User::where('email', $state)->first();
-
-                            if ($existing) {
-                                $set('_email_exists', true);
-                                $set('name', $existing->name);
-                            } else {
-                                $set('_email_exists', false);
-                            }
+                            // Não expõe o nome do usuário encontrado (evita vazar dado de conta alheia
+                            // só por saber/adivinhar o e-mail) — apenas sinaliza que a conta já existe.
+                            $set('_email_exists', User::where('email', $state)->exists());
                         })
                         ->disabled(fn (string $context) => $context === 'edit'),
 
                     TextInput::make('name')
                         ->label('Nome')
                         ->required()
-                        ->maxLength(255),
+                        ->maxLength(255)
+                        ->disabled(fn (Get $get, string $context) => $context === 'create' && (bool) $get('_email_exists'))
+                        ->dehydrated(fn (Get $get, string $context) => ! ($context === 'create' && (bool) $get('_email_exists'))),
 
                     Hidden::make('_email_exists')
                         ->default(false),
 
                     Placeholder::make('_notice_email_exists')
                         ->label('')
-                        ->content('Este e-mail já está cadastrado. O usuário será vinculado a esta loja sem necessidade de senha.')
+                        ->content('Este e-mail já possui uma conta. Informe a senha dessa conta para vinculá-la a esta loja.')
                         ->columnSpanFull()
                         ->visible(fn (Get $get, string $context) => $context === 'create' && (bool) $get('_email_exists')),
 
                     TextInput::make('password')
-                        ->label('Senha')
+                        ->label(fn (Get $get) => (bool) $get('_email_exists') ? 'Senha da conta existente' : 'Senha')
                         ->password()
                         ->revealable()
-                        ->minLength(8)
+                        ->minLength(fn (Get $get) => (bool) $get('_email_exists') ? null : 8)
                         ->dehydrated(fn (?string $state) => filled($state))
-                        ->dehydrateStateUsing(fn (string $state) => Hash::make($state))
-                        ->visible(fn (Get $get, string $context) => $context !== 'edit' && ! (bool) $get('_email_exists'))
-                        ->required(fn (Get $get, string $context) => $context === 'create' && ! (bool) $get('_email_exists')),
+                        ->dehydrateStateUsing(fn (?string $state, Get $get) => (bool) $get('_email_exists') ? $state : Hash::make($state))
+                        ->visible(fn (string $context) => $context !== 'edit')
+                        ->required(fn (string $context) => $context === 'create'),
                 ])
                 ->columns(2),
         ]);

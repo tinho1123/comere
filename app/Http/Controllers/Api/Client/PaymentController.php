@@ -75,6 +75,17 @@ class PaymentController extends Controller
             // Retrieve payment intent
             $paymentIntent = PaymentIntent::retrieve($request->get('intent_id'));
 
+            // Verify the intent actually belongs to this client/company — never trust
+            // client-submitted amount/ids alone, an attacker could pass any other
+            // succeeded intent id to fake a payment for someone else's debt.
+            if (($paymentIntent->metadata['client_uuid'] ?? null) !== $clientUser->uuid
+                || ($paymentIntent->metadata['company_uuid'] ?? null) !== $company->uuid) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Payment intent does not belong to this client/company',
+                ], 403);
+            }
+
             // Verify payment succeeded
             if ($paymentIntent->status !== 'succeeded') {
                 return response()->json([
@@ -83,13 +94,17 @@ class PaymentController extends Controller
                 ], 400);
             }
 
+            // Amount confirmed with Stripe — never trust the client-submitted "amount" for
+            // recording/crediting, only what Stripe actually charged.
+            $confirmedAmount = $paymentIntent->amount / 100;
+
             // Record payment in database
-            // TODO: Implement payment recording logic
+            // TODO: Implement payment recording logic using $confirmedAmount
 
             return response()->json([
                 'success' => true,
                 'message' => 'Payment recorded successfully',
-                'amount' => $request->get('amount'),
+                'amount' => $confirmedAmount,
             ]);
         } catch (\Exception $e) {
             \Log::error('Stripe confirm failed', ['company_uuid' => $company->uuid, 'error' => $e->getMessage()]);
