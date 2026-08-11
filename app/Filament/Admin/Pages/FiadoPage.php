@@ -4,14 +4,15 @@ namespace App\Filament\Admin\Pages;
 
 use App\Filament\Admin\Resources\FavoredTransactionResource;
 use App\Models\FavoredTransaction;
+use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Actions\Action as TableAction;
+use Filament\Actions\DeleteAction;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Enums\FontWeight;
-use Filament\Tables\Actions\Action as TableAction;
-use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
@@ -22,7 +23,7 @@ class FiadoPage extends Page implements HasTable
 {
     use InteractsWithTable;
 
-    protected static ?string $navigationIcon = 'heroicon-o-credit-card';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-credit-card';
 
     protected static ?string $navigationLabel = 'Fiados';
 
@@ -30,7 +31,7 @@ class FiadoPage extends Page implements HasTable
 
     protected static ?int $navigationSort = 5;
 
-    protected static string $view = 'filament.admin.pages.fiado-page';
+    protected string $view = 'filament.admin.pages.fiado-page';
 
     public ?string $selectedClient = null;
 

@@ -4,11 +4,12 @@ namespace App\Filament\Master\Resources;
 
 use App\Filament\Master\Resources\ProductCategoryResource\Pages;
 use App\Models\ProductsCategories;
+use BackedEnum;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
-use Filament\Tables\Actions\EditAction;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -17,7 +18,7 @@ class ProductCategoryResource extends Resource
 {
     protected static ?string $model = ProductsCategories::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-tag';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-tag';
 
     protected static ?string $navigationLabel = 'Categorias';
 
@@ -32,7 +33,7 @@ class ProductCategoryResource extends Resource
         return filament()->getCurrentPanel()?->getId() === 'master';
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $form): Schema
     {
         return $form->schema([
             TextInput::make('name')

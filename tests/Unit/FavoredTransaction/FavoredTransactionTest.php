@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\FavoredTransaction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class FavoredTransactionTest extends TestCase
@@ -25,7 +26,7 @@ class FavoredTransactionTest extends TestCase
         $this->client = Client::factory()->create(['company_id' => $this->company->id]);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_create_favored_transaction_with_minimum_data()
     {
         $transactionData = [
@@ -47,7 +48,7 @@ class FavoredTransactionTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_calculate_remaining_balance()
     {
         $transaction = FavoredTransaction::factory()->create([
@@ -58,7 +59,7 @@ class FavoredTransactionTest extends TestCase
         $this->assertEquals(70.00, $transaction->getRemainingBalance());
     }
 
-    /** @test */
+    #[Test]
     public function it_can_check_if_fully_paid()
     {
         $unpaidTransaction = FavoredTransaction::factory()->create([
@@ -75,7 +76,7 @@ class FavoredTransactionTest extends TestCase
         $this->assertTrue($paidTransaction->isFullyPaid());
     }
 
-    /** @test */
+    #[Test]
     public function it_uses_uuid_as_route_key()
     {
         $transaction = FavoredTransaction::factory()->create();
@@ -84,7 +85,7 @@ class FavoredTransactionTest extends TestCase
         $this->assertEquals($transaction->uuid, $transaction->getRouteKey());
     }
 
-    /** @test */
+    #[Test]
     public function it_belongs_to_client()
     {
         $transaction = FavoredTransaction::factory()->create([
@@ -95,7 +96,7 @@ class FavoredTransactionTest extends TestCase
         $this->assertEquals($this->client->id, $transaction->client->id);
     }
 
-    /** @test */
+    #[Test]
     public function it_belongs_to_company()
     {
         $transaction = FavoredTransaction::factory()->create([
@@ -106,7 +107,7 @@ class FavoredTransactionTest extends TestCase
         $this->assertEquals($this->company->id, $transaction->company->id);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_cast_decimal_fields_correctly()
     {
         $transaction = FavoredTransaction::factory()->create([
@@ -121,7 +122,7 @@ class FavoredTransactionTest extends TestCase
         $this->assertIsNumeric($transaction->amount);
     }
 
-    /** @test */
+    #[Test]
     public function it_filters_by_company_scope()
     {
         // Create transactions for different companies
@@ -140,7 +141,7 @@ class FavoredTransactionTest extends TestCase
         $this->assertEquals($transaction1->id, $companyTransactions->first()->id);
     }
 
-    /** @test */
+    #[Test]
     public function it_filters_by_client_relationship()
     {
         $otherClient = Client::factory()->create(['company_id' => $this->company->id]);
@@ -154,7 +155,7 @@ class FavoredTransactionTest extends TestCase
         $this->assertEquals($transaction1->id, $clientTransactions->first()->id);
     }
 
-    /** @test */
+    #[Test]
     public function it_handles_zero_paid_amount()
     {
         $transaction = FavoredTransaction::factory()->create([
@@ -166,7 +167,7 @@ class FavoredTransactionTest extends TestCase
         $this->assertFalse($transaction->isFullyPaid());
     }
 
-    /** @test */
+    #[Test]
     public function it_handles_overpayment_scenario()
     {
         $transaction = FavoredTransaction::factory()->create([

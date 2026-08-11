@@ -4,11 +4,13 @@ namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\DriverResource\Pages;
 use App\Models\Driver;
+use BackedEnum;
+use Filament\Actions;
 use Filament\Facades\Filament;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 
@@ -16,7 +18,7 @@ class DriverResource extends Resource
 {
     protected static ?string $model = Driver::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-truck';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-truck';
 
     protected static ?string $navigationLabel = 'Motoristas';
 
@@ -29,7 +31,7 @@ class DriverResource extends Resource
         return 'Gestão';
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $form): Schema
     {
         return $form->schema([
             Forms\Components\TextInput::make('name')
@@ -118,9 +120,9 @@ class DriverResource extends Resource
                     ->boolean(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make()
-                    ->before(function (Driver $record, Tables\Actions\DeleteAction $action) {
+                Actions\EditAction::make(),
+                Actions\DeleteAction::make()
+                    ->before(function (Driver $record, Actions\DeleteAction $action) {
                         if ($record->deliveries()->exists()) {
                             $action->halt();
                             Notification::make()
@@ -132,8 +134,8 @@ class DriverResource extends Resource
                     }),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }

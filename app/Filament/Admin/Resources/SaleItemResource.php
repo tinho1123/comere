@@ -5,6 +5,7 @@ namespace App\Filament\Admin\Resources;
 use App\Filament\Admin\Resources\SaleItemResource\Pages;
 use App\Models\Order;
 use App\Models\OrderItem;
+use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\Summarizers\Sum;
@@ -17,7 +18,7 @@ class SaleItemResource extends Resource
 {
     protected static ?string $model = OrderItem::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-receipt-percent';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-receipt-percent';
 
     protected static ?string $navigationLabel = 'Transações';
 

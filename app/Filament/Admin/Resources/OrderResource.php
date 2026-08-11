@@ -9,15 +9,17 @@ use App\Models\Delivery;
 use App\Models\Driver;
 use App\Models\Order;
 use App\Models\Product;
+use BackedEnum;
+use Filament\Actions;
 use Filament\Facades\Filament;
 use Filament\Forms;
-use Filament\Forms\Form;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
 use Filament\Infolists;
-use Filament\Infolists\Infolist;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\DB;
@@ -29,7 +31,7 @@ class OrderResource extends Resource
 {
     protected static ?string $model = Order::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-shopping-cart';
 
     protected static ?string $navigationLabel = 'Pedidos';
 
@@ -47,10 +49,10 @@ class OrderResource extends Resource
         return static::getModel()::where('status', Order::STATUS_PENDING)->count();
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $form): Schema
     {
         return $form->schema([
-            Forms\Components\Section::make('Tipo de pedido')
+            Schemas\Components\Section::make('Tipo de pedido')
                 ->schema([
                     Forms\Components\Select::make('channel')
                         ->label('Canal')
@@ -65,7 +67,7 @@ class OrderResource extends Resource
                         ->visibleOn('create'),
                 ]),
 
-            Forms\Components\Section::make('Cliente')
+            Schemas\Components\Section::make('Cliente')
                 ->schema([
                     Forms\Components\Select::make('client_id')
                         ->label('Cliente')
@@ -92,7 +94,7 @@ class OrderResource extends Resource
                         ->visibleOn('edit'),
                 ]),
 
-            Forms\Components\Section::make('Endereço de entrega')
+            Schemas\Components\Section::make('Endereço de entrega')
                 ->description('Obrigatório para pedidos online.')
                 ->visibleOn('create')
                 ->visible(fn (Get $get): bool => $get('channel') === Order::CHANNEL_ONLINE)
@@ -161,7 +163,7 @@ class OrderResource extends Resource
                         })
                         ->columnSpan(1),
 
-                    Forms\Components\Grid::make(3)->schema([
+                    Schemas\Components\Grid::make(3)->schema([
                         Forms\Components\TextInput::make('delivery_street')
                             ->label('Rua / Logradouro')
                             ->required(fn (Get $get): bool => $get('channel') === Order::CHANNEL_ONLINE)
@@ -173,7 +175,7 @@ class OrderResource extends Resource
                             ->columnSpan(1),
                     ]),
 
-                    Forms\Components\Grid::make(3)->schema([
+                    Schemas\Components\Grid::make(3)->schema([
                         Forms\Components\TextInput::make('delivery_complement')
                             ->label('Complemento')
                             ->nullable()
@@ -196,8 +198,8 @@ class OrderResource extends Resource
                     Forms\Components\Hidden::make('delivery_latitude'),
                     Forms\Components\Hidden::make('delivery_longitude'),
 
-                    Forms\Components\Actions::make([
-                        Forms\Components\Actions\Action::make('geocode')
+                    Schemas\Components\Actions::make([
+                        Actions\Action::make('geocode')
                             ->label('Buscar no mapa')
                             ->icon('heroicon-o-map-pin')
                             ->color('info')
@@ -265,7 +267,7 @@ class OrderResource extends Resource
                         ->columnSpanFull(),
                 ]),
 
-            Forms\Components\Section::make('Produtos')
+            Schemas\Components\Section::make('Produtos')
                 ->schema([
                     Forms\Components\Repeater::make('items')
                         ->label('')
@@ -318,7 +320,7 @@ class OrderResource extends Resource
                 ])
                 ->visibleOn('create'),
 
-            Forms\Components\Section::make('Pagamento e Observações')
+            Schemas\Components\Section::make('Pagamento e Observações')
                 ->schema([
                     Forms\Components\Select::make('payment_method')
                         ->label('Método de pagamento')
@@ -340,7 +342,7 @@ class OrderResource extends Resource
                         ->columnSpanFull(),
                 ]),
 
-            Forms\Components\Section::make('Status')
+            Schemas\Components\Section::make('Status')
                 ->schema([
                     Forms\Components\Select::make('status')
                         ->label('Status')
@@ -358,10 +360,10 @@ class OrderResource extends Resource
         ]);
     }
 
-    public static function infolist(Infolist $infolist): Infolist
+    public static function infolist(Schema $infolist): Schema
     {
         return $infolist->schema([
-            Infolists\Components\Section::make('Informações do Pedido')
+            Schemas\Components\Section::make('Informações do Pedido')
                 ->schema([
                     Infolists\Components\TextEntry::make('uuid')
                         ->label('ID do Pedido')
@@ -404,7 +406,7 @@ class OrderResource extends Resource
                         ->dateTime(),
                 ])->columns(2),
 
-            Infolists\Components\Section::make('Itens do Pedido')
+            Schemas\Components\Section::make('Itens do Pedido')
                 ->schema([
                     Infolists\Components\RepeatableEntry::make('items')
                         ->label('')
@@ -419,7 +421,7 @@ class OrderResource extends Resource
             Infolists\Components\View::make('filament.infolists.components.order-location')
                 ->columnSpanFull(),
 
-            Infolists\Components\Section::make('Totais')
+            Schemas\Components\Section::make('Totais')
                 ->schema([
                     Infolists\Components\TextEntry::make('subtotal')->label('Subtotal')->money('BRL'),
                     Infolists\Components\TextEntry::make('discount_amount')->label('Desconto')->money('BRL'),
@@ -512,14 +514,14 @@ class OrderResource extends Resource
                     ]),
             ])
             ->actions([
-                Tables\Actions\Action::make('approve')
+                Actions\Action::make('approve')
                     ->label('Aprovar')
                     ->icon('heroicon-o-check-circle')
                     ->color('info')
                     ->visible(fn (Order $record): bool => $record->canBeApproved())
                     ->action(fn (Order $record) => $record->approve())
                     ->requiresConfirmation(),
-                Tables\Actions\Action::make('ship')
+                Actions\Action::make('ship')
                     ->label('Despachar')
                     ->icon('heroicon-o-truck')
                     ->color('primary')
@@ -577,14 +579,14 @@ class OrderResource extends Resource
                             ->body("Motorista: {$driver->name}")
                             ->send();
                     }),
-                Tables\Actions\Action::make('deliver')
+                Actions\Action::make('deliver')
                     ->label('Concluir pedido')
                     ->icon('heroicon-o-check-badge')
                     ->color('success')
                     ->visible(fn (Order $record): bool => $record->canBeDelivered())
                     ->action(fn (Order $record) => $record->deliver())
                     ->requiresConfirmation(),
-                Tables\Actions\Action::make('cancel')
+                Actions\Action::make('cancel')
                     ->label('Cancelar')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
@@ -601,12 +603,12 @@ class OrderResource extends Resource
                             ->title('Pedido cancelado!')
                             ->send();
                     }),
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
+                Actions\ViewAction::make(),
+                Actions\EditAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }

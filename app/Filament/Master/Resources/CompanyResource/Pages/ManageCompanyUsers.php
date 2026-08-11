@@ -4,14 +4,15 @@ namespace App\Filament\Master\Resources\CompanyResource\Pages;
 
 use App\Filament\Master\Resources\CompanyResource;
 use App\Models\User;
+use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Actions\Action as TableAction;
+use Filament\Actions\CreateAction;
+use Filament\Actions\DeleteAction;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ManageRelatedRecords;
-use Filament\Tables\Actions\Action as TableAction;
-use Filament\Tables\Actions\CreateAction;
-use Filament\Tables\Actions\DeleteAction;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Hash;
@@ -22,7 +23,7 @@ class ManageCompanyUsers extends ManageRelatedRecords
 
     protected static string $relationship = 'users';
 
-    protected static ?string $navigationIcon = 'heroicon-o-users';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-users';
 
     protected static ?string $title = 'Usuários da loja';
 
@@ -37,7 +38,7 @@ class ManageCompanyUsers extends ManageRelatedRecords
         ];
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $form): Schema
     {
         return $form->schema([
             TextInput::make('name')

@@ -7,7 +7,7 @@ use Filament\Widgets\ChartWidget;
 
 class TransactionChartWidget extends ChartWidget
 {
-    protected static ?string $heading = 'Transações por Mês (R$)';
+    protected ?string $heading = 'Transações por Mês (R$)';
 
     protected int|string|array $columnSpan = 'full';
 

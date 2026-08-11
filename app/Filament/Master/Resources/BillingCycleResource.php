@@ -5,15 +5,16 @@ namespace App\Filament\Master\Resources;
 use App\Filament\Master\Resources\BillingCycleResource\Pages;
 use App\Models\BillingCycle;
 use App\Services\BillingService;
+use BackedEnum;
 use Carbon\Carbon;
+use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
+use Filament\Actions\BulkActionGroup;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
-use Filament\Tables\Actions\Action;
-use Filament\Tables\Actions\BulkAction;
-use Filament\Tables\Actions\BulkActionGroup;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -24,7 +25,7 @@ class BillingCycleResource extends Resource
 {
     protected static ?string $model = BillingCycle::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-credit-card';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-credit-card';
 
     protected static ?string $navigationLabel = 'Cobranças';
 
@@ -62,7 +63,7 @@ class BillingCycleResource extends Resource
         return false;
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $form): Schema
     {
         return $form->schema([]);
     }

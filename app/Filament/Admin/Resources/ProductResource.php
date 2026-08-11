@@ -5,10 +5,13 @@ namespace App\Filament\Admin\Resources;
 use App\Filament\Admin\Resources\ProductResource\Pages;
 use App\Models\Product;
 use App\Models\ProductSubcategory;
+use BackedEnum;
+use Filament\Actions;
 use Filament\Facades\Filament;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use Filament\Schemas;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Str;
@@ -18,7 +21,7 @@ class ProductResource extends Resource
 {
     protected static ?string $model = Product::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-shopping-bag';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-shopping-bag';
 
     protected static ?string $navigationLabel = 'Produtos';
 
@@ -31,7 +34,7 @@ class ProductResource extends Resource
         return 'Gestão';
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $form): Schema
     {
         return $form
             ->schema([
@@ -44,7 +47,7 @@ class ProductResource extends Resource
                     ->required()
                     ->maxLength(65535)
                     ->columnSpanFull(),
-                Forms\Components\Grid::make(3)
+                Schemas\Components\Grid::make(3)
                     ->schema([
                         Forms\Components\TextInput::make('amount')
                             ->label('Preço')
@@ -68,7 +71,7 @@ class ProductResource extends Resource
                             ->disabled()
                             ->dehydrated(),
                     ]),
-                Forms\Components\Grid::make(3)
+                Schemas\Components\Grid::make(3)
                     ->schema([
                         Forms\Components\TextInput::make('quantity')
                             ->label('Quantidade')
@@ -89,7 +92,7 @@ class ProductResource extends Resource
                             ->nullable()
                             ->placeholder('Nenhuma'),
                     ]),
-                Forms\Components\Section::make('Configurações de Fiado')
+                Schemas\Components\Section::make('Configurações de Fiado')
                     ->schema([
                         Forms\Components\Toggle::make('is_for_favored')
                             ->label('Disponível para Fiado')
@@ -100,40 +103,40 @@ class ProductResource extends Resource
                             ->prefix('R$')
                             ->visible(fn (Forms\Get $get): bool => $get('is_for_favored')),
                     ]),
-                Forms\Components\Section::make('Disponibilidade')
+                Schemas\Components\Section::make('Disponibilidade')
                     ->schema([
                         Forms\Components\Toggle::make('is_marketplace')
                             ->label('Disponível no Marketplace')
                             ->helperText('Ative para que este produto apareça no catálogo de delivery/marketplace.')
                             ->default(false),
                     ]),
-                Forms\Components\Section::make('Acréscimos por forma de pagamento')
+                Schemas\Components\Section::make('Acréscimos por forma de pagamento')
                     ->description('Defina acréscimos aplicados ao valor do item conforme a forma de pagamento escolhida.')
                     ->collapsible()
                     ->collapsed()
                     ->schema([
-                        Forms\Components\Grid::make(3)->schema([
+                        Schemas\Components\Grid::make(3)->schema([
                             Forms\Components\Placeholder::make('_label_cash')->label('')->content('Dinheiro'),
                             Forms\Components\Select::make('payment_surcharges.cash.type')
                                 ->label('Tipo')->options(['percent' => 'Porcentagem (%)', 'fixed' => 'Valor fixo (R$)'])->default('percent')->native(false),
                             Forms\Components\TextInput::make('payment_surcharges.cash.amount')
                                 ->label('Acréscimo')->numeric()->default(0)->minValue(0)->step(0.01),
                         ]),
-                        Forms\Components\Grid::make(3)->schema([
+                        Schemas\Components\Grid::make(3)->schema([
                             Forms\Components\Placeholder::make('_label_debit')->label('')->content('Cartão de Débito'),
                             Forms\Components\Select::make('payment_surcharges.debit.type')
                                 ->label('Tipo')->options(['percent' => 'Porcentagem (%)', 'fixed' => 'Valor fixo (R$)'])->default('percent')->native(false),
                             Forms\Components\TextInput::make('payment_surcharges.debit.amount')
                                 ->label('Acréscimo')->numeric()->default(0)->minValue(0)->step(0.01),
                         ]),
-                        Forms\Components\Grid::make(3)->schema([
+                        Schemas\Components\Grid::make(3)->schema([
                             Forms\Components\Placeholder::make('_label_credit')->label('')->content('Cartão de Crédito'),
                             Forms\Components\Select::make('payment_surcharges.credit.type')
                                 ->label('Tipo')->options(['percent' => 'Porcentagem (%)', 'fixed' => 'Valor fixo (R$)'])->default('percent')->native(false),
                             Forms\Components\TextInput::make('payment_surcharges.credit.amount')
                                 ->label('Acréscimo')->numeric()->default(0)->minValue(0)->step(0.01),
                         ]),
-                        Forms\Components\Grid::make(3)->schema([
+                        Schemas\Components\Grid::make(3)->schema([
                             Forms\Components\Placeholder::make('_label_pix')->label('')->content('Pix'),
                             Forms\Components\Select::make('payment_surcharges.pix.type')
                                 ->label('Tipo')->options(['percent' => 'Porcentagem (%)', 'fixed' => 'Valor fixo (R$)'])->default('percent')->native(false),
@@ -184,7 +187,7 @@ class ProductResource extends Resource
                     ->sortable()
                     ->color('primary')
                     ->action(
-                        Tables\Actions\Action::make('edit_category')
+                        Actions\Action::make('edit_category')
                             ->label('Alterar categoria')
                             ->modalHeading('Alterar Categoria / Subcategoria')
                             ->fillForm(fn (Product $record): array => [
@@ -219,7 +222,7 @@ class ProductResource extends Resource
                     ->sortable()
                     ->color('primary')
                     ->action(
-                        Tables\Actions\Action::make('edit_subcategory')
+                        Actions\Action::make('edit_subcategory')
                             ->label('Alterar subcategoria')
                             ->modalHeading('Alterar Subcategoria')
                             ->fillForm(fn (Product $record): array => [
@@ -260,11 +263,11 @@ class ProductResource extends Resource
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Actions\EditAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }

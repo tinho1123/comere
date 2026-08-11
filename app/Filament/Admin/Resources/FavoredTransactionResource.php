@@ -6,13 +6,16 @@ use App\Filament\Admin\Resources\FavoredTransactionResource\Pages;
 use App\Models\Client;
 use App\Models\FavoredTransaction;
 use App\Models\Product;
+use Filament\Actions;
 use Filament\Facades\Filament;
 use Filament\Forms;
-use Filament\Forms\Form;
-use Filament\Forms\Set;
 use Filament\Resources\Resource;
+use Filament\Schemas;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class FavoredTransactionResource extends Resource
 {
@@ -24,10 +27,10 @@ class FavoredTransactionResource extends Resource
 
     protected static bool $shouldRegisterNavigation = false;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $form): Schema
     {
         return $form->schema([
-            Forms\Components\Section::make('Devedor')
+            Schemas\Components\Section::make('Devedor')
                 ->schema([
                     Forms\Components\TextInput::make('client_name')
                         ->label('Nome de quem está devendo')
@@ -134,7 +137,7 @@ class FavoredTransactionResource extends Resource
                 ->dehydrated(false)
                 ->visibleOn('create'),
 
-            Forms\Components\Grid::make(2)
+            Schemas\Components\Grid::make(2)
                 ->schema([
                     Forms\Components\TextInput::make('name')
                         ->label('Produto')
@@ -148,7 +151,7 @@ class FavoredTransactionResource extends Resource
                 ])
                 ->visibleOn('edit'),
 
-            Forms\Components\Grid::make(2)
+            Schemas\Components\Grid::make(2)
                 ->schema([
                     Forms\Components\TextInput::make('favored_total')
                         ->label('Valor Total do Fiado')
@@ -225,7 +228,7 @@ class FavoredTransactionResource extends Resource
                     ->falseLabel('Inativos'),
             ])
             ->actions([
-                Tables\Actions\Action::make('pay')
+                Actions\Action::make('pay')
                     ->label('Pagar')
                     ->icon('heroicon-o-banknotes')
                     ->color('success')
@@ -242,14 +245,22 @@ class FavoredTransactionResource extends Resource
                         $record->increment('favored_paid_amount', $data['amount']);
                     }),
 
-                Tables\Actions\EditAction::make()->label('Editar'),
-                Tables\Actions\DeleteAction::make()->label('Excluir'),
+                Actions\EditAction::make()->label('Editar'),
+                Actions\DeleteAction::make()->label('Excluir'),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $company = filament()->getTenant();
+
+        return parent::getEloquentQuery()
+            ->where('company_id', $company->id);
     }
 
     public static function getRelations(): array

@@ -24,7 +24,7 @@ class MarketplaceLoginController extends Controller
 
         if ($client && ! $client->validateLoginAttempts()) {
             throw ValidationException::withMessages([
-                'email' => __('auth.throttle', ['seconds' => now()->diffInSeconds($client->locked_until)]),
+                'email' => __('auth.throttle', ['seconds' => (int) ceil(now()->diffInSeconds($client->locked_until))]),
             ]);
         }
 
