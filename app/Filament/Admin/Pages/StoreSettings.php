@@ -3,19 +3,20 @@
 namespace App\Filament\Admin\Pages;
 
 use App\Models\CompanyType;
+use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
-use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\HtmlString;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
@@ -24,7 +25,7 @@ class StoreSettings extends Page implements HasForms
 {
     use InteractsWithForms;
 
-    protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-cog-6-tooth';
 
     protected static ?string $navigationLabel = 'Configurações da Loja';
 
@@ -32,7 +33,7 @@ class StoreSettings extends Page implements HasForms
 
     protected static ?int $navigationSort = 10;
 
-    protected static string $view = 'filament.admin.pages.store-settings';
+    protected string $view = 'filament.admin.pages.store-settings';
 
     public static function getNavigationGroup(): ?string
     {
@@ -64,7 +65,7 @@ class StoreSettings extends Page implements HasForms
         ]);
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $form): Schema
     {
         return $form
             ->schema([
@@ -130,7 +131,7 @@ class StoreSettings extends Page implements HasForms
                             ->mask('99999-999')
                             ->maxLength(9)
                             ->suffixAction(
-                                \Filament\Forms\Components\Actions\Action::make('buscar_cep')
+                                Action::make('buscar_cep')
                                     ->icon('heroicon-o-magnifying-glass')
                                     ->label('Buscar')
                                     ->action('fillAddressFromZip')

@@ -3,12 +3,12 @@
 namespace App\Filament\Admin\Pages;
 
 use App\Models\Company;
-use Filament\Http\Responses\Auth\Contracts\LoginResponse;
-use Filament\Pages\Auth\Login as BaseLogin;
+use Filament\Auth\Http\Responses\Contracts\LoginResponse;
+use Filament\Auth\Pages\Login as BaseLogin;
 
 class Login extends BaseLogin
 {
-    protected static string $view = 'filament.admin.pages.login';
+    protected string $view = 'filament.admin.pages.login';
 
     public bool $showCompanySelector = false;
 

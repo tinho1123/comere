@@ -13,7 +13,7 @@
 | Layer | Technology |
 |---|---|
 | Backend | Laravel 12, PHP 8.4 (Sail) |
-| Admin Panel | Filament 3.3 |
+| Admin Panel | Filament 4 |
 | API Auth | Laravel Sanctum 3.3 |
 | Frontend | React 19.x + Inertia.js 2.x |
 | Styling | Tailwind CSS v4 + Vite 6.x |

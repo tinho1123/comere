@@ -4,15 +4,16 @@ namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\DeliveryFeeRangeResource\Pages;
 use App\Models\DeliveryFeeRange;
+use BackedEnum;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\EditAction;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\View;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
-use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\EditAction;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -22,7 +23,7 @@ class DeliveryFeeRangeResource extends Resource
 {
     protected static ?string $model = DeliveryFeeRange::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-map-pin';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-map-pin';
 
     protected static ?string $navigationLabel = 'Taxas de Entrega';
 
@@ -43,7 +44,7 @@ class DeliveryFeeRangeResource extends Resource
             ->where('company_id', Filament::getTenant()->id);
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $form): Schema
     {
         return $form->schema([
             Select::make('max_km')

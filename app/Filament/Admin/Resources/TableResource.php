@@ -6,16 +6,17 @@ use App\Filament\Admin\Resources\TableResource\Pages;
 use App\Models\Client;
 use App\Models\Table as TableModel;
 use App\Models\TableSession;
+use BackedEnum;
+use Filament\Actions\Action;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
-use Filament\Tables\Actions\Action;
-use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\EditAction;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -25,7 +26,7 @@ class TableResource extends Resource
 {
     protected static ?string $model = TableModel::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-table-cells';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-table-cells';
 
     protected static ?string $navigationLabel = 'Mesas';
 
@@ -59,7 +60,7 @@ class TableResource extends Resource
         return 'warning';
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $form): Schema
     {
         return $form->schema([
             TextInput::make('name')

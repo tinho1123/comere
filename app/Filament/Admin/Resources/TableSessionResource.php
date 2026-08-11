@@ -6,18 +6,18 @@ use App\Filament\Admin\Resources\TableSessionResource\Pages;
 use App\Filament\Admin\Resources\TableSessionResource\RelationManagers\ItemsRelationManager;
 use App\Models\Order;
 use App\Models\TableSession;
+use BackedEnum;
+use Filament\Actions\Action;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Form;
-use Filament\Forms\Get;
-use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Infolist;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
-use Filament\Tables\Actions\Action;
-use Filament\Tables\Actions\ViewAction;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -27,7 +27,7 @@ class TableSessionResource extends Resource
 {
     protected static ?string $model = TableSession::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-list';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-clipboard-document-list';
 
     protected static ?string $navigationLabel = 'Sessões';
 
@@ -47,12 +47,12 @@ class TableSessionResource extends Resource
         return false;
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $form): Schema
     {
         return $form->schema([]);
     }
 
-    public static function infolist(Infolist $infolist): Infolist
+    public static function infolist(Schema $infolist): Schema
     {
         return $infolist->schema([
             Section::make('Mesa')

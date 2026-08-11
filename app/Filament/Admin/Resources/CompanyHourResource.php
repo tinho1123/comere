@@ -4,20 +4,22 @@ namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\CompanyHourResource\Pages;
 use App\Models\CompanyHour;
+use BackedEnum;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
-use Filament\Tables\Actions\EditAction;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class CompanyHourResource extends Resource
 {
     protected static ?string $model = CompanyHour::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-clock';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-clock';
 
     protected static ?string $navigationLabel = 'Horário de Funcionamento';
 
@@ -25,11 +27,11 @@ class CompanyHourResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Horário de Funcionamento';
 
-    protected static ?string $navigationGroup = 'Configurações';
+    protected static string|UnitEnum|null $navigationGroup = 'Configurações';
 
     protected static ?int $navigationSort = 10;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $form): Schema
     {
         return $form->schema([
             Toggle::make('is_closed')

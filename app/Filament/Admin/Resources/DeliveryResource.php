@@ -5,11 +5,13 @@ namespace App\Filament\Admin\Resources;
 use App\Filament\Admin\Resources\DeliveryResource\Pages;
 use App\Models\Delivery;
 use App\Models\Driver;
+use BackedEnum;
+use Filament\Actions;
 use Filament\Facades\Filament;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Collection;
@@ -18,7 +20,7 @@ class DeliveryResource extends Resource
 {
     protected static ?string $model = Delivery::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-map-pin';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-map-pin';
 
     protected static ?string $navigationLabel = 'Entregas';
 
@@ -36,7 +38,7 @@ class DeliveryResource extends Resource
         return false;
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $form): Schema
     {
         return $form->schema([
             Forms\Components\TextInput::make('notes')
@@ -135,7 +137,7 @@ class DeliveryResource extends Resource
                     ->falseLabel('Pendente'),
             ])
             ->actions([
-                Tables\Actions\Action::make('mark_delivered')
+                Actions\Action::make('mark_delivered')
                     ->label('Marcar entregue')
                     ->icon('heroicon-o-check-badge')
                     ->color('success')
@@ -154,7 +156,7 @@ class DeliveryResource extends Resource
                             ->send();
                     }),
 
-                Tables\Actions\Action::make('mark_failed')
+                Actions\Action::make('mark_failed')
                     ->label('Falhou')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
@@ -169,7 +171,7 @@ class DeliveryResource extends Resource
                             ->send();
                     }),
 
-                Tables\Actions\Action::make('mark_paid')
+                Actions\Action::make('mark_paid')
                     ->label('Marcar pago')
                     ->icon('heroicon-o-banknotes')
                     ->color('info')
@@ -178,8 +180,8 @@ class DeliveryResource extends Resource
                     ->action(fn (Delivery $record) => $record->update(['is_paid' => true])),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\BulkAction::make('bulk_mark_paid')
+                Actions\BulkActionGroup::make([
+                    Actions\BulkAction::make('bulk_mark_paid')
                         ->label('Marcar como pago')
                         ->icon('heroicon-o-banknotes')
                         ->color('success')

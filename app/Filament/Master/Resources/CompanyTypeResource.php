@@ -4,11 +4,12 @@ namespace App\Filament\Master\Resources;
 
 use App\Filament\Master\Resources\CompanyTypeResource\Pages;
 use App\Models\CompanyType;
+use BackedEnum;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
-use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\EditAction;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -16,7 +17,7 @@ class CompanyTypeResource extends Resource
 {
     protected static ?string $model = CompanyType::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-tag';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-tag';
 
     protected static ?string $navigationLabel = 'Tipos de Loja';
 
@@ -26,7 +27,7 @@ class CompanyTypeResource extends Resource
 
     protected static ?int $navigationSort = 2;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $form): Schema
     {
         return $form->schema([
             TextInput::make('name')

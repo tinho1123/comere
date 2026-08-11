@@ -4,10 +4,12 @@ namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\ProductSubcategoryResource\Pages;
 use App\Models\ProductSubcategory;
+use BackedEnum;
+use Filament\Actions;
 use Filament\Facades\Filament;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 
@@ -15,7 +17,7 @@ class ProductSubcategoryResource extends Resource
 {
     protected static ?string $model = ProductSubcategory::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-tag';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-tag';
 
     protected static ?string $navigationLabel = 'Subcategorias';
 
@@ -28,7 +30,7 @@ class ProductSubcategoryResource extends Resource
         return 'Gestão';
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $form): Schema
     {
         return $form->schema([
             Forms\Components\TextInput::make('name')
@@ -70,12 +72,12 @@ class ProductSubcategoryResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Actions\EditAction::make(),
+                Actions\DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                Actions\BulkActionGroup::make([
+                    Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }

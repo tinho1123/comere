@@ -7,7 +7,7 @@
     "require": {
         "php": "^8.2",
         "bilalbaraz/supabase-laravel": "^0.1.2",
-        "filament/filament": "^3.3",
+        "filament/filament": "^4.0",
         "guzzlehttp/guzzle": "^7.2",
         "inertiajs/inertia-laravel": "^2.0",
         "laravel/framework": "^12.0",
