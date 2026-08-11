@@ -207,6 +207,12 @@ class MarketplaceController extends Controller
                 'delivered_at' => $order->delivered_at?->format('d/m/Y H:i'),
                 'cancelled_at' => $order->cancelled_at?->format('d/m/Y H:i'),
                 'estimated_ready_at' => $order->estimated_ready_at?->toIso8601String(),
+                'queue_position' => in_array($order->status, [Order::STATUS_PENDING, Order::STATUS_PROCESSING], true)
+                    ? Order::where('company_id', $order->company_id)
+                        ->whereIn('status', [Order::STATUS_PENDING, Order::STATUS_PROCESSING])
+                        ->where('created_at', '<', $order->created_at)
+                        ->count()
+                    : null,
                 'can_reorder' => $order->items->isNotEmpty(),
                 'company' => [
                     'uuid' => $order->company->uuid,

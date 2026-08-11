@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import MarketplaceLayout from '@/Layouts/MarketplaceLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, Clock, CheckCircle2, Truck, AlertCircle, ChevronDown, ShoppingBag, RotateCcw, X } from 'lucide-react';
+import { Package, Clock, CheckCircle2, Truck, AlertCircle, ChevronDown, ShoppingBag, RotateCcw, X, ListOrdered } from 'lucide-react';
 import axios from 'axios';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -89,6 +89,20 @@ function EtaBadge({ order }) {
         <div className="flex items-center gap-1.5 text-xs font-bold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full w-max">
             <Clock size={12} />
             {diffMinutes > 0 ? `Previsão: ~${diffMinutes} min` : 'Previsão: a qualquer momento'}
+        </div>
+    );
+}
+
+function QueueBadge({ order }) {
+    if (order.status !== 'pending' && order.status !== 'processing') return null;
+    if (order.queue_position === null || order.queue_position === undefined) return null;
+
+    return (
+        <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full w-max">
+            <ListOrdered size={12} />
+            {order.queue_position === 0
+                ? 'Você é o próximo!'
+                : `${order.queue_position} pedido${order.queue_position > 1 ? 's' : ''} na sua frente`}
         </div>
     );
 }
@@ -249,6 +263,7 @@ function OrderCard({ order, index }) {
                             <StatusIcon size={18} />
                             {config.label}
                         </div>
+                        <QueueBadge order={order} />
                         <EtaBadge order={order} />
                     </div>
                 </div>
