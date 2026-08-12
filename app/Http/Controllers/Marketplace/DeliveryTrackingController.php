@@ -38,4 +38,20 @@ class DeliveryTrackingController extends Controller
 
         return response()->json(['success' => true]);
     }
+
+    public function confirmPayment(string $token)
+    {
+        $delivery = Delivery::where('tracking_token', $token)->firstOrFail();
+
+        if ($delivery->status !== Delivery::STATUS_DISPATCHED) {
+            return response()->json(['success' => false, 'message' => 'Entrega não está mais em andamento.'], 409);
+        }
+
+        $delivery->update([
+            'payment_collected' => true,
+            'payment_collected_at' => now(),
+        ]);
+
+        return response()->json(['success' => true]);
+    }
 }

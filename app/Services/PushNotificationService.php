@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\DriverPushSubscription;
 use App\Models\PushSubscription;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Minishlink\WebPush\Subscription;
 use Minishlink\WebPush\WebPush;
@@ -29,6 +31,25 @@ class PushNotificationService
     {
         $subscriptions = PushSubscription::where('company_id', $companyId)->get();
 
+        $this->send($subscriptions, $title, $body, $url, function (string $endpoint) {
+            PushSubscription::where('endpoint', $endpoint)->delete();
+        }, ['company_id' => $companyId]);
+    }
+
+    public function notifyDriver(int $driverId, string $title, string $body, string $url = '/motoboy'): void
+    {
+        $subscriptions = DriverPushSubscription::where('driver_id', $driverId)->get();
+
+        $this->send($subscriptions, $title, $body, $url, function (string $endpoint) {
+            DriverPushSubscription::where('endpoint', $endpoint)->delete();
+        }, ['driver_id' => $driverId]);
+    }
+
+    /**
+     * @param  Collection<int, PushSubscription|DriverPushSubscription>  $subscriptions
+     */
+    private function send($subscriptions, string $title, string $body, string $url, callable $removeInvalid, array $logContext): void
+    {
         if ($subscriptions->isEmpty()) {
             return;
         }
@@ -56,13 +77,13 @@ class PushNotificationService
                 Log::warning('Push notification failed', [
                     'endpoint' => $report->getEndpoint(),
                     'reason' => $report->getReason(),
-                    'company_id' => $companyId,
+                    ...$logContext,
                 ]);
 
                 // Remove invalid subscriptions (410 Gone or 404)
                 $statusCode = $report->getResponse()?->getStatusCode();
                 if (in_array($statusCode, [404, 410])) {
-                    PushSubscription::where('endpoint', $report->getEndpoint())->delete();
+                    $removeInvalid($report->getEndpoint());
                 }
             }
         }

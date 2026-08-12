@@ -10,6 +10,7 @@ use App\Models\Driver;
 use App\Models\DriverCompany;
 use App\Models\Order;
 use App\Models\Product;
+use App\Services\PushNotificationService;
 use BackedEnum;
 use Filament\Actions;
 use Filament\Actions\Action;
@@ -579,6 +580,17 @@ class OrderResource extends Resource
                                 'notes' => $data['notes'] ?? null,
                             ]);
                         });
+
+                        try {
+                            app(PushNotificationService::class)->notifyDriver(
+                                $driver->id,
+                                'Nova entrega!',
+                                "{$record->company->name} — pedido #".strtoupper(substr($record->uuid, 0, 8)),
+                                "/entrega/{$delivery->tracking_token}"
+                            );
+                        } catch (\Throwable) {
+                            // Nunca falhar o despacho por causa de erro na notificação
+                        }
 
                         Notification::make()
                             ->success()

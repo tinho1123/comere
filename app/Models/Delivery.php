@@ -31,6 +31,8 @@ class Delivery extends Model
         'current_latitude',
         'current_longitude',
         'location_updated_at',
+        'payment_collected',
+        'payment_collected_at',
     ];
 
     protected $casts = [
@@ -41,6 +43,8 @@ class Delivery extends Model
         'current_latitude' => 'float',
         'current_longitude' => 'float',
         'location_updated_at' => 'datetime',
+        'payment_collected' => 'boolean',
+        'payment_collected_at' => 'datetime',
     ];
 
     protected static function booted(): void

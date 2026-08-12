@@ -10,6 +10,8 @@ use App\Http\Controllers\Marketplace\CompanyRatingController;
 use App\Http\Controllers\Marketplace\DeliveryTrackingController;
 use App\Http\Controllers\Marketplace\DriverAuthController;
 use App\Http\Controllers\Marketplace\DriverDashboardController;
+use App\Http\Controllers\Marketplace\DriverHistoryController;
+use App\Http\Controllers\Marketplace\DriverPushSubscriptionController;
 use App\Http\Controllers\Marketplace\MarketplaceController;
 use App\Http\Controllers\Marketplace\MarketplaceLoginController;
 use App\Http\Controllers\Marketplace\SSOCallbackController;
@@ -24,6 +26,7 @@ Route::post('/table/{uuid}/item', [TableController::class, 'addItem'])->name('ta
 
 Route::get('/entrega/{token}', [DeliveryTrackingController::class, 'show'])->name('delivery.tracking.show');
 Route::post('/entrega/{token}/localizacao', [DeliveryTrackingController::class, 'updateLocation'])->name('delivery.tracking.update-location');
+Route::post('/entrega/{token}/pagamento', [DeliveryTrackingController::class, 'confirmPayment'])->name('delivery.tracking.confirm-payment');
 
 // Cadastro é multiplataforma; login e tudo depois dele exige celular (mobile.only).
 Route::middleware('guest:driver')->group(function () {
@@ -43,6 +46,9 @@ Route::middleware(['auth:driver', 'mobile.only'])->group(function () {
     Route::post('/motoboy/vinculos/{driverCompany}/recusar', [DriverDashboardController::class, 'rejectInvite'])->name('motoboy.invite.reject');
     Route::get('/motoboy/poll', [DriverDashboardController::class, 'poll'])->name('motoboy.poll');
     Route::post('/motoboy/status', [DriverDashboardController::class, 'toggleStatus'])->name('motoboy.status.toggle');
+    Route::get('/motoboy/historico', [DriverHistoryController::class, 'show'])->name('motoboy.history');
+    Route::post('/motoboy/push/subscribe', [DriverPushSubscriptionController::class, 'subscribe'])->name('motoboy.push.subscribe');
+    Route::post('/motoboy/push/unsubscribe', [DriverPushSubscriptionController::class, 'unsubscribe'])->name('motoboy.push.unsubscribe');
 });
 
 Route::get('/', [MarketplaceController::class, 'index'])->name('marketplace.index');

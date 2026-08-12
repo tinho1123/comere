@@ -17,6 +17,7 @@ class DriverDashboardController extends Controller
 
         return Inertia::render('Driver/Dashboard', [
             'driver' => $this->driverPayload($driver),
+            'vapidPublicKey' => config('webpush.vapid.public_key'),
             'pendingInvites' => $driver->pendingInvites()->get()->map(fn ($company) => [
                 'pivot_id' => $company->pivot->id,
                 'name' => $company->name,

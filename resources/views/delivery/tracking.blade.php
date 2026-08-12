@@ -36,6 +36,29 @@
             </div>
         </div>
 
+        @if ($delivery->order->payment_method && $delivery->order->payment_method !== 'credit')
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-4 text-center">
+                <p class="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-1">Forma de pagamento</p>
+                <p class="text-lg font-bold text-gray-900 mb-4">
+                    {{ \App\Models\Order::paymentOptions()[$delivery->order->payment_method] ?? $delivery->order->payment_method }}
+                </p>
+
+                @if ($delivery->payment_collected)
+                    <div class="flex items-center justify-center gap-2 text-emerald-600 font-bold text-sm bg-emerald-50 rounded-xl py-3">
+                        ✓ Pagamento recebido
+                    </div>
+                @elseif ($delivery->status === \App\Models\Delivery::STATUS_DISPATCHED)
+                    <button
+                        id="confirm-payment-btn"
+                        onclick="confirmPayment()"
+                        class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
+                    >
+                        Confirmar recebimento do pagamento
+                    </button>
+                @endif
+            </div>
+        @endif
+
         @if ($delivery->status !== \App\Models\Delivery::STATUS_DISPATCHED)
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center">
                 <p class="text-lg font-bold text-gray-900">Esta entrega já foi finalizada</p>
@@ -73,9 +96,32 @@
     <script>
         const TOKEN = @json($delivery->tracking_token);
         const UPDATE_URL = @json(route('delivery.tracking.update-location', $delivery->tracking_token));
+        const CONFIRM_PAYMENT_URL = @json(route('delivery.tracking.confirm-payment', $delivery->tracking_token));
         let watchId = null;
         let lastSentAt = 0;
         const MIN_INTERVAL_MS = 15000;
+
+        function confirmPayment() {
+            const btn = document.getElementById('confirm-payment-btn');
+            if (!btn) return;
+            btn.disabled = true;
+            btn.textContent = 'Confirmando...';
+
+            fetch(CONFIRM_PAYMENT_URL, { method: 'POST' })
+                .then((res) => res.json())
+                .then((data) => {
+                    if (data.success) {
+                        btn.outerHTML = '<div class="flex items-center justify-center gap-2 text-emerald-600 font-bold text-sm bg-emerald-50 rounded-xl py-3">✓ Pagamento recebido</div>';
+                    } else {
+                        btn.disabled = false;
+                        btn.textContent = 'Confirmar recebimento do pagamento';
+                    }
+                })
+                .catch(() => {
+                    btn.disabled = false;
+                    btn.textContent = 'Confirmar recebimento do pagamento';
+                });
+        }
 
         function sendLocation(position) {
             const now = Date.now();

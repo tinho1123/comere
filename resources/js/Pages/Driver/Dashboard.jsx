@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bike, Power, Package, ArrowRight, X, Store, CheckCircle2, XCircle } from 'lucide-react';
+import { Bike, Power, Package, ArrowRight, X, Store, CheckCircle2, XCircle, Wallet } from 'lucide-react';
 import axios from 'axios';
 
 function playAlertSound() {
@@ -27,6 +27,46 @@ function playAlertSound() {
         });
     } catch {
         // navegador sem suporte a Web Audio API — falha silenciosamente
+    }
+}
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = atob(base64);
+    return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+}
+
+async function setupPushNotifications(vapidPublicKey) {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !vapidPublicKey) {
+        return;
+    }
+
+    try {
+        const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+        await navigator.serviceWorker.ready;
+
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') return;
+
+        const existing = await registration.pushManager.getSubscription();
+        if (existing) return;
+
+        const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+        });
+
+        const key = subscription.getKey('p256dh');
+        const auth = subscription.getKey('auth');
+
+        await axios.post('/motoboy/push/subscribe', {
+            endpoint: subscription.endpoint,
+            public_key: key ? btoa(String.fromCharCode(...new Uint8Array(key))) : null,
+            auth_token: auth ? btoa(String.fromCharCode(...new Uint8Array(auth))) : null,
+        });
+    } catch (err) {
+        console.warn('[Comere Motoboy] Push subscription failed:', err);
     }
 }
 
@@ -98,13 +138,17 @@ function NewDeliveryAlert({ delivery, onDismiss }) {
     );
 }
 
-export default function DriverDashboard({ driver, pendingInvites: initialInvites, acceptedCompanies, activeDeliveries: initialDeliveries }) {
+export default function DriverDashboard({ driver, vapidPublicKey, pendingInvites: initialInvites, acceptedCompanies, activeDeliveries: initialDeliveries }) {
     const { flash } = usePage().props;
     const [isOnline, setIsOnline] = useState(driver.is_online);
     const [toggling, setToggling] = useState(false);
     const [activeDeliveries, setActiveDeliveries] = useState(initialDeliveries);
     const [newDelivery, setNewDelivery] = useState(null);
     const knownIds = useRef(new Set(initialDeliveries.map(d => d.id)));
+
+    useEffect(() => {
+        setupPushNotifications(vapidPublicKey);
+    }, [vapidPublicKey]);
 
     const handleToggle = async () => {
         if (toggling) return;
@@ -163,12 +207,17 @@ export default function DriverDashboard({ driver, pendingInvites: initialInvites
                             <h1 className="text-lg font-black text-gray-900 leading-tight">{driver.name}</h1>
                         </div>
                     </div>
-                    <button
-                        onClick={() => router.post('/motoboy/logout')}
-                        className="text-sm font-bold text-gray-400 hover:text-red-500"
-                    >
-                        Sair
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <Link href="/motoboy/historico" className="text-gray-400 hover:text-red-500" aria-label="Meus ganhos">
+                            <Wallet size={20} />
+                        </Link>
+                        <button
+                            onClick={() => router.post('/motoboy/logout')}
+                            className="text-sm font-bold text-gray-400 hover:text-red-500"
+                        >
+                            Sair
+                        </button>
+                    </div>
                 </div>
 
                 {flash?.success && (

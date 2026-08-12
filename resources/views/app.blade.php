@@ -8,7 +8,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Comere">
+    <meta name="apple-mobile-web-app-title" content="{{ request()->is('motoboy*') ? 'Comere Motoboy' : 'Comere' }}">
     <meta name="color-scheme" content="light">
 
     {{-- DNS prefetch para domínios externos usados no frontend --}}
@@ -17,6 +17,12 @@
     <link rel="dns-prefetch" href="//nominatim.openstreetmap.org">
 
     <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+
+    @if (request()->is('motoboy*'))
+        <link rel="manifest" href="/motoboy-manifest.webmanifest">
+    @else
+        <link rel="manifest" href="/build/manifest.webmanifest">
+    @endif
 
     @vite('resources/js/app.jsx')
     @inertiaHead

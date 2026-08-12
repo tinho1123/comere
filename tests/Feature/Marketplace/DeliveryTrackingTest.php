@@ -168,6 +168,44 @@ class DeliveryTrackingTest extends TestCase
     }
 
     #[Test]
+    public function it_confirms_payment_collection_via_the_public_token()
+    {
+        $company = Company::factory()->create();
+        $client = Client::factory()->create(['company_id' => $company->id]);
+        $delivery = $this->makeDispatchedDelivery($company, $client);
+
+        $response = $this->postJson(route('delivery.tracking.confirm-payment', $delivery->tracking_token));
+
+        $response->assertOk();
+        $response->assertJson(['success' => true]);
+        $delivery->refresh();
+        $this->assertTrue($delivery->payment_collected);
+        $this->assertNotNull($delivery->payment_collected_at);
+    }
+
+    #[Test]
+    public function it_rejects_payment_confirmation_once_the_delivery_is_no_longer_dispatched()
+    {
+        $company = Company::factory()->create();
+        $client = Client::factory()->create(['company_id' => $company->id]);
+        $delivery = $this->makeDispatchedDelivery($company, $client);
+        $delivery->update(['status' => Delivery::STATUS_DELIVERED]);
+
+        $response = $this->postJson(route('delivery.tracking.confirm-payment', $delivery->tracking_token));
+
+        $response->assertStatus(409);
+        $this->assertFalse($delivery->fresh()->payment_collected);
+    }
+
+    #[Test]
+    public function it_returns_404_for_payment_confirmation_with_an_invalid_token()
+    {
+        $response = $this->postJson(route('delivery.tracking.confirm-payment', 'token-invalido'));
+
+        $response->assertNotFound();
+    }
+
+    #[Test]
     public function tracking_is_unavailable_when_order_has_no_delivery_yet()
     {
         $company = Company::factory()->create();

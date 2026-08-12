@@ -103,6 +103,12 @@ class DeliveryResource extends Resource
                     ->trueColor('success')
                     ->falseColor('gray'),
 
+                Tables\Columns\IconColumn::make('payment_collected')
+                    ->label('Cliente pagou')
+                    ->boolean()
+                    ->trueColor('success')
+                    ->falseColor('gray'),
+
                 Tables\Columns\TextColumn::make('dispatched_at')
                     ->label('Despachado em')
                     ->dateTime('d/m/Y H:i')
