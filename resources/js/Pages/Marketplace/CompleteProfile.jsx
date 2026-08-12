@@ -12,7 +12,7 @@ export default function CompleteProfile() {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!agreed) return;
-        post(route('marketplace.store-profile'));
+        post('/complete-profile');
     };
 
     return (

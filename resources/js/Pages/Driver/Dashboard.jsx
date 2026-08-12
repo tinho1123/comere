@@ -87,7 +87,7 @@ function NewDeliveryAlert({ delivery, onDismiss }) {
                         Fechar
                     </button>
                     <a
-                        href={route('delivery.tracking.show', delivery.tracking_token)}
+                        href={`/entrega/${delivery.tracking_token}`}
                         className="flex-1 bg-emerald-500 text-white font-bold py-3 rounded-xl active:scale-95 transition-transform"
                     >
                         Ver entrega
@@ -111,7 +111,7 @@ export default function DriverDashboard({ driver, pendingInvites: initialInvites
         setToggling(true);
         const next = !isOnline;
         try {
-            const res = await axios.post(route('motoboy.status.toggle'), { is_online: next });
+            const res = await axios.post('/motoboy/status', { is_online: next });
             setIsOnline(res.data.is_online);
         } catch {
             // mantém o estado anterior em caso de falha
@@ -123,7 +123,7 @@ export default function DriverDashboard({ driver, pendingInvites: initialInvites
     useEffect(() => {
         const interval = setInterval(async () => {
             try {
-                const res = await axios.get(route('motoboy.poll'));
+                const res = await axios.get('/motoboy/poll');
                 const incoming = res.data.active_deliveries;
 
                 const fresh = incoming.find(d => !knownIds.current.has(d.id));
@@ -144,8 +144,8 @@ export default function DriverDashboard({ driver, pendingInvites: initialInvites
     }, []);
 
     const respondToInvite = (pivotId, action) => {
-        const routeName = action === 'accept' ? 'motoboy.invite.accept' : 'motoboy.invite.reject';
-        router.post(route(routeName, pivotId));
+        const path = action === 'accept' ? 'aceitar' : 'recusar';
+        router.post(`/motoboy/vinculos/${pivotId}/${path}`);
     };
 
     return (
@@ -164,7 +164,7 @@ export default function DriverDashboard({ driver, pendingInvites: initialInvites
                         </div>
                     </div>
                     <button
-                        onClick={() => router.post(route('motoboy.logout'))}
+                        onClick={() => router.post('/motoboy/logout')}
                         className="text-sm font-bold text-gray-400 hover:text-red-500"
                     >
                         Sair
@@ -188,7 +188,7 @@ export default function DriverDashboard({ driver, pendingInvites: initialInvites
                             {activeDeliveries.map(delivery => (
                                 <a
                                     key={delivery.id}
-                                    href={route('delivery.tracking.show', delivery.tracking_token)}
+                                    href={`/entrega/${delivery.tracking_token}`}
                                     className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center justify-between hover:border-red-300 transition-colors"
                                 >
                                     <div className="flex items-center gap-3">
