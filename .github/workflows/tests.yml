@@ -36,6 +36,12 @@ jobs:
           extensions: mbstring, pdo, pdo_mysql, xml, ctype, bcmath, tokenizer
           coverage: none
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
       - name: Cache Composer
         uses: actions/cache@v4
         with:
@@ -45,6 +51,12 @@ jobs:
 
       - name: Instalar dependências PHP
         run: composer update --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Instalar dependências Node
+        run: npm ci
+
+      - name: Buildar assets do frontend
+        run: npm run build
 
       - name: Configurar ambiente de testes
         run: |
