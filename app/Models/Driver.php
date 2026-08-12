@@ -30,6 +30,7 @@ class Driver extends AuthenticatableUser
         'cpf',
         'password',
         'is_active',
+        'is_online',
     ];
 
     protected $hidden = [
@@ -39,6 +40,7 @@ class Driver extends AuthenticatableUser
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_online' => 'boolean',
     ];
 
     protected static function booted(): void

@@ -8,12 +8,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
 
 class DriverAuthController extends Controller
 {
     public function showRegister()
     {
-        return view('motoboy.register');
+        return Inertia::render('Driver/Register');
     }
 
     public function register(Request $request)
@@ -33,6 +34,7 @@ class DriverAuthController extends Controller
             'vehicle_type' => $data['vehicle_type'],
             'password' => Hash::make($data['password']),
             'is_active' => true,
+            'is_online' => false,
         ]);
 
         Auth::guard('driver')->login($driver);
@@ -43,7 +45,7 @@ class DriverAuthController extends Controller
 
     public function showLogin()
     {
-        return view('motoboy.login');
+        return Inertia::render('Driver/Login');
     }
 
     public function login(Request $request)

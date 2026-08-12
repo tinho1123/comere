@@ -32,7 +32,7 @@ class DriverLinkingTest extends TestCase
         return $user;
     }
 
-    private function makeDriver(string $phone = '11912345678'): Driver
+    private function makeDriver(string $phone = '11912345678', bool $isOnline = true): Driver
     {
         return Driver::create([
             'name' => 'Motoboy Teste',
@@ -40,6 +40,7 @@ class DriverLinkingTest extends TestCase
             'vehicle_type' => Driver::VEHICLE_MOTOBOY,
             'password' => Hash::make('password'),
             'is_active' => true,
+            'is_online' => $isOnline,
         ]);
     }
 
@@ -199,5 +200,34 @@ class DriverLinkingTest extends TestCase
             ->assertHasTableActionErrors(['driver_id']);
 
         $this->assertDatabaseMissing('deliveries', ['order_id' => $secondOrder->id]);
+    }
+
+    #[Test]
+    public function offline_drivers_do_not_appear_in_the_dispatch_list()
+    {
+        $company = Company::factory()->create();
+        $this->actingAsCompanyAdmin($company);
+
+        $offline = $this->makeDriver('11900000004', isOnline: false);
+        DriverCompany::create(['driver_id' => $offline->id, 'company_id' => $company->id, 'status' => Driver::LINK_ACCEPTED, 'delivery_fee' => 10]);
+
+        $client = Client::factory()->create(['company_id' => $company->id]);
+        $order = Order::create([
+            'uuid' => (string) Str::uuid(),
+            'company_id' => $company->id,
+            'client_id' => $client->id,
+            'status' => Order::STATUS_PROCESSING,
+            'channel' => Order::CHANNEL_ONLINE,
+            'subtotal' => 30,
+            'discount_amount' => 0,
+            'fee_amount' => 0,
+            'total_amount' => 30,
+        ]);
+
+        Livewire::test(ManageOrders::class)
+            ->callTableAction('ship', $order, data: ['driver_id' => $offline->id])
+            ->assertHasTableActionErrors(['driver_id']);
+
+        $this->assertDatabaseMissing('deliveries', ['order_id' => $order->id]);
     }
 }

@@ -534,7 +534,7 @@ class OrderResource extends Resource
 
                         $links = DriverCompany::where('company_id', $companyId)
                             ->where('status', Driver::LINK_ACCEPTED)
-                            ->whereHas('driver', fn ($q) => $q->where('is_active', true))
+                            ->whereHas('driver', fn ($q) => $q->where('is_active', true)->where('is_online', true))
                             ->whereDoesntHave('driver.deliveries', fn ($q) => $q->where('status', Delivery::STATUS_DISPATCHED))
                             ->with('driver')
                             ->get()
@@ -550,7 +550,7 @@ class OrderResource extends Resource
                                 ->options($links)
                                 ->native(false)
                                 ->required()
-                                ->helperText('Apenas motoristas vinculados e ativos, sem entrega em andamento.'),
+                                ->helperText('Apenas motoristas vinculados, online no momento e sem entrega em andamento.'),
 
                             Forms\Components\Textarea::make('notes')
                                 ->label('Observações para o motorista')

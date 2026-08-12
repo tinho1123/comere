@@ -119,11 +119,11 @@ class DriverAuthTest extends TestCase
             'delivery_fee' => 12,
         ]);
 
-        // Regressão: withPivot() precisa incluir "id", senão a view monta a
+        // Regressão: withPivot() precisa incluir "id", senão a página monta a
         // URL de aceite/recusa com o parâmetro do vínculo ausente.
         $response = $this->actingAs($driver, 'driver')->get(route('motoboy.dashboard'));
 
         $response->assertOk();
-        $response->assertSee(route('motoboy.invite.accept', $link->id), false);
+        $response->assertInertia(fn ($page) => $page->where('pendingInvites.0.pivot_id', $link->id));
     }
 }

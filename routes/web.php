@@ -37,6 +37,8 @@ Route::middleware('auth:driver')->group(function () {
     Route::get('/motoboy', [DriverDashboardController::class, 'show'])->name('motoboy.dashboard');
     Route::post('/motoboy/vinculos/{driverCompany}/aceitar', [DriverDashboardController::class, 'acceptInvite'])->name('motoboy.invite.accept');
     Route::post('/motoboy/vinculos/{driverCompany}/recusar', [DriverDashboardController::class, 'rejectInvite'])->name('motoboy.invite.reject');
+    Route::get('/motoboy/poll', [DriverDashboardController::class, 'poll'])->name('motoboy.poll');
+    Route::post('/motoboy/status', [DriverDashboardController::class, 'toggleStatus'])->name('motoboy.status.toggle');
 });
 
 Route::get('/', [MarketplaceController::class, 'index'])->name('marketplace.index');
