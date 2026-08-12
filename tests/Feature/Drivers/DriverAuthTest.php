@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Drivers;
 
+use App\Models\Company;
 use App\Models\Driver;
+use App\Models\DriverCompany;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use PHPUnit\Framework\Attributes\Test;
@@ -97,5 +99,31 @@ class DriverAuthTest extends TestCase
         $response = $this->get(route('motoboy.dashboard'));
 
         $response->assertRedirect(route('motoboy.login.show'));
+    }
+
+    #[Test]
+    public function the_dashboard_renders_a_working_accept_link_for_pending_invites()
+    {
+        $driver = Driver::create([
+            'name' => 'João Motoboy',
+            'phone' => '11912345678',
+            'vehicle_type' => Driver::VEHICLE_MOTOBOY,
+            'password' => Hash::make('senha123'),
+            'is_active' => true,
+        ]);
+        $company = Company::factory()->create(['name' => 'Loja Teste']);
+        $link = DriverCompany::create([
+            'driver_id' => $driver->id,
+            'company_id' => $company->id,
+            'status' => Driver::LINK_PENDING,
+            'delivery_fee' => 12,
+        ]);
+
+        // Regressão: withPivot() precisa incluir "id", senão a view monta a
+        // URL de aceite/recusa com o parâmetro do vínculo ausente.
+        $response = $this->actingAs($driver, 'driver')->get(route('motoboy.dashboard'));
+
+        $response->assertOk();
+        $response->assertSee(route('motoboy.invite.accept', $link->id), false);
     }
 }

@@ -28,9 +28,50 @@ return new class extends Migration
             ]);
         });
 
+        // No modelo antigo, cada empresa cadastrava seu próprio registro de
+        // motorista, então é esperado que a mesma pessoa (mesmo telefone) exista
+        // como várias linhas duplicadas em drivers — uma por empresa. Antes de
+        // tornar phone único, funde essas duplicatas num único motorista
+        // (mantém a linha de menor id como "canônica"), migrando os vínculos e
+        // entregas de cada duplicata pra ela e removendo o resto. Como
+        // consequência, se as duplicatas tinham nome/veículo/cpf diferentes,
+        // só o valor da linha canônica sobrevive.
+        $duplicatePhones = DB::table('drivers')
+            ->select('phone')
+            ->whereNotNull('phone')
+            ->groupBy('phone')
+            ->havingRaw('COUNT(*) > 1')
+            ->pluck('phone');
+
+        foreach ($duplicatePhones as $phone) {
+            $driverIds = DB::table('drivers')->where('phone', $phone)->orderBy('id')->pluck('id');
+            $canonicalId = $driverIds->shift();
+
+            foreach ($driverIds as $duplicateId) {
+                foreach (DB::table('driver_company')->where('driver_id', $duplicateId)->get() as $link) {
+                    $canonicalAlreadyLinked = DB::table('driver_company')
+                        ->where('driver_id', $canonicalId)
+                        ->where('company_id', $link->company_id)
+                        ->exists();
+
+                    if ($canonicalAlreadyLinked) {
+                        DB::table('driver_company')->where('id', $link->id)->delete();
+                    } else {
+                        DB::table('driver_company')->where('id', $link->id)->update(['driver_id' => $canonicalId]);
+                    }
+                }
+
+                DB::table('deliveries')->where('driver_id', $duplicateId)->update(['driver_id' => $canonicalId]);
+                DB::table('drivers')->where('id', $duplicateId)->delete();
+            }
+        }
+
         Schema::table('drivers', function (Blueprint $table) {
-            $table->dropIndex('idx_drivers_company_active');
+            // No MySQL a FK depende do índice composto pra existir, então a
+            // constraint precisa ser removida antes do índice (ordem inversa
+            // não dá erro no SQLite, mas quebra no MySQL).
             $table->dropForeign(['company_id']);
+            $table->dropIndex('idx_drivers_company_active');
             $table->dropColumn(['company_id', 'delivery_fee']);
             $table->string('password')->nullable()->after('phone');
             $table->rememberToken()->after('password');

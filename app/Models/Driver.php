@@ -62,7 +62,7 @@ class Driver extends AuthenticatableUser
     public function companies(): BelongsToMany
     {
         return $this->belongsToMany(Company::class, 'driver_company')
-            ->withPivot(['status', 'delivery_fee', 'responded_at'])
+            ->withPivot(['id', 'status', 'delivery_fee', 'responded_at'])
             ->withTimestamps();
     }
 
