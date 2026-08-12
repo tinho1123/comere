@@ -8,10 +8,12 @@ use App\Models\DriverCompany;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\Concerns\InteractsAsMobileDevice;
 use Tests\TestCase;
 
 class DriverAuthTest extends TestCase
 {
+    use InteractsAsMobileDevice;
     use RefreshDatabase;
 
     #[Test]
@@ -64,7 +66,7 @@ class DriverAuthTest extends TestCase
             'is_active' => true,
         ]);
 
-        $response = $this->post(route('motoboy.login'), [
+        $response = $this->withMobileUserAgent()->post(route('motoboy.login'), [
             'phone' => '11912345678',
             'password' => 'senha123',
         ]);
@@ -84,7 +86,7 @@ class DriverAuthTest extends TestCase
             'is_active' => true,
         ]);
 
-        $response = $this->post(route('motoboy.login'), [
+        $response = $this->withMobileUserAgent()->post(route('motoboy.login'), [
             'phone' => '11912345678',
             'password' => 'senhaerrada',
         ]);
@@ -121,7 +123,7 @@ class DriverAuthTest extends TestCase
 
         // Regressão: withPivot() precisa incluir "id", senão a página monta a
         // URL de aceite/recusa com o parâmetro do vínculo ausente.
-        $response = $this->actingAs($driver, 'driver')->get(route('motoboy.dashboard'));
+        $response = $this->withMobileUserAgent()->actingAs($driver, 'driver')->get(route('motoboy.dashboard'));
 
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page->where('pendingInvites.0.pivot_id', $link->id));

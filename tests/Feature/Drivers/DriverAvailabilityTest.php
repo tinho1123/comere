@@ -12,10 +12,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\Concerns\InteractsAsMobileDevice;
 use Tests\TestCase;
 
 class DriverAvailabilityTest extends TestCase
 {
+    use InteractsAsMobileDevice;
     use RefreshDatabase;
 
     private function makeDriver(bool $isOnline = false): Driver
@@ -35,14 +37,14 @@ class DriverAvailabilityTest extends TestCase
     {
         $driver = $this->makeDriver(isOnline: false);
 
-        $response = $this->actingAs($driver, 'driver')
+        $response = $this->withMobileUserAgent()->actingAs($driver, 'driver')
             ->postJson(route('motoboy.status.toggle'), ['is_online' => true]);
 
         $response->assertOk();
         $response->assertJson(['is_online' => true]);
         $this->assertTrue($driver->fresh()->is_online);
 
-        $response = $this->actingAs($driver, 'driver')
+        $response = $this->withMobileUserAgent()->actingAs($driver, 'driver')
             ->postJson(route('motoboy.status.toggle'), ['is_online' => false]);
 
         $response->assertOk();
@@ -94,7 +96,7 @@ class DriverAvailabilityTest extends TestCase
             'dispatched_at' => now(),
         ]);
 
-        $response = $this->actingAs($driver, 'driver')->getJson(route('motoboy.poll'));
+        $response = $this->withMobileUserAgent()->actingAs($driver, 'driver')->getJson(route('motoboy.poll'));
 
         $response->assertOk();
         $response->assertJson([

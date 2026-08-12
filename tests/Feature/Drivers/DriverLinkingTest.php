@@ -16,10 +16,12 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\Concerns\InteractsAsMobileDevice;
 use Tests\TestCase;
 
 class DriverLinkingTest extends TestCase
 {
+    use InteractsAsMobileDevice;
     use RefreshDatabase;
 
     private function actingAsCompanyAdmin(Company $company): User
@@ -93,7 +95,7 @@ class DriverLinkingTest extends TestCase
             'delivery_fee' => 10,
         ]);
 
-        $response = $this->actingAs($driver, 'driver')
+        $response = $this->withMobileUserAgent()->actingAs($driver, 'driver')
             ->post(route('motoboy.invite.accept', $link));
 
         $response->assertRedirect(route('motoboy.dashboard'));
@@ -113,7 +115,7 @@ class DriverLinkingTest extends TestCase
             'delivery_fee' => 10,
         ]);
 
-        $this->actingAs($driver, 'driver')
+        $this->withMobileUserAgent()->actingAs($driver, 'driver')
             ->post(route('motoboy.invite.reject', $link));
 
         $this->assertEquals(Driver::LINK_REJECTED, $link->fresh()->status);
@@ -133,7 +135,7 @@ class DriverLinkingTest extends TestCase
             'delivery_fee' => 10,
         ]);
 
-        $response = $this->actingAs($otherDriver, 'driver')
+        $response = $this->withMobileUserAgent()->actingAs($otherDriver, 'driver')
             ->post(route('motoboy.invite.accept', $link));
 
         $response->assertForbidden();
