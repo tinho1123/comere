@@ -3,12 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Foundation\Auth\User as AuthenticatableUser;
 use Illuminate\Support\Str;
 
-class Driver extends Model
+class Driver extends AuthenticatableUser
 {
     use HasFactory;
 
@@ -16,19 +16,28 @@ class Driver extends Model
 
     const VEHICLE_CAR = 'car';
 
+    const LINK_PENDING = 'pending';
+
+    const LINK_ACCEPTED = 'accepted';
+
+    const LINK_REJECTED = 'rejected';
+
     protected $fillable = [
         'uuid',
-        'company_id',
         'name',
         'vehicle_type',
         'phone',
         'cpf',
-        'delivery_fee',
+        'password',
         'is_active',
     ];
 
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
     protected $casts = [
-        'delivery_fee' => 'decimal:2',
         'is_active' => 'boolean',
     ];
 
@@ -46,9 +55,30 @@ class Driver extends Model
         return 'uuid';
     }
 
-    public function company(): BelongsTo
+    /**
+     * Empresas vinculadas a este motorista, com o status do vínculo
+     * (a tabela pivot driver_company guarda o status: pending/accepted/rejected).
+     */
+    public function companies(): BelongsToMany
     {
-        return $this->belongsTo(Company::class);
+        return $this->belongsToMany(Company::class, 'driver_company')
+            ->withPivot(['id', 'status', 'delivery_fee', 'responded_at'])
+            ->withTimestamps();
+    }
+
+    public function acceptedCompanies(): BelongsToMany
+    {
+        return $this->companies()->wherePivot('status', self::LINK_ACCEPTED);
+    }
+
+    public function pendingInvites(): BelongsToMany
+    {
+        return $this->companies()->wherePivot('status', self::LINK_PENDING);
+    }
+
+    public function isLinkedTo(Company $company): bool
+    {
+        return $this->acceptedCompanies()->where('companies.id', $company->id)->exists();
     }
 
     public function deliveries(): HasMany

@@ -5,6 +5,7 @@ namespace App\Filament\Admin\Resources;
 use App\Filament\Admin\Resources\DeliveryResource\Pages;
 use App\Models\Delivery;
 use App\Models\Driver;
+use App\Models\DriverCompany;
 use BackedEnum;
 use Filament\Actions;
 use Filament\Facades\Filament;
@@ -126,9 +127,12 @@ class DeliveryResource extends Resource
                 Tables\Filters\SelectFilter::make('driver_id')
                     ->label('Motorista')
                     ->options(
-                        Driver::where('company_id', $companyId)
-                            ->where('is_active', true)
-                            ->pluck('name', 'id')
+                        DriverCompany::where('company_id', $companyId)
+                            ->where('status', Driver::LINK_ACCEPTED)
+                            ->whereHas('driver', fn ($q) => $q->where('is_active', true))
+                            ->with('driver')
+                            ->get()
+                            ->pluck('driver.name', 'driver.id')
                     ),
 
                 Tables\Filters\TernaryFilter::make('is_paid')
