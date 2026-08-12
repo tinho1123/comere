@@ -7,6 +7,7 @@ use App\Models\Client;
 use App\Models\ClientAddress;
 use App\Models\Delivery;
 use App\Models\Driver;
+use App\Models\DriverCompany;
 use App\Models\Order;
 use App\Models\Product;
 use BackedEnum;
@@ -531,23 +532,25 @@ class OrderResource extends Resource
                     ->form(function (): array {
                         $companyId = Filament::getTenant()->id;
 
-                        $drivers = Driver::where('company_id', $companyId)
-                            ->where('is_active', true)
-                            ->whereDoesntHave('deliveries', fn ($q) => $q->where('status', Delivery::STATUS_DISPATCHED))
+                        $links = DriverCompany::where('company_id', $companyId)
+                            ->where('status', Driver::LINK_ACCEPTED)
+                            ->whereHas('driver', fn ($q) => $q->where('is_active', true))
+                            ->whereDoesntHave('driver.deliveries', fn ($q) => $q->where('status', Delivery::STATUS_DISPATCHED))
+                            ->with('driver')
                             ->get()
-                            ->mapWithKeys(fn (Driver $d) => [
-                                $d->id => $d->name.' — '.($d->vehicle_type === Driver::VEHICLE_MOTOBOY ? 'Motoboy' : 'Carro')
-                                    .' — R$ '.number_format((float) $d->delivery_fee, 2, ',', '.'),
+                            ->mapWithKeys(fn (DriverCompany $link) => [
+                                $link->driver->id => $link->driver->name.' — '.($link->driver->vehicle_type === Driver::VEHICLE_MOTOBOY ? 'Motoboy' : 'Carro')
+                                    .' — R$ '.number_format((float) $link->delivery_fee, 2, ',', '.'),
                             ])
                             ->toArray();
 
                         return [
                             Forms\Components\Select::make('driver_id')
                                 ->label('Motorista disponível')
-                                ->options($drivers)
+                                ->options($links)
                                 ->native(false)
                                 ->required()
-                                ->helperText('Apenas motoristas ativos sem entrega em andamento.'),
+                                ->helperText('Apenas motoristas vinculados e ativos, sem entrega em andamento.'),
 
                             Forms\Components\Textarea::make('notes')
                                 ->label('Observações para o motorista')
@@ -557,8 +560,11 @@ class OrderResource extends Resource
                     })
                     ->action(function (Order $record, array $data): void {
                         $driver = Driver::findOrFail($data['driver_id']);
+                        $link = DriverCompany::where('driver_id', $driver->id)
+                            ->where('company_id', $record->company_id)
+                            ->firstOrFail();
 
-                        $delivery = DB::transaction(function () use ($record, $driver, $data): Delivery {
+                        $delivery = DB::transaction(function () use ($record, $driver, $link, $data): Delivery {
                             $record->ship();
 
                             return Delivery::create([
@@ -567,7 +573,7 @@ class OrderResource extends Resource
                                 'order_id' => $record->id,
                                 'driver_id' => $driver->id,
                                 'status' => Delivery::STATUS_DISPATCHED,
-                                'driver_fee' => $driver->delivery_fee,
+                                'driver_fee' => $link->delivery_fee,
                                 'is_paid' => false,
                                 'dispatched_at' => now(),
                                 'notes' => $data['notes'] ?? null,

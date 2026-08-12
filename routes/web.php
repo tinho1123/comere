@@ -8,6 +8,8 @@ use App\Http\Controllers\Marketplace\ClientAddressController;
 use App\Http\Controllers\Marketplace\ClientFavoriteController;
 use App\Http\Controllers\Marketplace\CompanyRatingController;
 use App\Http\Controllers\Marketplace\DeliveryTrackingController;
+use App\Http\Controllers\Marketplace\DriverAuthController;
+use App\Http\Controllers\Marketplace\DriverDashboardController;
 use App\Http\Controllers\Marketplace\MarketplaceController;
 use App\Http\Controllers\Marketplace\MarketplaceLoginController;
 use App\Http\Controllers\Marketplace\SSOCallbackController;
@@ -22,6 +24,20 @@ Route::post('/table/{uuid}/item', [TableController::class, 'addItem'])->name('ta
 
 Route::get('/entrega/{token}', [DeliveryTrackingController::class, 'show'])->name('delivery.tracking.show');
 Route::post('/entrega/{token}/localizacao', [DeliveryTrackingController::class, 'updateLocation'])->name('delivery.tracking.update-location');
+
+Route::middleware('guest:driver')->group(function () {
+    Route::get('/motoboy/cadastro', [DriverAuthController::class, 'showRegister'])->name('motoboy.register.show');
+    Route::post('/motoboy/cadastro', [DriverAuthController::class, 'register'])->name('motoboy.register');
+    Route::get('/motoboy/login', [DriverAuthController::class, 'showLogin'])->name('motoboy.login.show');
+    Route::post('/motoboy/login', [DriverAuthController::class, 'login'])->name('motoboy.login')->middleware('throttle:10,1');
+});
+
+Route::middleware('auth:driver')->group(function () {
+    Route::post('/motoboy/logout', [DriverAuthController::class, 'logout'])->name('motoboy.logout');
+    Route::get('/motoboy', [DriverDashboardController::class, 'show'])->name('motoboy.dashboard');
+    Route::post('/motoboy/vinculos/{driverCompany}/aceitar', [DriverDashboardController::class, 'acceptInvite'])->name('motoboy.invite.accept');
+    Route::post('/motoboy/vinculos/{driverCompany}/recusar', [DriverDashboardController::class, 'rejectInvite'])->name('motoboy.invite.reject');
+});
 
 Route::get('/', [MarketplaceController::class, 'index'])->name('marketplace.index');
 Route::get('/search', [MarketplaceController::class, 'search'])->name('marketplace.search');

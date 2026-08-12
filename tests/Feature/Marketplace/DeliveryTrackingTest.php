@@ -6,8 +6,10 @@ use App\Models\Client;
 use App\Models\Company;
 use App\Models\Delivery;
 use App\Models\Driver;
+use App\Models\DriverCompany;
 use App\Models\Order;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -33,10 +35,19 @@ class DeliveryTrackingTest extends TestCase
         ]);
 
         $driver = Driver::create([
-            'company_id' => $company->id,
             'name' => 'Motoboy Teste',
+            'phone' => '119'.random_int(10000000, 99999999),
             'vehicle_type' => Driver::VEHICLE_MOTOBOY,
+            'password' => Hash::make('password'),
             'is_active' => true,
+        ]);
+
+        DriverCompany::create([
+            'driver_id' => $driver->id,
+            'company_id' => $company->id,
+            'status' => Driver::LINK_ACCEPTED,
+            'delivery_fee' => 10,
+            'responded_at' => now(),
         ]);
 
         return Delivery::create([
