@@ -10,7 +10,7 @@ export default function DriverLogin() {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        post('/motoboy/login');
+        post('/drivers/login');
     };
 
     return (
@@ -77,7 +77,7 @@ export default function DriverLogin() {
                 </form>
 
                 <p className="text-center text-sm text-gray-500 mt-5">
-                    Ainda não tem conta? <Link href="/motoboy/cadastro" className="font-bold text-red-500">Cadastre-se</Link>
+                    Ainda não tem conta? <Link href="/drivers/cadastro" className="font-bold text-red-500">Cadastre-se</Link>
                 </p>
             </div>
         </div>

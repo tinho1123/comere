@@ -93,6 +93,15 @@ class DeliveryResource extends Resource
                         default => $state,
                     }),
 
+                Tables\Columns\TextColumn::make('pickup_code')
+                    ->label('Código de retirada')
+                    ->formatStateUsing(fn (Delivery $record): string => $record->isPickedUp() ? 'Retirado' : $record->pickup_code)
+                    ->badge()
+                    ->color(fn (Delivery $record): string => $record->isPickedUp() ? 'gray' : 'warning')
+                    ->copyable(fn (Delivery $record): bool => ! $record->isPickedUp())
+                    ->copyMessage('Código copiado!')
+                    ->visible(fn (Delivery $record): bool => $record->status === Delivery::STATUS_DISPATCHED),
+
                 Tables\Columns\TextColumn::make('driver_fee')
                     ->label('Valor entrega')
                     ->money('BRL'),

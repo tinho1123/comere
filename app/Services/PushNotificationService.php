@@ -36,7 +36,7 @@ class PushNotificationService
         }, ['company_id' => $companyId]);
     }
 
-    public function notifyDriver(int $driverId, string $title, string $body, string $url = '/motoboy'): void
+    public function notifyDriver(int $driverId, string $title, string $body, string $url = '/drivers'): void
     {
         $subscriptions = DriverPushSubscription::where('driver_id', $driverId)->get();
 

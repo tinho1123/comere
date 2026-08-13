@@ -15,7 +15,7 @@ class Authenticate extends Middleware
     {
         $redirectRouteName = match ($guards[0] ?? null) {
             'client' => 'marketplace.index',
-            'driver' => 'motoboy.login.show',
+            'driver' => 'drivers.login.show',
             default => 'login',
         };
 

@@ -19,7 +19,7 @@ class DriverAuthTest extends TestCase
     #[Test]
     public function a_driver_can_self_register_and_is_logged_in()
     {
-        $response = $this->post(route('motoboy.register'), [
+        $response = $this->post(route('drivers.register'), [
             'name' => 'João Motoboy',
             'phone' => '11912345678',
             'vehicle_type' => Driver::VEHICLE_MOTOBOY,
@@ -27,7 +27,7 @@ class DriverAuthTest extends TestCase
             'password_confirmation' => 'senha123',
         ]);
 
-        $response->assertRedirect(route('motoboy.dashboard'));
+        $response->assertRedirect(route('drivers.dashboard'));
         $this->assertDatabaseHas('drivers', ['phone' => '11912345678', 'name' => 'João Motoboy']);
         $this->assertAuthenticated('driver');
     }
@@ -43,7 +43,7 @@ class DriverAuthTest extends TestCase
             'is_active' => true,
         ]);
 
-        $response = $this->post(route('motoboy.register'), [
+        $response = $this->post(route('drivers.register'), [
             'name' => 'Outro',
             'phone' => '11999999999',
             'vehicle_type' => Driver::VEHICLE_MOTOBOY,
@@ -66,12 +66,12 @@ class DriverAuthTest extends TestCase
             'is_active' => true,
         ]);
 
-        $response = $this->withMobileUserAgent()->post(route('motoboy.login'), [
+        $response = $this->withMobileUserAgent()->post(route('drivers.login'), [
             'phone' => '11912345678',
             'password' => 'senha123',
         ]);
 
-        $response->assertRedirect(route('motoboy.dashboard'));
+        $response->assertRedirect(route('drivers.dashboard'));
         $this->assertAuthenticated('driver');
     }
 
@@ -86,7 +86,7 @@ class DriverAuthTest extends TestCase
             'is_active' => true,
         ]);
 
-        $response = $this->withMobileUserAgent()->post(route('motoboy.login'), [
+        $response = $this->withMobileUserAgent()->post(route('drivers.login'), [
             'phone' => '11912345678',
             'password' => 'senhaerrada',
         ]);
@@ -98,9 +98,9 @@ class DriverAuthTest extends TestCase
     #[Test]
     public function guests_cannot_access_the_dashboard()
     {
-        $response = $this->get(route('motoboy.dashboard'));
+        $response = $this->get(route('drivers.dashboard'));
 
-        $response->assertRedirect(route('motoboy.login.show'));
+        $response->assertRedirect(route('drivers.login.show'));
     }
 
     #[Test]
@@ -123,7 +123,7 @@ class DriverAuthTest extends TestCase
 
         // Regressão: withPivot() precisa incluir "id", senão a página monta a
         // URL de aceite/recusa com o parâmetro do vínculo ausente.
-        $response = $this->withMobileUserAgent()->actingAs($driver, 'driver')->get(route('motoboy.dashboard'));
+        $response = $this->withMobileUserAgent()->actingAs($driver, 'driver')->get(route('drivers.dashboard'));
 
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page->where('pendingInvites.0.pivot_id', $link->id));

@@ -26,29 +26,34 @@ Route::post('/table/{uuid}/item', [TableController::class, 'addItem'])->name('ta
 
 Route::get('/entrega/{token}', [DeliveryTrackingController::class, 'show'])->name('delivery.tracking.show');
 Route::post('/entrega/{token}/localizacao', [DeliveryTrackingController::class, 'updateLocation'])->name('delivery.tracking.update-location');
+Route::post('/entrega/{token}/retirada', [DeliveryTrackingController::class, 'confirmPickup'])->name('delivery.tracking.confirm-pickup');
 Route::post('/entrega/{token}/pagamento', [DeliveryTrackingController::class, 'confirmPayment'])->name('delivery.tracking.confirm-payment');
+Route::post('/entrega/{token}/concluir', [DeliveryTrackingController::class, 'confirmDelivery'])->name('delivery.tracking.confirm-delivery');
+Route::post('/entrega/{token}/problema', [DeliveryTrackingController::class, 'reportProblem'])->name('delivery.tracking.report-problem');
+Route::post('/entrega/{token}/avaliacao', [DeliveryTrackingController::class, 'submitFeedback'])->name('delivery.tracking.feedback');
 
 // Cadastro é multiplataforma; login e tudo depois dele exige celular (mobile.only).
 Route::middleware('guest:driver')->group(function () {
-    Route::get('/motoboy/cadastro', [DriverAuthController::class, 'showRegister'])->name('motoboy.register.show');
-    Route::post('/motoboy/cadastro', [DriverAuthController::class, 'register'])->name('motoboy.register');
+    Route::get('/drivers/cadastro', [DriverAuthController::class, 'showRegister'])->name('drivers.register.show');
+    Route::post('/drivers/cadastro', [DriverAuthController::class, 'register'])->name('drivers.register');
 
     Route::middleware('mobile.only')->group(function () {
-        Route::get('/motoboy/login', [DriverAuthController::class, 'showLogin'])->name('motoboy.login.show');
-        Route::post('/motoboy/login', [DriverAuthController::class, 'login'])->name('motoboy.login')->middleware('throttle:10,1');
+        Route::get('/drivers/login', [DriverAuthController::class, 'showLogin'])->name('drivers.login.show');
+        Route::post('/drivers/login', [DriverAuthController::class, 'login'])->name('drivers.login')->middleware('throttle:10,1');
     });
 });
 
 Route::middleware(['auth:driver', 'mobile.only'])->group(function () {
-    Route::post('/motoboy/logout', [DriverAuthController::class, 'logout'])->name('motoboy.logout');
-    Route::get('/motoboy', [DriverDashboardController::class, 'show'])->name('motoboy.dashboard');
-    Route::post('/motoboy/vinculos/{driverCompany}/aceitar', [DriverDashboardController::class, 'acceptInvite'])->name('motoboy.invite.accept');
-    Route::post('/motoboy/vinculos/{driverCompany}/recusar', [DriverDashboardController::class, 'rejectInvite'])->name('motoboy.invite.reject');
-    Route::get('/motoboy/poll', [DriverDashboardController::class, 'poll'])->name('motoboy.poll');
-    Route::post('/motoboy/status', [DriverDashboardController::class, 'toggleStatus'])->name('motoboy.status.toggle');
-    Route::get('/motoboy/historico', [DriverHistoryController::class, 'show'])->name('motoboy.history');
-    Route::post('/motoboy/push/subscribe', [DriverPushSubscriptionController::class, 'subscribe'])->name('motoboy.push.subscribe');
-    Route::post('/motoboy/push/unsubscribe', [DriverPushSubscriptionController::class, 'unsubscribe'])->name('motoboy.push.unsubscribe');
+    Route::post('/drivers/logout', [DriverAuthController::class, 'logout'])->name('drivers.logout');
+    Route::get('/drivers', [DriverDashboardController::class, 'show'])->name('drivers.dashboard');
+    Route::post('/drivers/vinculos/{driverCompany}/aceitar', [DriverDashboardController::class, 'acceptInvite'])->name('drivers.invite.accept');
+    Route::post('/drivers/vinculos/{driverCompany}/recusar', [DriverDashboardController::class, 'rejectInvite'])->name('drivers.invite.reject');
+    Route::get('/drivers/poll', [DriverDashboardController::class, 'poll'])->name('drivers.poll');
+    Route::post('/drivers/status', [DriverDashboardController::class, 'toggleStatus'])->name('drivers.status.toggle');
+    Route::post('/drivers/localizacao', [DriverDashboardController::class, 'updateLocation'])->name('drivers.location.update');
+    Route::get('/drivers/historico', [DriverHistoryController::class, 'show'])->name('drivers.history');
+    Route::post('/drivers/push/subscribe', [DriverPushSubscriptionController::class, 'subscribe'])->name('drivers.push.subscribe');
+    Route::post('/drivers/push/unsubscribe', [DriverPushSubscriptionController::class, 'unsubscribe'])->name('drivers.push.unsubscribe');
 });
 
 Route::get('/', [MarketplaceController::class, 'index'])->name('marketplace.index');

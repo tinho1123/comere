@@ -13,7 +13,7 @@ export default function DriverRegister() {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        post('/motoboy/cadastro');
+        post('/drivers/cadastro');
     };
 
     return (
@@ -136,7 +136,7 @@ export default function DriverRegister() {
                 </form>
 
                 <p className="text-center text-sm text-gray-500 mt-5">
-                    Já tem conta? <Link href="/motoboy/login" className="font-bold text-red-500">Entrar</Link>
+                    Já tem conta? <Link href="/drivers/login" className="font-bold text-red-500">Entrar</Link>
                 </p>
             </div>
         </div>
