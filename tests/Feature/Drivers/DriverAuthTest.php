@@ -104,6 +104,24 @@ class DriverAuthTest extends TestCase
     }
 
     #[Test]
+    public function a_logged_in_driver_who_opens_the_login_page_is_sent_to_the_dashboard_not_admin()
+    {
+        // Regressão: guest:driver usava um redirect genérico pro /admin (guard "web"),
+        // que por sua vez mandava o motorista logado pro /admin/login.
+        $driver = Driver::create([
+            'name' => 'João Motoboy',
+            'phone' => '11912345678',
+            'vehicle_type' => Driver::VEHICLE_MOTOBOY,
+            'password' => Hash::make('senha123'),
+            'is_active' => true,
+        ]);
+
+        $response = $this->withMobileUserAgent()->actingAs($driver, 'driver')->get(route('drivers.login.show'));
+
+        $response->assertRedirect(route('drivers.dashboard'));
+    }
+
+    #[Test]
     public function the_dashboard_renders_a_working_accept_link_for_pending_invites()
     {
         $driver = Driver::create([
