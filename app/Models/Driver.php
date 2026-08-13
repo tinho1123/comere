@@ -31,6 +31,9 @@ class Driver extends AuthenticatableUser
         'password',
         'is_active',
         'is_online',
+        'last_latitude',
+        'last_longitude',
+        'last_location_at',
     ];
 
     protected $hidden = [
@@ -41,6 +44,9 @@ class Driver extends AuthenticatableUser
     protected $casts = [
         'is_active' => 'boolean',
         'is_online' => 'boolean',
+        'last_latitude' => 'float',
+        'last_longitude' => 'float',
+        'last_location_at' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -91,5 +97,15 @@ class Driver extends AuthenticatableUser
     public function activeDeliveries(): HasMany
     {
         return $this->hasMany(Delivery::class)->where('status', Delivery::STATUS_DISPATCHED);
+    }
+
+    /**
+     * O GPS é obrigatório pra ficar online: só consideramos a localização
+     * válida se ela foi reportada há pouco tempo.
+     */
+    public function hasFreshLocation(int $maxMinutes = 3): bool
+    {
+        return $this->last_location_at !== null
+            && $this->last_location_at->gt(now()->subMinutes($maxMinutes));
     }
 }

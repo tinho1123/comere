@@ -595,7 +595,7 @@ class OrderResource extends Resource
                         Notification::make()
                             ->success()
                             ->title('Pedido despachado!')
-                            ->body("Motorista: {$driver->name}. Envie o link de rastreio para o celular dele.")
+                            ->body("Motorista: {$driver->name}. Envie o link de rastreio para o celular dele.\nCódigo de retirada (informe ao motorista na loja): {$delivery->pickup_code}")
                             ->actions([
                                 Action::make('open_tracking_link')
                                     ->label('Abrir link de rastreio')

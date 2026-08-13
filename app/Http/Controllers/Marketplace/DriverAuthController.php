@@ -40,7 +40,7 @@ class DriverAuthController extends Controller
         Auth::guard('driver')->login($driver);
         $request->session()->regenerate();
 
-        return redirect()->route('motoboy.dashboard');
+        return redirect()->route('drivers.dashboard');
     }
 
     public function showLogin()
@@ -58,7 +58,7 @@ class DriverAuthController extends Controller
         if (Auth::guard('driver')->attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
 
-            return redirect()->intended(route('motoboy.dashboard'));
+            return redirect()->intended(route('drivers.dashboard'));
         }
 
         throw ValidationException::withMessages([
@@ -73,6 +73,6 @@ class DriverAuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('motoboy.login');
+        return redirect()->route('drivers.login');
     }
 }

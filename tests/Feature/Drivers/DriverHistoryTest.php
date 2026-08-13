@@ -75,7 +75,7 @@ class DriverHistoryTest extends TestCase
         $this->makeDelivery($driver, $company, $client, Delivery::STATUS_DISPATCHED, 15.00);
 
         $response = $this->withMobileUserAgent()->actingAs($driver, 'driver')
-            ->get(route('motoboy.history'));
+            ->get(route('drivers.history'));
 
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page
@@ -104,7 +104,7 @@ class DriverHistoryTest extends TestCase
         $this->makeDelivery($driverB, $company, $client, Delivery::STATUS_DELIVERED, 99.00, now());
 
         $response = $this->withMobileUserAgent()->actingAs($driverA, 'driver')
-            ->get(route('motoboy.history'));
+            ->get(route('drivers.history'));
 
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page
@@ -116,7 +116,7 @@ class DriverHistoryTest extends TestCase
     #[Test]
     public function guests_cannot_access_driver_history()
     {
-        $response = $this->withMobileUserAgent()->get(route('motoboy.history'));
+        $response = $this->withMobileUserAgent()->get(route('drivers.history'));
 
         $response->assertRedirect();
     }

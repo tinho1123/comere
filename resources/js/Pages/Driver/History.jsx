@@ -12,7 +12,7 @@ export default function DriverHistory({ deliveries, totals }) {
 
             <div className="max-w-md mx-auto px-4 pt-8">
                 <div className="flex items-center gap-3 mb-6">
-                    <Link href="/motoboy" className="text-gray-400 hover:text-red-500">
+                    <Link href="/drivers" className="text-gray-400 hover:text-red-500">
                         <ArrowLeft size={20} />
                     </Link>
                     <h1 className="text-lg font-black text-gray-900">Meus ganhos</h1>

@@ -120,7 +120,7 @@ class DriverResource extends Resource
                         Forms\Components\TextInput::make('phone')
                             ->label('Telefone do motorista')
                             ->required()
-                            ->helperText('O motorista precisa já ter uma conta criada em /motoboy/cadastro com este telefone.'),
+                            ->helperText('O motorista precisa já ter uma conta criada em /drivers/cadastro com este telefone.'),
 
                         Forms\Components\TextInput::make('delivery_fee')
                             ->label('Valor proposto por entrega')
@@ -139,7 +139,7 @@ class DriverResource extends Resource
                             Notification::make()
                                 ->danger()
                                 ->title('Motorista não encontrado')
-                                ->body('Nenhum motorista cadastrado com esse telefone. Peça para ele se cadastrar em /motoboy/cadastro primeiro.')
+                                ->body('Nenhum motorista cadastrado com esse telefone. Peça para ele se cadastrar em /drivers/cadastro primeiro.')
                                 ->send();
 
                             return;

@@ -32,7 +32,7 @@ class DriverPushSubscriptionTest extends TestCase
         $driver = $this->makeDriver();
 
         $response = $this->withMobileUserAgent()->actingAs($driver, 'driver')
-            ->postJson(route('motoboy.push.subscribe'), [
+            ->postJson(route('drivers.push.subscribe'), [
                 'endpoint' => 'https://fcm.googleapis.com/fcm/send/abc123',
                 'public_key' => 'public-key',
                 'auth_token' => 'auth-token',
@@ -52,13 +52,13 @@ class DriverPushSubscriptionTest extends TestCase
         $driver = $this->makeDriver();
 
         $this->withMobileUserAgent()->actingAs($driver, 'driver')
-            ->postJson(route('motoboy.push.subscribe'), [
+            ->postJson(route('drivers.push.subscribe'), [
                 'endpoint' => 'https://fcm.googleapis.com/fcm/send/abc123',
                 'public_key' => 'old-key',
             ])->assertOk();
 
         $this->withMobileUserAgent()->actingAs($driver, 'driver')
-            ->postJson(route('motoboy.push.subscribe'), [
+            ->postJson(route('drivers.push.subscribe'), [
                 'endpoint' => 'https://fcm.googleapis.com/fcm/send/abc123',
                 'public_key' => 'new-key',
             ])->assertOk();
@@ -80,7 +80,7 @@ class DriverPushSubscriptionTest extends TestCase
         ]);
 
         $response = $this->withMobileUserAgent()->actingAs($driver, 'driver')
-            ->postJson(route('motoboy.push.unsubscribe'), [
+            ->postJson(route('drivers.push.unsubscribe'), [
                 'endpoint' => 'https://fcm.googleapis.com/fcm/send/abc123',
             ]);
 
@@ -108,7 +108,7 @@ class DriverPushSubscriptionTest extends TestCase
         ]);
 
         $this->withMobileUserAgent()->actingAs($driver, 'driver')
-            ->postJson(route('motoboy.push.unsubscribe'), [
+            ->postJson(route('drivers.push.unsubscribe'), [
                 'endpoint' => 'https://fcm.googleapis.com/fcm/send/abc123',
             ])->assertOk();
 
@@ -122,7 +122,7 @@ class DriverPushSubscriptionTest extends TestCase
     public function guests_cannot_subscribe()
     {
         $response = $this->withMobileUserAgent()
-            ->postJson(route('motoboy.push.subscribe'), [
+            ->postJson(route('drivers.push.subscribe'), [
                 'endpoint' => 'https://fcm.googleapis.com/fcm/send/abc123',
             ]);
 

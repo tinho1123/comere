@@ -30,7 +30,7 @@ class MobileOnlyAccessTest extends TestCase
     #[Test]
     public function registration_page_is_accessible_from_desktop()
     {
-        $response = $this->withHeaders(['User-Agent' => self::DESKTOP_UA])->get(route('motoboy.register.show'));
+        $response = $this->withHeaders(['User-Agent' => self::DESKTOP_UA])->get(route('drivers.register.show'));
 
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page->component('Driver/Register'));
@@ -39,7 +39,7 @@ class MobileOnlyAccessTest extends TestCase
     #[Test]
     public function login_page_shows_the_mobile_only_notice_on_desktop()
     {
-        $response = $this->withHeaders(['User-Agent' => self::DESKTOP_UA])->get(route('motoboy.login.show'));
+        $response = $this->withHeaders(['User-Agent' => self::DESKTOP_UA])->get(route('drivers.login.show'));
 
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page->component('Driver/DesktopBlocked'));
@@ -48,7 +48,7 @@ class MobileOnlyAccessTest extends TestCase
     #[Test]
     public function login_page_works_normally_on_mobile()
     {
-        $response = $this->withHeaders(['User-Agent' => self::MOBILE_UA])->get(route('motoboy.login.show'));
+        $response = $this->withHeaders(['User-Agent' => self::MOBILE_UA])->get(route('drivers.login.show'));
 
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page->component('Driver/Login'));
@@ -59,7 +59,7 @@ class MobileOnlyAccessTest extends TestCase
     {
         $this->makeDriver();
 
-        $response = $this->withHeaders(['User-Agent' => self::DESKTOP_UA])->post(route('motoboy.login'), [
+        $response = $this->withHeaders(['User-Agent' => self::DESKTOP_UA])->post(route('drivers.login'), [
             'phone' => '11912345678',
             'password' => 'senha123',
         ]);
@@ -75,7 +75,7 @@ class MobileOnlyAccessTest extends TestCase
 
         $response = $this->withHeaders(['User-Agent' => self::DESKTOP_UA])
             ->actingAs($driver, 'driver')
-            ->get(route('motoboy.dashboard'));
+            ->get(route('drivers.dashboard'));
 
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page->component('Driver/DesktopBlocked'));
@@ -88,7 +88,7 @@ class MobileOnlyAccessTest extends TestCase
 
         $response = $this->withHeaders(['User-Agent' => self::MOBILE_UA])
             ->actingAs($driver, 'driver')
-            ->get(route('motoboy.dashboard'));
+            ->get(route('drivers.dashboard'));
 
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page->component('Driver/Dashboard'));

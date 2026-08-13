@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 class Delivery extends Model
@@ -26,8 +27,12 @@ class Delivery extends Model
         'driver_fee',
         'is_paid',
         'dispatched_at',
+        'picked_up_at',
         'delivered_at',
         'notes',
+        'failure_reason',
+        'pickup_code',
+        'payment_confirmation_code',
         'current_latitude',
         'current_longitude',
         'location_updated_at',
@@ -39,6 +44,7 @@ class Delivery extends Model
         'driver_fee' => 'decimal:2',
         'is_paid' => 'boolean',
         'dispatched_at' => 'datetime',
+        'picked_up_at' => 'datetime',
         'delivered_at' => 'datetime',
         'current_latitude' => 'float',
         'current_longitude' => 'float',
@@ -56,12 +62,28 @@ class Delivery extends Model
             if (empty($delivery->tracking_token)) {
                 $delivery->tracking_token = Str::random(40);
             }
+            if (empty($delivery->pickup_code)) {
+                $delivery->pickup_code = self::generateCode();
+            }
+            if (empty($delivery->payment_confirmation_code)) {
+                $delivery->payment_confirmation_code = self::generateCode();
+            }
         });
+    }
+
+    public static function generateCode(): string
+    {
+        return str_pad((string) random_int(0, 9999), 4, '0', STR_PAD_LEFT);
     }
 
     public function trackingUrl(): string
     {
         return route('delivery.tracking.show', $this->tracking_token);
+    }
+
+    public function isPickedUp(): bool
+    {
+        return $this->picked_up_at !== null;
     }
 
     public function getRouteKeyName(): string
@@ -82,5 +104,10 @@ class Delivery extends Model
     public function driver(): BelongsTo
     {
         return $this->belongsTo(Driver::class);
+    }
+
+    public function feedback(): HasOne
+    {
+        return $this->hasOne(DeliveryFeedback::class);
     }
 }

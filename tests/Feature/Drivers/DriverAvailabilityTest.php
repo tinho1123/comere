@@ -36,16 +36,17 @@ class DriverAvailabilityTest extends TestCase
     public function a_driver_can_go_online_and_offline()
     {
         $driver = $this->makeDriver(isOnline: false);
+        $driver->update(['last_latitude' => -23.55, 'last_longitude' => -46.63, 'last_location_at' => now()]);
 
         $response = $this->withMobileUserAgent()->actingAs($driver, 'driver')
-            ->postJson(route('motoboy.status.toggle'), ['is_online' => true]);
+            ->postJson(route('drivers.status.toggle'), ['is_online' => true]);
 
         $response->assertOk();
         $response->assertJson(['is_online' => true]);
         $this->assertTrue($driver->fresh()->is_online);
 
         $response = $this->withMobileUserAgent()->actingAs($driver, 'driver')
-            ->postJson(route('motoboy.status.toggle'), ['is_online' => false]);
+            ->postJson(route('drivers.status.toggle'), ['is_online' => false]);
 
         $response->assertOk();
         $response->assertJson(['is_online' => false]);
@@ -53,9 +54,62 @@ class DriverAvailabilityTest extends TestCase
     }
 
     #[Test]
+    public function a_driver_cannot_go_online_without_a_fresh_gps_location()
+    {
+        $driver = $this->makeDriver(isOnline: false);
+
+        $response = $this->withMobileUserAgent()->actingAs($driver, 'driver')
+            ->postJson(route('drivers.status.toggle'), ['is_online' => true]);
+
+        $response->assertStatus(422);
+        $this->assertFalse($driver->fresh()->is_online);
+    }
+
+    #[Test]
+    public function a_driver_cannot_go_online_with_a_stale_gps_location()
+    {
+        $driver = $this->makeDriver(isOnline: false);
+        $driver->update(['last_latitude' => -23.55, 'last_longitude' => -46.63, 'last_location_at' => now()->subMinutes(10)]);
+
+        $response = $this->withMobileUserAgent()->actingAs($driver, 'driver')
+            ->postJson(route('drivers.status.toggle'), ['is_online' => true]);
+
+        $response->assertStatus(422);
+        $this->assertFalse($driver->fresh()->is_online);
+    }
+
+    #[Test]
+    public function a_driver_can_go_offline_even_without_gps()
+    {
+        $driver = $this->makeDriver(isOnline: true);
+
+        $response = $this->withMobileUserAgent()->actingAs($driver, 'driver')
+            ->postJson(route('drivers.status.toggle'), ['is_online' => false]);
+
+        $response->assertOk();
+        $this->assertFalse($driver->fresh()->is_online);
+    }
+
+    #[Test]
+    public function it_updates_the_drivers_last_known_location()
+    {
+        $driver = $this->makeDriver(isOnline: false);
+
+        $response = $this->withMobileUserAgent()->actingAs($driver, 'driver')
+            ->postJson(route('drivers.location.update'), ['latitude' => -23.55, 'longitude' => -46.63]);
+
+        $response->assertOk();
+        $response->assertJson(['success' => true, 'has_location' => true]);
+        $driver->refresh();
+        $this->assertEquals(-23.55, $driver->last_latitude);
+        $this->assertEquals(-46.63, $driver->last_longitude);
+        $this->assertTrue($driver->hasFreshLocation());
+    }
+
+    #[Test]
     public function guests_cannot_toggle_availability()
     {
-        $response = $this->postJson(route('motoboy.status.toggle'), ['is_online' => true]);
+        $response = $this->postJson(route('drivers.status.toggle'), ['is_online' => true]);
 
         $response->assertUnauthorized();
     }
@@ -96,7 +150,7 @@ class DriverAvailabilityTest extends TestCase
             'dispatched_at' => now(),
         ]);
 
-        $response = $this->withMobileUserAgent()->actingAs($driver, 'driver')->getJson(route('motoboy.poll'));
+        $response = $this->withMobileUserAgent()->actingAs($driver, 'driver')->getJson(route('drivers.poll'));
 
         $response->assertOk();
         $response->assertJson([

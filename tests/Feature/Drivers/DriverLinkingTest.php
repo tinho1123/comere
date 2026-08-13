@@ -96,9 +96,9 @@ class DriverLinkingTest extends TestCase
         ]);
 
         $response = $this->withMobileUserAgent()->actingAs($driver, 'driver')
-            ->post(route('motoboy.invite.accept', $link));
+            ->post(route('drivers.invite.accept', $link));
 
-        $response->assertRedirect(route('motoboy.dashboard'));
+        $response->assertRedirect(route('drivers.dashboard'));
         $this->assertEquals(Driver::LINK_ACCEPTED, $link->fresh()->status);
         $this->assertTrue($driver->isLinkedTo($company));
     }
@@ -116,7 +116,7 @@ class DriverLinkingTest extends TestCase
         ]);
 
         $this->withMobileUserAgent()->actingAs($driver, 'driver')
-            ->post(route('motoboy.invite.reject', $link));
+            ->post(route('drivers.invite.reject', $link));
 
         $this->assertEquals(Driver::LINK_REJECTED, $link->fresh()->status);
         $this->assertFalse($driver->isLinkedTo($company));
@@ -136,7 +136,7 @@ class DriverLinkingTest extends TestCase
         ]);
 
         $response = $this->withMobileUserAgent()->actingAs($otherDriver, 'driver')
-            ->post(route('motoboy.invite.accept', $link));
+            ->post(route('drivers.invite.accept', $link));
 
         $response->assertForbidden();
         $this->assertEquals(Driver::LINK_PENDING, $link->fresh()->status);
