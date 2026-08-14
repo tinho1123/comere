@@ -192,7 +192,7 @@ class MarketplaceController extends Controller
     public function orders()
     {
         $orders = Order::where('client_id', auth()->guard('client')->id())
-            ->with(['items', 'company'])
+            ->with(['items', 'company', 'delivery.driver'])
             ->latest()
             ->get()
             ->map(fn ($order) => [
@@ -224,6 +224,12 @@ class MarketplaceController extends Controller
                     'quantity' => $item->quantity,
                     'total_amount' => $item->total_amount,
                 ]),
+                'delivery' => $order->delivery ? [
+                    'payment_confirmation_code' => $order->delivery->payment_confirmation_code,
+                    'payment_collected' => $order->delivery->payment_collected,
+                    'payment_collected_at' => $order->delivery->payment_collected_at?->format('H:i'),
+                    'driver_name' => $order->delivery->driver->name,
+                ] : null,
             ]);
 
         return Inertia::render('Marketplace/Orders', [

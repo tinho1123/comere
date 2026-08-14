@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import MarketplaceLayout from '@/Layouts/MarketplaceLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, Clock, CheckCircle2, Truck, AlertCircle, ChevronDown, ShoppingBag, RotateCcw, X, ListOrdered } from 'lucide-react';
+import { Package, Clock, CheckCircle2, Truck, AlertCircle, ChevronDown, ShoppingBag, RotateCcw, X, ListOrdered, KeyRound } from 'lucide-react';
 import axios from 'axios';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -103,6 +103,45 @@ function QueueBadge({ order }) {
             {order.queue_position === 0
                 ? 'Você é o próximo!'
                 : `${order.queue_position} pedido${order.queue_position > 1 ? 's' : ''} na sua frente`}
+        </div>
+    );
+}
+
+function DeliveryCodeReveal({ code }) {
+    return (
+        <div className="bg-red-50 border border-dashed border-red-100 rounded-2xl p-4 mb-3 text-center">
+            <div className="flex items-center justify-center gap-2 mb-1">
+                <KeyRound size={14} className="text-red-600" />
+                <p className="text-[11px] font-extrabold text-red-600 uppercase tracking-wider">Código de confirmação</p>
+            </div>
+            <div className="flex gap-2.5 justify-center my-3">
+                {code.split('').map((digit, i) => (
+                    <div key={i} className="w-12 h-14 bg-white border border-red-100 rounded-xl flex items-center justify-center text-2xl font-black text-gray-900">
+                        {digit}
+                    </div>
+                ))}
+            </div>
+            <p className="text-xs font-semibold text-red-600 leading-relaxed">
+                Mostre esse código pro entregador quando ele chegar — é assim que a gente confirma que o pagamento foi feito com a pessoa certa.
+            </p>
+        </div>
+    );
+}
+
+function PaidReceipt({ code, driverName, collectedAt }) {
+    return (
+        <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3 mb-3">
+            <div className="w-7 h-7 bg-emerald-500 text-white rounded-full flex items-center justify-center flex-shrink-0">
+                <CheckCircle2 size={16} />
+            </div>
+            <div>
+                <p className="text-xs font-extrabold text-emerald-700">Entrega confirmada com o código {code}</p>
+                {(driverName || collectedAt) && (
+                    <p className="text-[11px] text-emerald-600 mt-0.5">
+                        Pagamento recebido{driverName ? ` por ${driverName}` : ''}{collectedAt ? ` às ${collectedAt}` : ''}
+                    </p>
+                )}
+            </div>
         </div>
     );
 }
@@ -296,6 +335,16 @@ function OrderCard({ order, index }) {
                             className="overflow-hidden"
                         >
                             <div className="bg-gray-50 rounded-2xl p-4 mt-4">
+                                {order.status === 'shipped' && order.payment_method !== 'credit' && order.delivery?.payment_confirmation_code && (
+                                    <DeliveryCodeReveal code={order.delivery.payment_confirmation_code} />
+                                )}
+                                {order.status === 'delivered' && order.delivery?.payment_collected && order.delivery?.payment_confirmation_code && (
+                                    <PaidReceipt
+                                        code={order.delivery.payment_confirmation_code}
+                                        driverName={order.delivery.driver_name}
+                                        collectedAt={order.delivery.payment_collected_at}
+                                    />
+                                )}
                                 <OrderTimeline order={order} />
                                 {order.status === 'shipped' && <DeliveryMap order={order} />}
                                 <div className="space-y-2 mb-3 border-t border-gray-200 pt-3">
