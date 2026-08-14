@@ -437,6 +437,7 @@ class OrderResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->with('delivery'))
             ->defaultSort('created_at', 'desc')
             ->columns([
                 Tables\Columns\TextColumn::make('uuid')
@@ -474,7 +475,10 @@ class OrderResource extends Resource
                         Order::STATUS_DELIVERED => 'Finalizado',
                         Order::STATUS_CANCELLED => 'Cancelado',
                         default => $state,
-                    }),
+                    })
+                    ->description(fn (Order $record): ?string => $record->hasUnresolvedFailedDelivery()
+                        ? '⚠ Entrega falhou: '.($record->delivery->failureReasonLabel() ?? 'motivo não informado')
+                        : null),
                 Tables\Columns\TextColumn::make('notes')
                     ->label('Origem')
                     ->placeholder('—')
@@ -605,11 +609,89 @@ class OrderResource extends Resource
                             ->persistent()
                             ->send();
                     }),
+                Action::make('reassign')
+                    ->label('Reatribuir motorista')
+                    ->icon('heroicon-o-arrow-path')
+                    ->color('warning')
+                    ->visible(fn (Order $record): bool => $record->hasUnresolvedFailedDelivery())
+                    ->modalHeading('Reatribuir entrega a outro motorista')
+                    ->modalDescription(fn (Order $record): string => 'Motivo da falha anterior: '.($record->delivery->failureReasonLabel() ?? 'não informado'))
+                    ->form(function (): array {
+                        $companyId = Filament::getTenant()->id;
+
+                        $links = DriverCompany::where('company_id', $companyId)
+                            ->where('status', Driver::LINK_ACCEPTED)
+                            ->whereHas('driver', fn ($q) => $q->where('is_active', true)->where('is_online', true))
+                            ->whereDoesntHave('driver.deliveries', fn ($q) => $q->where('status', Delivery::STATUS_DISPATCHED))
+                            ->with('driver')
+                            ->get()
+                            ->mapWithKeys(fn (DriverCompany $link) => [
+                                $link->driver->id => $link->driver->name.' — '.($link->driver->vehicle_type === Driver::VEHICLE_MOTOBOY ? 'Motoboy' : 'Carro')
+                                    .' — R$ '.number_format((float) $link->delivery_fee, 2, ',', '.'),
+                            ])
+                            ->toArray();
+
+                        return [
+                            Forms\Components\Select::make('driver_id')
+                                ->label('Novo motorista disponível')
+                                ->options($links)
+                                ->native(false)
+                                ->required()
+                                ->helperText('Apenas motoristas vinculados, online no momento e sem entrega em andamento.'),
+
+                            Forms\Components\Textarea::make('notes')
+                                ->label('Observações para o motorista')
+                                ->rows(2)
+                                ->nullable(),
+                        ];
+                    })
+                    ->action(function (Order $record, array $data): void {
+                        $driver = Driver::findOrFail($data['driver_id']);
+                        $link = DriverCompany::where('driver_id', $driver->id)
+                            ->where('company_id', $record->company_id)
+                            ->firstOrFail();
+
+                        $delivery = Delivery::create([
+                            'uuid' => (string) Str::uuid(),
+                            'company_id' => $record->company_id,
+                            'order_id' => $record->id,
+                            'driver_id' => $driver->id,
+                            'status' => Delivery::STATUS_DISPATCHED,
+                            'driver_fee' => $link->delivery_fee,
+                            'is_paid' => false,
+                            'dispatched_at' => now(),
+                            'notes' => $data['notes'] ?? null,
+                        ]);
+
+                        try {
+                            app(PushNotificationService::class)->notifyDriver(
+                                $driver->id,
+                                'Nova entrega!',
+                                "{$record->company->name} — pedido #".strtoupper(substr($record->uuid, 0, 8)),
+                                "/entrega/{$delivery->tracking_token}"
+                            );
+                        } catch (\Throwable) {
+                            // Nunca falhar a reatribuição por causa de erro na notificação
+                        }
+
+                        Notification::make()
+                            ->success()
+                            ->title('Entrega reatribuída!')
+                            ->body("Motorista: {$driver->name}. Envie o link de rastreio para o celular dele.\nCódigo de retirada (informe ao motorista na loja): {$delivery->pickup_code}")
+                            ->actions([
+                                Action::make('open_tracking_link')
+                                    ->label('Abrir link de rastreio')
+                                    ->url($delivery->trackingUrl())
+                                    ->openUrlInNewTab(),
+                            ])
+                            ->persistent()
+                            ->send();
+                    }),
                 Action::make('deliver')
                     ->label('Concluir pedido')
                     ->icon('heroicon-o-check-badge')
                     ->color('success')
-                    ->visible(fn (Order $record): bool => $record->canBeDelivered())
+                    ->visible(fn (Order $record): bool => $record->canBeDelivered() && ! $record->hasUnresolvedFailedDelivery())
                     ->action(fn (Order $record) => $record->deliver())
                     ->requiresConfirmation(),
                 Action::make('cancel')

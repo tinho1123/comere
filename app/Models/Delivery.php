@@ -18,6 +18,13 @@ class Delivery extends Model
 
     const STATUS_FAILED = 'failed';
 
+    const FAILURE_REASONS = [
+        'customer_unavailable' => 'Cliente não atende',
+        'wrong_address' => 'Endereço não encontrado',
+        'customer_refused' => 'Cliente recusou o pedido',
+        'other' => 'Outro motivo',
+    ];
+
     protected $fillable = [
         'uuid',
         'company_id',
@@ -84,6 +91,15 @@ class Delivery extends Model
     public function isPickedUp(): bool
     {
         return $this->picked_up_at !== null;
+    }
+
+    public function failureReasonLabel(): ?string
+    {
+        if (! $this->failure_reason) {
+            return null;
+        }
+
+        return self::FAILURE_REASONS[$this->failure_reason] ?? $this->failure_reason;
     }
 
     public function getRouteKeyName(): string

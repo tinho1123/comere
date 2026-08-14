@@ -10,13 +10,6 @@ use Illuminate\Validation\Rule;
 
 class DeliveryTrackingController extends Controller
 {
-    const FAILURE_REASONS = [
-        'customer_unavailable' => 'Cliente não atende',
-        'wrong_address' => 'Endereço não encontrado',
-        'customer_refused' => 'Cliente recusou o pedido',
-        'other' => 'Outro motivo',
-    ];
-
     public function show(string $token)
     {
         $delivery = Delivery::where('tracking_token', $token)
@@ -25,7 +18,7 @@ class DeliveryTrackingController extends Controller
 
         return view('delivery.tracking', [
             'delivery' => $delivery,
-            'failureReasons' => self::FAILURE_REASONS,
+            'failureReasons' => Delivery::FAILURE_REASONS,
         ]);
     }
 
@@ -137,7 +130,7 @@ class DeliveryTrackingController extends Controller
         }
 
         $data = $request->validate([
-            'reason' => ['required', Rule::in(array_keys(self::FAILURE_REASONS))],
+            'reason' => ['required', Rule::in(array_keys(Delivery::FAILURE_REASONS))],
             'notes' => 'nullable|string|max:500',
         ]);
 

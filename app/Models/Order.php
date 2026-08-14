@@ -171,6 +171,15 @@ class Order extends Model
     }
 
     /**
+     * Check if the order is stuck as shipped with a delivery that failed.
+     */
+    public function hasUnresolvedFailedDelivery(): bool
+    {
+        return $this->status === self::STATUS_SHIPPED
+            && $this->delivery?->status === Delivery::STATUS_FAILED;
+    }
+
+    /**
      * Check if the order can be cancelled (still open, not yet finalized).
      */
     public function canBeCancelled(): bool
