@@ -26,12 +26,14 @@ class DriverHistoryController extends Controller
                 'company_name' => $delivery->company->name,
                 'order_short_id' => strtoupper(substr($delivery->order->uuid, 0, 8)),
                 'driver_fee' => $delivery->driver_fee,
+                'is_paid' => $delivery->is_paid,
                 'delivered_at' => $delivery->delivered_at?->format('d/m/Y H:i'),
             ])->values(),
             'totals' => [
                 'lifetime' => $completed->sum('driver_fee'),
                 'today' => $completed->filter(fn (Delivery $d) => $d->delivered_at?->isToday())->sum('driver_fee'),
                 'this_week' => $completed->filter(fn (Delivery $d) => $d->delivered_at?->isCurrentWeek())->sum('driver_fee'),
+                'to_receive' => $completed->where('is_paid', false)->sum('driver_fee'),
                 'deliveries_count' => $completed->count(),
             ],
         ]);
