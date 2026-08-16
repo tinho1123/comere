@@ -33,6 +33,7 @@ class Delivery extends Model
         'status',
         'driver_fee',
         'is_paid',
+        'driver_payout_id',
         'dispatched_at',
         'picked_up_at',
         'delivered_at',
@@ -125,5 +126,10 @@ class Delivery extends Model
     public function feedback(): HasOne
     {
         return $this->hasOne(DeliveryFeedback::class);
+    }
+
+    public function payout(): BelongsTo
+    {
+        return $this->belongsTo(DriverPayout::class, 'driver_payout_id');
     }
 }
