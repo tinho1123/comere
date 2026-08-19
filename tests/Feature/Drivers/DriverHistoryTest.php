@@ -31,7 +31,7 @@ class DriverHistoryTest extends TestCase
         ]);
     }
 
-    private function makeDelivery(Driver $driver, Company $company, Client $client, string $status, float $fee, ?\DateTimeInterface $deliveredAt = null): Delivery
+    private function makeDelivery(Driver $driver, Company $company, Client $client, string $status, float $fee, ?\DateTimeInterface $deliveredAt = null, bool $isPaid = false): Delivery
     {
         $order = Order::create([
             'uuid' => (string) Str::uuid(),
@@ -51,7 +51,7 @@ class DriverHistoryTest extends TestCase
             'driver_id' => $driver->id,
             'status' => $status,
             'driver_fee' => $fee,
-            'is_paid' => false,
+            'is_paid' => $isPaid,
             'dispatched_at' => now(),
             'delivered_at' => $deliveredAt,
         ]);
@@ -110,6 +110,33 @@ class DriverHistoryTest extends TestCase
         $response->assertInertia(fn ($page) => $page
             ->where('totals.deliveries_count', 1)
             ->where('totals.lifetime', 10)
+        );
+    }
+
+    #[Test]
+    public function it_exposes_the_paid_status_per_delivery_and_a_to_receive_total()
+    {
+        $driver = $this->makeDriver();
+        $company = Company::factory()->create();
+        DriverCompany::create([
+            'driver_id' => $driver->id,
+            'company_id' => $company->id,
+            'status' => Driver::LINK_ACCEPTED,
+            'delivery_fee' => 10,
+        ]);
+        $client = Client::factory()->create(['company_id' => $company->id]);
+
+        $this->makeDelivery($driver, $company, $client, Delivery::STATUS_DELIVERED, 12.50, now(), isPaid: false);
+        $this->makeDelivery($driver, $company, $client, Delivery::STATUS_DELIVERED, 8.00, now()->subDay(), isPaid: true);
+
+        $response = $this->withMobileUserAgent()->actingAs($driver, 'driver')
+            ->get(route('drivers.history'));
+
+        $response->assertOk();
+        $response->assertInertia(fn ($page) => $page
+            ->where('totals.to_receive', 12.5)
+            ->where('deliveries.0.is_paid', false)
+            ->where('deliveries.1.is_paid', true)
         );
     }
 

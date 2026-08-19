@@ -18,6 +18,13 @@ class Delivery extends Model
 
     const STATUS_FAILED = 'failed';
 
+    const FAILURE_REASONS = [
+        'customer_unavailable' => 'Cliente não atende',
+        'wrong_address' => 'Endereço não encontrado',
+        'customer_refused' => 'Cliente recusou o pedido',
+        'other' => 'Outro motivo',
+    ];
+
     protected $fillable = [
         'uuid',
         'company_id',
@@ -26,6 +33,7 @@ class Delivery extends Model
         'status',
         'driver_fee',
         'is_paid',
+        'driver_payout_id',
         'dispatched_at',
         'picked_up_at',
         'delivered_at',
@@ -86,6 +94,15 @@ class Delivery extends Model
         return $this->picked_up_at !== null;
     }
 
+    public function failureReasonLabel(): ?string
+    {
+        if (! $this->failure_reason) {
+            return null;
+        }
+
+        return self::FAILURE_REASONS[$this->failure_reason] ?? $this->failure_reason;
+    }
+
     public function getRouteKeyName(): string
     {
         return 'uuid';
@@ -109,5 +126,10 @@ class Delivery extends Model
     public function feedback(): HasOne
     {
         return $this->hasOne(DeliveryFeedback::class);
+    }
+
+    public function payout(): BelongsTo
+    {
+        return $this->belongsTo(DriverPayout::class, 'driver_payout_id');
     }
 }
