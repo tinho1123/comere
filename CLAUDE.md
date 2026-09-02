@@ -200,6 +200,25 @@ php artisan config:clear && php artisan cache:clear && php artisan route:clear &
 
 ---
 
+## Localização (GPS) de Motoristas — Política de Privacidade e Compliance
+
+**Por que isso é uma regra própria, não só "boa prática":** rastreamento de motorista mal escopado gera dois riscos jurídicos simultâneos — viola LGPD (coleta sem finalidade clara) e reforça o argumento de vínculo empregatício (parece monitoramento de funcionário, não ferramenta operacional que a loja usa para gerenciar a própria entrega). As regras abaixo existem para manter a Comere na posição de fornecedora de software, não gestora do motorista.
+
+### Regra central
+**Localização do motorista só é coletada/transmitida com finalidade ativa: `Driver.is_online = true` (disponível para despacho) OU entrega em andamento (`Delivery::STATUS_DISPATCHED`). Nunca em background enquanto offline, nunca fora desses dois contextos.**
+
+### Duas fontes de localização — escopos diferentes, não confundir
+
+1. **`Driver.last_latitude/last_longitude/last_location_at`** — ping do app enquanto o motorista está **online** (disponível, com ou sem entrega ativa). Finalidade: permitir despacho e provar que o GPS está ativo (`Driver::hasFreshLocation()`). Enviado via `POST /drivers/localizacao` → `DriverDashboardController::updateLocation`. O `watchPosition` em `resources/js/Pages/Driver/Dashboard.jsx` só roda enquanto `isOnline === true` — nunca continuamente a partir do simples carregamento da página, e para imediatamente quando o motorista fica offline. **Nunca exponha este campo no painel admin** — não criar um "mapa ao vivo de todos os motoristas vinculados"; isso é vigilância de mão de obra, não acompanhamento de pedido.
+2. **`Delivery.current_latitude/current_longitude/location_updated_at`** — ping do motorista **durante uma entrega específica**, enviado por `resources/views/delivery/tracking.blade.php` via `POST /entrega/{token}/localizacao` → `DeliveryTrackingController::updateLocation`. Já é corretamente restrito: o servidor recusa atualização se `status !== STATUS_DISPATCHED`. É a única fonte que deve alimentar: (a) acompanhamento do cliente, (b) distância até o destino na tela do motorista, (c) qualquer visão futura da loja sobre a localização do motorista — sempre por pedido específico, nunca uma visão consolidada de todos os motoristas.
+
+### Nunca fazer
+- Nunca usar localização (de nenhuma das duas fontes) para pontuação, ranking ou penalização de motorista (ex.: "ficou parado X minutos"). Isso viraria controle disciplinar — o que sustenta a tese de autonomia do motorista é justamente a plataforma não avaliar/punir desempenho individual.
+- Nunca reter histórico de localização além do necessário para resolver uma disputa pontual sobre a entrega (ex.: "motorista diz que chegou, cliente diz que não").
+- Nunca dar à loja uma tela com localização de motoristas fora do contexto de um pedido em andamento daquela loja.
+
+---
+
 ## Filament Panels
 
 ### Admin Panel (`/admin`)
