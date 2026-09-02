@@ -213,14 +213,24 @@ export default function DriverDashboard({ driver, vapidPublicKey, pendingInvites
         });
     };
 
+    const stopWatchingLocation = () => {
+        if (watchIdRef.current !== null && navigator.geolocation) {
+            navigator.geolocation.clearWatch(watchIdRef.current);
+            watchIdRef.current = null;
+        }
+    };
+
+    // Localização só é rastreada enquanto o motorista está disponível pra despacho
+    // (is_online). Nunca em background com o motorista offline — ver CLAUDE.md,
+    // seção "Localização (GPS) de Motoristas".
     useEffect(() => {
-        startWatchingLocation();
-        return () => {
-            if (watchIdRef.current !== null && navigator.geolocation) {
-                navigator.geolocation.clearWatch(watchIdRef.current);
-            }
-        };
-    }, []);
+        if (isOnline) {
+            startWatchingLocation();
+        } else {
+            stopWatchingLocation();
+        }
+        return stopWatchingLocation;
+    }, [isOnline]);
 
     const handleEnableLocation = () => {
         if (!navigator.geolocation) return;
@@ -229,7 +239,6 @@ export default function DriverDashboard({ driver, vapidPublicKey, pendingInvites
             (position) => {
                 lastLocationSentAt.current = 0;
                 sendLocation(position);
-                startWatchingLocation();
                 setRequestingLocation(false);
             },
             () => setRequestingLocation(false),
