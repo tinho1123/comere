@@ -164,10 +164,21 @@
                             link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
                             document.head.appendChild(link);
                         }
-                        if (document.getElementById('leaflet-js')) {
+                        var existing = document.getElementById('leaflet-js');
+                        if (existing) {
                             // Já está carregando em outro componente; espera terminar.
+                            var waited = 0;
                             var waitInterval = setInterval(() => {
-                                if (window.L) { clearInterval(waitInterval); cb(); }
+                                waited += 50;
+                                if (window.L) {
+                                    clearInterval(waitInterval);
+                                    cb();
+                                } else if (waited >= 5000) {
+                                    // O carregamento anterior travou/falhou; remove e tenta de novo.
+                                    clearInterval(waitInterval);
+                                    existing.remove();
+                                    this.loadLeaflet(cb);
+                                }
                             }, 50);
                             return;
                         }
@@ -175,6 +186,7 @@
                         script.id = 'leaflet-js';
                         script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
                         script.onload = cb;
+                        script.onerror = () => script.remove();
                         document.head.appendChild(script);
                     }
                 }"
