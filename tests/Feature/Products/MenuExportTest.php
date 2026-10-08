@@ -3,7 +3,6 @@
 namespace Tests\Feature\Products;
 
 use App\Models\Company;
-use App\Models\Product;
 use App\Models\ProductsCategories;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
