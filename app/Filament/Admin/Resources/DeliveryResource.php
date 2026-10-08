@@ -100,7 +100,7 @@ class DeliveryResource extends Resource
                     ->color(fn (Delivery $record): string => $record->isPickedUp() ? 'gray' : 'warning')
                     ->copyable(fn (Delivery $record): bool => ! $record->isPickedUp())
                     ->copyMessage('Código copiado!')
-                    ->visible(fn (Delivery $record): bool => $record->status === Delivery::STATUS_DISPATCHED),
+                    ->visible(fn (?Delivery $record): bool => ! $record || $record->status === Delivery::STATUS_DISPATCHED),
 
                 Tables\Columns\TextColumn::make('driver_fee')
                     ->label('Valor entrega')
