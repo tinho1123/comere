@@ -31,7 +31,21 @@ jobs:
         run: npm run build
 
       - name: Install PHP dependencies
-        run: composer update --no-dev --optimize-autoloader --no-interaction
+        run: composer install --no-dev --optimize-autoloader --no-interaction
+
+      - name: Verificar publicação dos assets do Filament
+        run: |
+          for f in \
+            public/js/filament/actions/actions.js \
+            public/js/filament/tables/tables.js \
+            public/js/filament/schemas/schemas.js \
+            public/js/filament/filament/app.js \
+            public/css/filament/filament/app.css; do
+            if [ ! -f "$f" ]; then
+              echo "::error::Asset do Filament não foi publicado: $f — abortando deploy para não subir admin quebrado."
+              exit 1
+            fi
+          done
 
       - name: Upload projeto para Hostinger
         uses: appleboy/scp-action@v0.1.7
