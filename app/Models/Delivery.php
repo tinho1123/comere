@@ -86,6 +86,11 @@ class Delivery extends Model
 
     public function trackingUrl(): string
     {
+        if (empty($this->tracking_token)) {
+            $this->tracking_token = Str::random(40);
+            $this->save();
+        }
+
         return route('delivery.tracking.show', $this->tracking_token);
     }
 
