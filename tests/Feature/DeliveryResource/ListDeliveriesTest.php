@@ -42,7 +42,7 @@ class ListDeliveriesTest extends TestCase
         Filament::setTenant($this->company);
     }
 
-    private function makeDispatchedDelivery(): Delivery
+    private function makeDispatchedDelivery(bool $withoutTrackingToken = false): Delivery
     {
         $order = Order::create([
             'uuid' => (string) Str::uuid(),
@@ -72,7 +72,7 @@ class ListDeliveriesTest extends TestCase
             'responded_at' => now(),
         ]);
 
-        return Delivery::create([
+        $delivery = Delivery::create([
             'company_id' => $this->company->id,
             'order_id' => $order->id,
             'driver_id' => $driver->id,
@@ -81,6 +81,14 @@ class ListDeliveriesTest extends TestCase
             'is_paid' => false,
             'dispatched_at' => now(),
         ]);
+
+        if ($withoutTrackingToken) {
+            // Simulates a delivery created before the tracking_token column
+            // was backfilled (see migration 2026_10_08_000001).
+            $delivery->forceFill(['tracking_token' => null])->save();
+        }
+
+        return $delivery;
     }
 
     #[Test]
@@ -98,5 +106,41 @@ class ListDeliveriesTest extends TestCase
 
         Livewire::test(ListDeliveries::class)
             ->assertOk();
+    }
+
+    #[Test]
+    public function it_renders_the_list_page_for_a_delivery_without_a_tracking_token()
+    {
+        $delivery = $this->makeDispatchedDelivery(withoutTrackingToken: true);
+
+        $this->assertNull($delivery->tracking_token);
+
+        Livewire::test(ListDeliveries::class)
+            ->assertOk();
+    }
+
+    #[Test]
+    public function tracking_url_self_heals_a_missing_token()
+    {
+        $delivery = $this->makeDispatchedDelivery(withoutTrackingToken: true);
+
+        $url = $delivery->trackingUrl();
+
+        $this->assertNotEmpty($delivery->tracking_token);
+        $this->assertStringContainsString($delivery->tracking_token, $url);
+        $this->assertDatabaseHas('deliveries', [
+            'id' => $delivery->id,
+            'tracking_token' => $delivery->tracking_token,
+        ]);
+    }
+
+    #[Test]
+    public function the_backfill_migration_fills_missing_tracking_tokens()
+    {
+        $delivery = $this->makeDispatchedDelivery(withoutTrackingToken: true);
+
+        (require base_path('database/migrations/2026_10_08_000001_backfill_delivery_tracking_tokens.php'))->up();
+
+        $this->assertNotEmpty($delivery->refresh()->tracking_token);
     }
 }
