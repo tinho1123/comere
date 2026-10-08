@@ -48,7 +48,7 @@
 <div class="fi-section rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
     <div class="fi-section-header flex flex-col gap-3 px-6 py-4">
         <div class="flex items-center gap-3">
-            <x-heroicon-o-map-pin class="h-5 w-5 text-primary-500" />
+            <x-heroicon-o-map-pin style="width: 1.25rem; height: 1.25rem; color: #6366f1;" />
             <h3 class="fi-section-header-heading text-base font-semibold leading-6 text-gray-950 dark:text-white">
                 Localização
             </h3>
@@ -73,9 +73,10 @@
                             rel="noopener"
                             x-data
                             @click.prevent="window.open(/iPad|iPhone|iPod/.test(navigator.userAgent) ? 'https://maps.apple.com/?q={{ $clientLat }},{{ $clientLng }}' : $el.href, '_blank')"
-                            class="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:underline dark:text-primary-400"
+                            class="inline-flex items-center gap-1 font-medium hover:underline"
+                            style="margin-top: 0.5rem; font-size: 0.75rem; color: #6366f1;"
                         >
-                            <x-heroicon-o-map-pin class="h-3.5 w-3.5" />
+                            <x-heroicon-o-map-pin style="width: 0.875rem; height: 0.875rem;" />
                             Abrir no Maps
                         </a>
                     @endif
@@ -96,9 +97,10 @@
                             rel="noopener"
                             x-data
                             @click.prevent="window.open(/iPad|iPhone|iPod/.test(navigator.userAgent) ? 'https://maps.apple.com/?q={{ $storeLat }},{{ $storeLng }}' : $el.href, '_blank')"
-                            class="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:underline dark:text-primary-400"
+                            class="inline-flex items-center gap-1 font-medium hover:underline"
+                            style="margin-top: 0.5rem; font-size: 0.75rem; color: #6366f1;"
                         >
-                            <x-heroicon-o-map-pin class="h-3.5 w-3.5" />
+                            <x-heroicon-o-map-pin style="width: 0.875rem; height: 0.875rem;" />
                             Abrir no Maps
                         </a>
                     @endif
