@@ -43,8 +43,6 @@
     $storeAddressText = $company?->address_street
         ? "{$company->address_street}, {$company->address_number} — {$company->address_neighborhood}, {$company->address_city}/{$company->address_state}"
         : null;
-
-    $mapId = 'order-map-' . $record->id;
 @endphp
 
 <div class="fi-section rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
@@ -99,91 +97,104 @@
         {{-- Mapa Leaflet --}}
         @if ($hasClient || $hasBoth)
             <div
-                id="{{ $mapId }}"
-                style="height: 320px; border-radius: 0.75rem; overflow: hidden; border: 1px solid #e5e7eb; z-index: 0;"
-            ></div>
+                x-data="{
+                    map: null,
+                    clientLat: {{ $clientLat ?? 'null' }},
+                    clientLng: {{ $clientLng ?? 'null' }},
+                    storeLat: {{ $storeLat ?? 'null' }},
+                    storeLng: {{ $storeLng ?? 'null' }},
 
-            <script>
-                (function () {
-                    function initMap() {
-                        var clientLat = {{ $clientLat ?? 'null' }};
-                        var clientLng = {{ $clientLng ?? 'null' }};
-                        var storeLat  = {{ $storeLat  ?? 'null' }};
-                        var storeLng  = {{ $storeLng  ?? 'null' }};
+                    initMap() {
+                        if (this.map) return;
 
-                        var map = L.map('{{ $mapId }}');
+                        this.map = L.map(this.$refs.mapEl);
 
                         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                        }).addTo(map);
+                            attribution: '&copy; <a href=\'https://www.openstreetmap.org/copyright\'>OpenStreetMap</a>'
+                        }).addTo(this.map);
 
                         var bounds = [];
 
-                        // Marcador da loja (azul)
-                        if (storeLat && storeLng) {
+                        if (this.storeLat && this.storeLng) {
                             var storeIcon = L.divIcon({
                                 className: '',
-                                html: '<div style="width:14px;height:14px;background:#3b82f6;border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>',
+                                html: '<div style=\'width:14px;height:14px;background:#3b82f6;border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.4)\'></div>',
                                 iconAnchor: [7, 7]
                             });
-                            L.marker([storeLat, storeLng], { icon: storeIcon })
-                                .addTo(map)
+                            L.marker([this.storeLat, this.storeLng], { icon: storeIcon })
+                                .addTo(this.map)
                                 .bindTooltip('{{ addslashes($company?->name ?? 'Loja') }}', { permanent: true, direction: 'top', offset: [0, -10] });
-                            bounds.push([storeLat, storeLng]);
+                            bounds.push([this.storeLat, this.storeLng]);
                         }
 
-                        // Marcador do cliente (vermelho)
-                        if (clientLat && clientLng) {
+                        if (this.clientLat && this.clientLng) {
                             var clientIcon = L.divIcon({
                                 className: '',
-                                html: '<div style="width:14px;height:14px;background:#ef4444;border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>',
+                                html: '<div style=\'width:14px;height:14px;background:#ef4444;border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.4)\'></div>',
                                 iconAnchor: [7, 7]
                             });
-                            L.marker([clientLat, clientLng], { icon: clientIcon })
-                                .addTo(map)
+                            L.marker([this.clientLat, this.clientLng], { icon: clientIcon })
+                                .addTo(this.map)
                                 .bindTooltip('{{ addslashes($addressLabel) }}', { permanent: true, direction: 'top', offset: [0, -10] });
-                            bounds.push([clientLat, clientLng]);
+                            bounds.push([this.clientLat, this.clientLng]);
                         }
 
-                        // Linha entre loja e cliente
-                        if (storeLat && storeLng && clientLat && clientLng) {
-                            L.polyline([[storeLat, storeLng], [clientLat, clientLng]], {
+                        if (this.storeLat && this.storeLng && this.clientLat && this.clientLng) {
+                            L.polyline([[this.storeLat, this.storeLng], [this.clientLat, this.clientLng]], {
                                 color: '#6366f1',
                                 weight: 2,
                                 dashArray: '6 4',
                                 opacity: 0.7
-                            }).addTo(map);
+                            }).addTo(this.map);
                         }
 
                         if (bounds.length > 1) {
-                            map.fitBounds(bounds, { padding: [40, 40] });
+                            this.map.fitBounds(bounds, { padding: [40, 40] });
                         } else if (bounds.length === 1) {
-                            map.setView(bounds[0], 15);
+                            this.map.setView(bounds[0], 15);
                         }
-                    }
+                    },
 
-                    function load() {
-                        if (window.L) { initMap(); return; }
+                    loadLeaflet(cb) {
+                        if (window.L) { cb(); return; }
                         if (!document.getElementById('leaflet-css')) {
                             var link = document.createElement('link');
-                            link.id  = 'leaflet-css';
+                            link.id = 'leaflet-css';
                             link.rel = 'stylesheet';
                             link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
                             document.head.appendChild(link);
                         }
+                        var existing = document.getElementById('leaflet-js');
+                        if (existing) {
+                            // Já está carregando em outro componente; espera terminar.
+                            var waited = 0;
+                            var waitInterval = setInterval(() => {
+                                waited += 50;
+                                if (window.L) {
+                                    clearInterval(waitInterval);
+                                    cb();
+                                } else if (waited >= 5000) {
+                                    // O carregamento anterior travou/falhou; remove e tenta de novo.
+                                    clearInterval(waitInterval);
+                                    existing.remove();
+                                    this.loadLeaflet(cb);
+                                }
+                            }, 50);
+                            return;
+                        }
                         var script = document.createElement('script');
+                        script.id = 'leaflet-js';
                         script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-                        script.onload = initMap;
+                        script.onload = cb;
+                        script.onerror = () => script.remove();
                         document.head.appendChild(script);
                     }
-
-                    if (document.readyState === 'loading') {
-                        document.addEventListener('DOMContentLoaded', load);
-                    } else {
-                        load();
-                    }
-                })();
-            </script>
+                }"
+                x-init="loadLeaflet(() => $nextTick(() => initMap()))"
+                wire:ignore
+                x-ref="mapEl"
+                style="height: 320px; border-radius: 0.75rem; overflow: hidden; border: 1px solid #e5e7eb; z-index: 0;"
+            ></div>
         @else
             <div class="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800" style="height: 140px;">
                 <p class="text-sm text-gray-400">Cadastre o endereço do cliente e da loja para visualizar o mapa.</p>
