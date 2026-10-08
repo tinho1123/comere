@@ -66,6 +66,17 @@
                     @if ($clientZip)
                         <p class="text-xs text-gray-400 mt-1">CEP: {{ $clientZip }}</p>
                     @endif
+                    @if ($hasClient)
+                        <a
+                            href="https://www.google.com/maps?q={{ $clientLat }},{{ $clientLng }}"
+                            target="_blank"
+                            rel="noopener"
+                            class="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:underline dark:text-primary-400"
+                        >
+                            <x-heroicon-o-map-pin class="h-3.5 w-3.5" />
+                            Abrir no Maps
+                        </a>
+                    @endif
                 @else
                     <p class="text-sm text-gray-400 italic">Não cadastrado</p>
                 @endif
@@ -76,6 +87,17 @@
                 @if ($storeAddressText)
                     <p class="text-sm text-gray-800 dark:text-gray-200">{{ $storeAddressText }}</p>
                     <p class="text-xs text-gray-400 mt-1">CEP: {{ $company->address_zip }}</p>
+                    @if ($storeLat && $storeLng)
+                        <a
+                            href="https://www.google.com/maps?q={{ $storeLat }},{{ $storeLng }}"
+                            target="_blank"
+                            rel="noopener"
+                            class="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:underline dark:text-primary-400"
+                        >
+                            <x-heroicon-o-map-pin class="h-3.5 w-3.5" />
+                            Abrir no Maps
+                        </a>
+                    @endif
                 @else
                     <p class="text-sm text-gray-400 italic">Não cadastrado</p>
                 @endif
