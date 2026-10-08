@@ -51,4 +51,41 @@ class ViewOrderInfolistTest extends TestCase
             ->mountTableAction(ViewAction::class, $order)
             ->assertOk();
     }
+
+    #[Test]
+    public function it_shows_open_in_maps_links_when_coordinates_are_available()
+    {
+        $company = Company::factory()->create([
+            'latitude' => -22.9654,
+            'longitude' => -42.0297,
+        ]);
+
+        $user = User::factory()->create();
+        $user->companies()->attach($company->id);
+        $this->actingAs($user);
+        Filament::setTenant($company);
+
+        $client = Client::factory()->create(['company_id' => $company->id]);
+        $order = Order::create([
+            'uuid' => (string) Str::uuid(),
+            'company_id' => $company->id,
+            'client_id' => $client->id,
+            'status' => Order::STATUS_PENDING,
+            'channel' => Order::CHANNEL_ONLINE,
+            'subtotal' => 10,
+            'discount_amount' => 0,
+            'fee_amount' => 0,
+            'total_amount' => 10,
+            'delivery_latitude' => -22.9035,
+            'delivery_longitude' => -43.2096,
+            'delivery_street' => 'Rua Teste',
+            'delivery_number' => '123',
+        ]);
+
+        Livewire::test(ManageOrders::class)
+            ->mountTableAction(ViewAction::class, $order)
+            ->assertSee('Abrir no Maps')
+            ->assertSeeHtml('https://www.google.com/maps?q=-22.9035,-43.2096')
+            ->assertSeeHtml('https://www.google.com/maps?q=-22.9654,-42.0297');
+    }
 }
