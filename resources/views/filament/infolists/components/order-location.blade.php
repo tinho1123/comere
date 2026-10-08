@@ -71,6 +71,8 @@
                             href="https://www.google.com/maps?q={{ $clientLat }},{{ $clientLng }}"
                             target="_blank"
                             rel="noopener"
+                            x-data
+                            @click.prevent="window.open(/iPad|iPhone|iPod/.test(navigator.userAgent) ? 'https://maps.apple.com/?q={{ $clientLat }},{{ $clientLng }}' : $el.href, '_blank')"
                             class="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:underline dark:text-primary-400"
                         >
                             <x-heroicon-o-map-pin class="h-3.5 w-3.5" />
@@ -92,6 +94,8 @@
                             href="https://www.google.com/maps?q={{ $storeLat }},{{ $storeLng }}"
                             target="_blank"
                             rel="noopener"
+                            x-data
+                            @click.prevent="window.open(/iPad|iPhone|iPod/.test(navigator.userAgent) ? 'https://maps.apple.com/?q={{ $storeLat }},{{ $storeLng }}' : $el.href, '_blank')"
                             class="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:underline dark:text-primary-400"
                         >
                             <x-heroicon-o-map-pin class="h-3.5 w-3.5" />
