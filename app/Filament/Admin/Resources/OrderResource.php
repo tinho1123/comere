@@ -421,7 +421,8 @@ class OrderResource extends Resource
                         ])->columns(4),
                 ]),
 
-            Infolists\Components\View::make('filament.infolists.components.order-location')
+            Infolists\Components\ViewEntry::make('location')
+                ->view('filament.infolists.components.order-location')
                 ->columnSpanFull(),
 
             Schemas\Components\Section::make('Totais')
