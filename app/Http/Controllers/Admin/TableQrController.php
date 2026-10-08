@@ -12,10 +12,7 @@ class TableQrController extends Controller
     {
         $table = TableModel::where('uuid', $uuid)->firstOrFail();
 
-        abort_unless(
-            auth()->user()->companies()->where('companies.id', $table->company_id)->exists(),
-            403
-        );
+        abort_unless(auth()->user()->canAccessTenant($table->company), 403);
 
         $url = route('table.show', $table->uuid);
 
