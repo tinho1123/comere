@@ -13,8 +13,13 @@ return new class extends Migration
             ->select('id')
             ->chunkById(200, function ($deliveries): void {
                 foreach ($deliveries as $delivery) {
+                    // Guard against a concurrent request self-healing this row via
+                    // Delivery::trackingUrl() between the select above and this
+                    // update: only claim it if it's still null, so we never
+                    // clobber a token that's already been handed out.
                     DB::table('deliveries')
                         ->where('id', $delivery->id)
+                        ->whereNull('tracking_token')
                         ->update(['tracking_token' => Str::random(40)]);
                 }
             });
