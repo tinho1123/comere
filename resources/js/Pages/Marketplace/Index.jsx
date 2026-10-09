@@ -1,8 +1,135 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import MarketplaceLayout from '../../Layouts/MarketplaceLayout';
-import { Link, usePage } from '@inertiajs/react';
-import { Heart } from 'lucide-react';
+import { Link, router, usePage } from '@inertiajs/react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Heart, MapPin, X } from 'lucide-react';
 import axios from 'axios';
+import { getCurrentPosition, haversineKm, reverseGeocode } from '../../utils/geo';
+
+const LOCATION_SUGGEST_THRESHOLD_KM = 1;
+
+function LocationSuggestionSheet() {
+    const { auth, default_address } = usePage().props;
+    const [suggestion, setSuggestion] = useState(null);
+    const [visible, setVisible] = useState(false);
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        if (!auth.user || !default_address?.latitude || !default_address?.longitude) return;
+        if (sessionStorage.getItem('comere_location_prompt_seen')) return;
+
+        let cancelled = false;
+
+        (async () => {
+            try {
+                const { latitude, longitude } = await getCurrentPosition();
+                const distance = haversineKm(default_address.latitude, default_address.longitude, latitude, longitude);
+                if (cancelled || distance < LOCATION_SUGGEST_THRESHOLD_KM) return;
+
+                const address = await reverseGeocode(latitude, longitude);
+                if (cancelled) return;
+
+                setSuggestion({ latitude, longitude, address });
+                setVisible(true);
+            } catch {
+                // sem permissão ou GPS indisponível: não insiste
+            }
+        })();
+
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [auth.user, default_address?.latitude, default_address?.longitude]);
+
+    const dismiss = () => {
+        sessionStorage.setItem('comere_location_prompt_seen', '1');
+        setVisible(false);
+    };
+
+    const useSuggestion = async () => {
+        if (!suggestion || saving) return;
+        setSaving(true);
+        try {
+            const payload = {
+                latitude: suggestion.latitude,
+                longitude: suggestion.longitude,
+            };
+            if (suggestion.address.street) payload.street = suggestion.address.street;
+            if (suggestion.address.number) payload.number = suggestion.address.number;
+            if (suggestion.address.neighborhood) payload.neighborhood = suggestion.address.neighborhood;
+            if (suggestion.address.city) payload.city = suggestion.address.city;
+            if (suggestion.address.state?.length === 2) payload.state = suggestion.address.state;
+            if (suggestion.address.zip_code) payload.zip_code = suggestion.address.zip_code;
+
+            await axios.put(`/addresses/${default_address.uuid}`, payload);
+            sessionStorage.setItem('comere_location_prompt_seen', '1');
+            setVisible(false);
+            router.reload({ only: ['default_address', 'companies'] });
+        } catch {
+            // se falhar, o cliente ainda pode atualizar manualmente em Endereços
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (!visible || !suggestion) return null;
+
+    const currentLabel = default_address
+        ? `${default_address.street}, ${default_address.number} — ${default_address.city}`
+        : null;
+
+    return (
+        <AnimatePresence>
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={dismiss}
+                className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+            />
+            <motion.div
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+                className="fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-3xl shadow-2xl p-6 sm:max-w-md sm:mx-auto sm:rounded-3xl sm:bottom-6"
+            >
+                <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-2 text-red-500 font-bold">
+                        <MapPin size={18} />
+                        <span>Você está por aqui?</span>
+                    </div>
+                    <button onClick={dismiss} className="text-gray-300 hover:text-gray-500">
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-2">
+                    <p className="text-sm font-semibold text-gray-900">{suggestion.address.label ?? 'Localização atual'}</p>
+                </div>
+
+                <p className="text-xs text-gray-500 mb-5">
+                    Detectamos que você está em um local diferente do seu endereço salvo{currentLabel ? ` ("${currentLabel}")` : ''}. Quer usar a localização atual como seu endereço de entrega?
+                </p>
+
+                <div className="flex flex-col gap-2">
+                    <button
+                        onClick={useSuggestion}
+                        disabled={saving}
+                        className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl transition-all disabled:opacity-50"
+                    >
+                        {saving ? 'Atualizando...' : 'Usar esta localização'}
+                    </button>
+                    <button
+                        onClick={dismiss}
+                        className="w-full text-gray-500 font-medium py-2 text-sm hover:text-gray-700"
+                    >
+                        Manter endereço salvo
+                    </button>
+                </div>
+            </motion.div>
+        </AnimatePresence>
+    );
+}
 
 function FavoriteButton({ uuid, initialFavorited, onToggle }) {
     const { auth } = usePage().props;
@@ -107,6 +234,8 @@ export default function MarketplaceIndex({ companies, lastVisited, categories, s
 
     return (
         <MarketplaceLayout>
+            <LocationSuggestionSheet />
+
             {/* Categorias */}
             {categories.length > 0 && (
                 <div className="flex gap-4 overflow-x-auto pb-4 mb-8 no-scrollbar">
