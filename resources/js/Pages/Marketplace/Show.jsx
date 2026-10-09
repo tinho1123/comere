@@ -28,7 +28,7 @@ function StarRating({ company }) {
         }
     };
 
-    const display = hovered || selected;
+    const display = hovered || selected || Math.round(average);
 
     return (
         <div className="flex items-center gap-3 mt-1 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-100 shadow-sm w-max">
@@ -315,7 +315,7 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                     <div className="flex-grow">
                         <h2 className="text-2xl font-black mb-8 border-b-4 border-red-500 inline-block pb-1">{activeCategory}</h2>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-12">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-12">
                             {productsByCategory[activeCategory]?.map((product) => (
                                 <div key={product.uuid} className="flex gap-6 group cursor-pointer">
                                     <div className="flex-grow flex flex-col justify-between py-1">
