@@ -95,20 +95,28 @@ class UserResource extends Resource
             ->columns([
                 TextColumn::make('name')
                     ->label('Nome')
+                    ->icon('heroicon-o-user-circle')
+                    ->weight('medium')
                     ->searchable()
                     ->sortable(),
 
                 TextColumn::make('email')
                     ->label('E-mail')
+                    ->icon('heroicon-o-envelope')
+                    ->color('gray')
+                    ->copyable()
                     ->searchable()
                     ->sortable(),
 
                 TextColumn::make('created_at')
-                    ->label('Criado em')
-                    ->dateTime('d/m/Y H:i')
+                    ->label('Na equipe desde')
+                    ->date('d/m/Y')
                     ->sortable(),
             ])
-            ->actions([]);
+            ->actions([])
+            ->emptyStateHeading('Nenhum usuário nesta loja')
+            ->emptyStateDescription('Convide um usuário para ajudar a administrar esta loja.')
+            ->emptyStateIcon('heroicon-o-users');
     }
 
     public static function getEloquentQuery(): Builder

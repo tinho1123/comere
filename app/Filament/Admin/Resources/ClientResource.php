@@ -8,6 +8,7 @@ use BackedEnum;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -35,38 +36,55 @@ class ClientResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('name')
-                    ->label('Nome')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('email')
-                    ->label('E-mail')
-                    ->email()
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('password')
-                    ->password()
-                    ->required(fn (string $context): bool => $context === 'create')
-                    ->dehydrated(fn (?string $state) => filled($state))
-                    ->maxLength(255),
-                Forms\Components\Select::make('document_type')
-                    ->options([
-                        'CPF' => 'CPF',
-                        'CNPJ' => 'CNPJ',
+                Section::make('Dados pessoais')
+                    ->schema([
+                        Forms\Components\TextInput::make('name')
+                            ->label('Nome')
+                            ->required()
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('email')
+                            ->label('E-mail')
+                            ->email()
+                            ->required()
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('phone')
+                            ->label('Telefone')
+                            ->tel()
+                            ->maxLength(20),
+                        Forms\Components\TextInput::make('password')
+                            ->label('Senha')
+                            ->password()
+                            ->revealable()
+                            ->required(fn (string $context): bool => $context === 'create')
+                            ->dehydrated(fn (?string $state) => filled($state))
+                            ->maxLength(255),
                     ])
-                    ->required(),
-                Forms\Components\TextInput::make('document_number')
-                    ->label('CPF/CNPJ')
-                    ->required()
-                    ->maxLength(20),
-                Forms\Components\TextInput::make('phone')
-                    ->label('Telefone')
-                    ->tel()
-                    ->maxLength(20),
-                Forms\Components\Toggle::make('active')
-                    ->label('Ativo')
-                    ->required()
-                    ->default(true),
+                    ->columns(2),
+
+                Section::make('Documento')
+                    ->schema([
+                        Forms\Components\Select::make('document_type')
+                            ->label('Tipo')
+                            ->options([
+                                'CPF' => 'CPF',
+                                'CNPJ' => 'CNPJ',
+                            ])
+                            ->required(),
+                        Forms\Components\TextInput::make('document_number')
+                            ->label('CPF/CNPJ')
+                            ->required()
+                            ->maxLength(20),
+                    ])
+                    ->columns(2),
+
+                Section::make('Status')
+                    ->schema([
+                        Forms\Components\Toggle::make('active')
+                            ->label('Ativo')
+                            ->helperText('Clientes inativos não conseguem fazer login no portal.')
+                            ->required()
+                            ->default(true),
+                    ]),
             ]);
     }
 
@@ -76,16 +94,23 @@ class ClientResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nome')
-                    ->searchable(),
+                    ->weight('medium')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('email')
                     ->label('E-mail')
+                    ->icon('heroicon-o-envelope')
+                    ->color('gray')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('document_number')
                     ->label('CPF/CNPJ')
+                    ->description(fn (Client $record): string => $record->document_type)
                     ->searchable(),
-                Tables\Columns\IconColumn::make('active')
-                    ->label('Ativo')
-                    ->boolean(),
+                Tables\Columns\TextColumn::make('active')
+                    ->label('Status')
+                    ->badge()
+                    ->formatStateUsing(fn (bool $state): string => $state ? 'Ativo' : 'Inativo')
+                    ->color(fn (bool $state): string => $state ? 'success' : 'danger'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Criado em')
                     ->dateTime()
@@ -102,7 +127,10 @@ class ClientResource extends Resource
                 Actions\BulkActionGroup::make([
                     Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->emptyStateHeading('Nenhum cliente cadastrado')
+            ->emptyStateDescription('Cadastre um cliente para começar a vender fiado.')
+            ->emptyStateIcon('heroicon-o-users');
     }
 
     public static function getRelations(): array
