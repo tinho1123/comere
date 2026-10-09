@@ -170,7 +170,13 @@ class ProductResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('image'),
+                Tables\Columns\ImageColumn::make('image')
+                    ->label('Imagem')
+                    ->size(50)
+                    ->circular(false)
+                    ->defaultImageUrl(fn (): string => 'data:image/svg+xml;base64,'.base64_encode(
+                        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>'
+                    )),
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nome')
                     ->searchable(),
@@ -186,6 +192,8 @@ class ProductResource extends Resource
                     ->label('Categoria')
                     ->sortable()
                     ->color('primary')
+                    ->icon('heroicon-o-pencil-square')
+                    ->iconPosition('after')
                     ->action(
                         Actions\Action::make('edit_category')
                             ->label('Alterar categoria')
@@ -221,6 +229,8 @@ class ProductResource extends Resource
                     ->placeholder('—')
                     ->sortable()
                     ->color('primary')
+                    ->icon('heroicon-o-pencil-square')
+                    ->iconPosition('after')
                     ->action(
                         Actions\Action::make('edit_subcategory')
                             ->label('Alterar subcategoria')
@@ -243,16 +253,17 @@ class ProductResource extends Resource
                                 'subcategory_id' => $data['subcategory_id'],
                             ]))
                     ),
-                Tables\Columns\IconColumn::make('active')
-                    ->label('Ativo')
-                    ->boolean(),
-                Tables\Columns\IconColumn::make('is_marketplace')
+                Tables\Columns\TextColumn::make('active')
+                    ->label('Status')
+                    ->badge()
+                    ->formatStateUsing(fn (bool $state): string => $state ? 'Ativo' : 'Inativo')
+                    ->color(fn (bool $state): string => $state ? 'success' : 'danger'),
+                Tables\Columns\TextColumn::make('is_marketplace')
                     ->label('Marketplace')
-                    ->boolean()
-                    ->trueIcon('heroicon-o-globe-alt')
-                    ->falseIcon('heroicon-o-minus')
-                    ->trueColor('success')
-                    ->falseColor('gray'),
+                    ->badge()
+                    ->icon(fn (bool $state): string => $state ? 'heroicon-o-globe-alt' : 'heroicon-o-minus-circle')
+                    ->formatStateUsing(fn (bool $state): string => $state ? 'Visível' : 'Oculto')
+                    ->color(fn (bool $state): string => $state ? 'info' : 'gray'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Criado em')
                     ->dateTime()
@@ -269,7 +280,10 @@ class ProductResource extends Resource
                 Actions\BulkActionGroup::make([
                     Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->emptyStateHeading('Nenhum produto cadastrado')
+            ->emptyStateDescription('Cadastre um produto para começar a vender.')
+            ->emptyStateIcon('heroicon-o-shopping-bag');
     }
 
     public static function getRelations(): array

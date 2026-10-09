@@ -14,9 +14,9 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\Width;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -50,73 +50,87 @@ class CouponResource extends Resource
     public static function form(Schema $form): Schema
     {
         return $form->schema([
-            TextInput::make('code')
-                ->label('Código')
-                ->required()
-                ->maxLength(50)
-                ->formatStateUsing(fn (?string $state): ?string => $state ? Str::upper($state) : $state)
-                ->dehydrateStateUsing(fn (?string $state): ?string => $state ? Str::upper(str_replace(' ', '', $state)) : $state)
-                ->unique(ignoreRecord: true, modifyRuleUsing: fn ($rule) => $rule->where('company_id', Filament::getTenant()->id))
-                ->placeholder('Ex: BEMVINDO10'),
-
-            Grid::make(2)
+            Section::make('Cupom')
                 ->schema([
-                    Select::make('discount_type')
-                        ->label('Tipo de desconto')
-                        ->options([
-                            Coupon::TYPE_PERCENT => 'Percentual (%)',
-                            Coupon::TYPE_FIXED => 'Valor fixo (R$)',
-                        ])
-                        ->default(Coupon::TYPE_PERCENT)
+                    TextInput::make('code')
+                        ->label('Código')
                         ->required()
-                        ->live(),
+                        ->maxLength(50)
+                        ->formatStateUsing(fn (?string $state): ?string => $state ? Str::upper($state) : $state)
+                        ->dehydrateStateUsing(fn (?string $state): ?string => $state ? Str::upper(str_replace(' ', '', $state)) : $state)
+                        ->unique(ignoreRecord: true, modifyRuleUsing: fn ($rule) => $rule->where('company_id', Filament::getTenant()->id))
+                        ->placeholder('Ex: BEMVINDO10'),
 
-                    TextInput::make('discount_value')
-                        ->label('Valor do desconto')
-                        ->numeric()
-                        ->minValue(0)
-                        ->required()
-                        ->prefix(fn ($get) => $get('discount_type') === Coupon::TYPE_FIXED ? 'R$' : null)
-                        ->suffix(fn ($get) => $get('discount_type') === Coupon::TYPE_PERCENT ? '%' : null)
-                        ->maxValue(fn ($get) => $get('discount_type') === Coupon::TYPE_PERCENT ? 100 : null),
+                    Grid::make(2)
+                        ->schema([
+                            Select::make('discount_type')
+                                ->label('Tipo de desconto')
+                                ->options([
+                                    Coupon::TYPE_PERCENT => 'Percentual (%)',
+                                    Coupon::TYPE_FIXED => 'Valor fixo (R$)',
+                                ])
+                                ->default(Coupon::TYPE_PERCENT)
+                                ->required()
+                                ->live(),
+
+                            TextInput::make('discount_value')
+                                ->label('Valor do desconto')
+                                ->numeric()
+                                ->minValue(0)
+                                ->required()
+                                ->prefix(fn ($get) => $get('discount_type') === Coupon::TYPE_FIXED ? 'R$' : null)
+                                ->suffix(fn ($get) => $get('discount_type') === Coupon::TYPE_PERCENT ? '%' : null)
+                                ->maxValue(fn ($get) => $get('discount_type') === Coupon::TYPE_PERCENT ? 100 : null),
+                        ]),
                 ]),
 
-            Grid::make(2)
+            Section::make('Limites de uso')
                 ->schema([
-                    TextInput::make('min_order_amount')
-                        ->label('Pedido mínimo (R$)')
-                        ->numeric()
-                        ->minValue(0)
-                        ->prefix('R$')
-                        ->nullable()
-                        ->placeholder('Sem mínimo'),
+                    Grid::make(2)
+                        ->schema([
+                            TextInput::make('min_order_amount')
+                                ->label('Pedido mínimo (R$)')
+                                ->numeric()
+                                ->minValue(0)
+                                ->prefix('R$')
+                                ->nullable()
+                                ->placeholder('Sem mínimo'),
 
-                    TextInput::make('max_uses')
-                        ->label('Limite de usos')
-                        ->numeric()
-                        ->minValue(1)
-                        ->nullable()
-                        ->placeholder('Sem limite'),
-                ]),
+                            TextInput::make('max_uses')
+                                ->label('Limite de usos')
+                                ->numeric()
+                                ->minValue(1)
+                                ->nullable()
+                                ->placeholder('Sem limite'),
+                        ]),
+                ])
+                ->columns(2),
 
-            Grid::make(2)
+            Section::make('Validade')
                 ->schema([
-                    DateTimePicker::make('valid_from')
-                        ->label('Válido a partir de')
-                        ->native(false)
-                        ->displayFormat('d/m/Y H:i')
-                        ->nullable(),
+                    Grid::make(2)
+                        ->schema([
+                            DateTimePicker::make('valid_from')
+                                ->label('Válido a partir de')
+                                ->native(false)
+                                ->displayFormat('d/m/Y H:i')
+                                ->nullable(),
 
-                    DateTimePicker::make('valid_until')
-                        ->label('Válido até')
-                        ->native(false)
-                        ->displayFormat('d/m/Y H:i')
-                        ->nullable(),
+                            DateTimePicker::make('valid_until')
+                                ->label('Válido até')
+                                ->native(false)
+                                ->displayFormat('d/m/Y H:i')
+                                ->nullable(),
+                        ]),
+                ])
+                ->columns(2),
+
+            Section::make('Status')
+                ->schema([
+                    Toggle::make('active')
+                        ->label('Ativo')
+                        ->default(true),
                 ]),
-
-            Toggle::make('active')
-                ->label('Ativo')
-                ->default(true),
         ]);
     }
 
@@ -127,6 +141,7 @@ class CouponResource extends Resource
             ->columns([
                 TextColumn::make('code')
                     ->label('Código')
+                    ->icon('heroicon-o-ticket')
                     ->searchable()
                     ->copyable()
                     ->weight('bold'),
@@ -145,19 +160,25 @@ class CouponResource extends Resource
 
                 TextColumn::make('valid_until')
                     ->label('Expira em')
+                    ->icon('heroicon-o-calendar')
                     ->date('d/m/Y')
                     ->placeholder('—')
                     ->sortable(),
 
-                IconColumn::make('active')
-                    ->label('Ativo')
-                    ->boolean(),
+                TextColumn::make('active')
+                    ->label('Status')
+                    ->badge()
+                    ->formatStateUsing(fn (bool $state): string => $state ? 'Ativo' : 'Inativo')
+                    ->color(fn (bool $state): string => $state ? 'success' : 'danger'),
             ])
             ->actions([
                 EditAction::make()
                     ->modalWidth(Width::Large),
                 DeleteAction::make(),
-            ]);
+            ])
+            ->emptyStateHeading('Nenhum cupom cadastrado')
+            ->emptyStateDescription('Crie um cupom para oferecer descontos aos seus clientes.')
+            ->emptyStateIcon('heroicon-o-ticket');
     }
 
     public static function getPages(): array

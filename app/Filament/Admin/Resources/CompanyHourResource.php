@@ -9,8 +9,8 @@ use Filament\Actions\EditAction;
 use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use UnitEnum;
@@ -34,22 +34,26 @@ class CompanyHourResource extends Resource
     public static function form(Schema $form): Schema
     {
         return $form->schema([
-            Toggle::make('is_closed')
-                ->label('Fechado neste dia')
-                ->reactive()
-                ->columnSpanFull(),
+            Section::make('Horário de funcionamento')
+                ->schema([
+                    Toggle::make('is_closed')
+                        ->label('Fechado neste dia')
+                        ->reactive()
+                        ->columnSpanFull(),
 
-            TimePicker::make('opens_at')
-                ->label('Abre às')
-                ->seconds(false)
-                ->hidden(fn ($get) => $get('is_closed'))
-                ->required(fn ($get) => ! $get('is_closed')),
+                    TimePicker::make('opens_at')
+                        ->label('Abre às')
+                        ->seconds(false)
+                        ->hidden(fn ($get) => $get('is_closed'))
+                        ->required(fn ($get) => ! $get('is_closed')),
 
-            TimePicker::make('closes_at')
-                ->label('Fecha às')
-                ->seconds(false)
-                ->hidden(fn ($get) => $get('is_closed'))
-                ->required(fn ($get) => ! $get('is_closed')),
+                    TimePicker::make('closes_at')
+                        ->label('Fecha às')
+                        ->seconds(false)
+                        ->hidden(fn ($get) => $get('is_closed'))
+                        ->required(fn ($get) => ! $get('is_closed')),
+                ])
+                ->columns(2),
         ]);
     }
 
@@ -61,16 +65,15 @@ class CompanyHourResource extends Resource
             ->columns([
                 TextColumn::make('day_of_week')
                     ->label('Dia')
+                    ->icon('heroicon-o-calendar-days')
                     ->formatStateUsing(fn ($state) => CompanyHour::DAY_NAMES[$state] ?? $state)
                     ->width('180px'),
 
-                IconColumn::make('is_closed')
-                    ->label('Fechado')
-                    ->boolean()
-                    ->trueIcon('heroicon-o-x-circle')
-                    ->falseIcon('heroicon-o-check-circle')
-                    ->trueColor('danger')
-                    ->falseColor('success'),
+                TextColumn::make('is_closed')
+                    ->label('Status')
+                    ->badge()
+                    ->formatStateUsing(fn (bool $state): string => $state ? 'Fechado' : 'Aberto')
+                    ->color(fn (bool $state): string => $state ? 'danger' : 'success'),
 
                 TextColumn::make('opens_at')
                     ->label('Abre às')
@@ -84,7 +87,10 @@ class CompanyHourResource extends Resource
                 EditAction::make()->label('Editar')->modalHeading(
                     fn (CompanyHour $record) => 'Horário — '.CompanyHour::DAY_NAMES[$record->day_of_week]
                 ),
-            ]);
+            ])
+            ->emptyStateHeading('Nenhum horário configurado')
+            ->emptyStateDescription('Defina o horário de funcionamento para cada dia da semana.')
+            ->emptyStateIcon('heroicon-o-clock');
     }
 
     public static function getPages(): array

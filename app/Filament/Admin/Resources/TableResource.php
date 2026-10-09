@@ -8,6 +8,7 @@ use App\Models\Table as TableModel;
 use App\Models\TableSession;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
@@ -16,6 +17,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -63,21 +65,25 @@ class TableResource extends Resource
     public static function form(Schema $form): Schema
     {
         return $form->schema([
-            TextInput::make('name')
-                ->label('Nome da Mesa')
-                ->placeholder('ex: Mesa 1, Mesa VIP, Balcão...')
-                ->required()
-                ->maxLength(100),
+            Section::make('Dados da Mesa')
+                ->schema([
+                    TextInput::make('name')
+                        ->label('Nome da Mesa')
+                        ->placeholder('ex: Mesa 1, Mesa VIP, Balcão...')
+                        ->required()
+                        ->maxLength(100),
 
-            TextInput::make('seats')
-                ->label('Capacidade (lugares)')
-                ->numeric()
-                ->minValue(1)
-                ->placeholder('ex: 4'),
+                    TextInput::make('seats')
+                        ->label('Capacidade (lugares)')
+                        ->numeric()
+                        ->minValue(1)
+                        ->placeholder('ex: 4'),
 
-            Toggle::make('is_active')
-                ->label('Ativa')
-                ->default(true),
+                    Toggle::make('is_active')
+                        ->label('Ativa')
+                        ->default(true),
+                ])
+                ->columns(2),
         ]);
     }
 
@@ -110,97 +116,103 @@ class TableResource extends Resource
 
                 TextColumn::make('client_display')
                     ->label('Cliente')
+                    ->icon(fn (TableModel $record): ?string => $record->activeSession ? 'heroicon-o-user' : null)
                     ->getStateUsing(fn (TableModel $record): string => $record->activeSession
                         ? $record->activeSession->client_display_name
                         : '—'),
             ])
             ->actions([
-                Action::make('open_session')
-                    ->label('Abrir Mesa')
-                    ->icon('heroicon-o-play')
-                    ->color('success')
-                    ->visible(fn (TableModel $record): bool => $record->is_active && $record->activeSession === null)
-                    ->form([
-                        Select::make('client_id')
-                            ->label('Cliente cadastrado')
-                            ->options(function (): array {
-                                $company = filament()->getTenant();
+                ActionGroup::make([
+                    Action::make('open_session')
+                        ->label('Abrir Mesa')
+                        ->icon('heroicon-o-play')
+                        ->color('success')
+                        ->visible(fn (TableModel $record): bool => $record->is_active && $record->activeSession === null)
+                        ->form([
+                            Select::make('client_id')
+                                ->label('Cliente cadastrado')
+                                ->options(function (): array {
+                                    $company = filament()->getTenant();
 
-                                return Client::whereHas('companies', fn ($q) => $q->where('companies.id', $company->id))
-                                    ->get()
-                                    ->mapWithKeys(fn ($c) => [$c->id => $c->name.' — '.$c->document_number])
-                                    ->toArray();
-                            })
-                            ->searchable()
-                            ->placeholder('Selecionar cliente cadastrado'),
+                                    return Client::whereHas('companies', fn ($q) => $q->where('companies.id', $company->id))
+                                        ->get()
+                                        ->mapWithKeys(fn ($c) => [$c->id => $c->name.' — '.$c->document_number])
+                                        ->toArray();
+                                })
+                                ->searchable()
+                                ->placeholder('Selecionar cliente cadastrado'),
 
-                        TextInput::make('guest_name')
-                            ->label('Nome do cliente')
-                            ->placeholder('ex: João Silva')
-                            ->helperText('Preencha se o cliente não estiver cadastrado'),
+                            TextInput::make('guest_name')
+                                ->label('Nome do cliente')
+                                ->placeholder('ex: João Silva')
+                                ->helperText('Preencha se o cliente não estiver cadastrado'),
 
-                        Textarea::make('notes')
-                            ->label('Observações')
-                            ->rows(2),
-                    ])
-                    ->action(function (TableModel $record, array $data): void {
-                        $session = TableSession::create([
-                            'uuid' => str()->uuid(),
-                            'company_id' => $record->company_id,
-                            'table_id' => $record->id,
-                            'client_id' => $data['client_id'] ?? null,
-                            'guest_name' => $data['guest_name'] ?? null,
-                            'status' => 'open',
-                            'opened_at' => now(),
-                            'total_amount' => 0,
-                            'notes' => $data['notes'] ?? null,
-                        ]);
+                            Textarea::make('notes')
+                                ->label('Observações')
+                                ->rows(2),
+                        ])
+                        ->action(function (TableModel $record, array $data): void {
+                            $session = TableSession::create([
+                                'uuid' => str()->uuid(),
+                                'company_id' => $record->company_id,
+                                'table_id' => $record->id,
+                                'client_id' => $data['client_id'] ?? null,
+                                'guest_name' => $data['guest_name'] ?? null,
+                                'status' => 'open',
+                                'opened_at' => now(),
+                                'total_amount' => 0,
+                                'notes' => $data['notes'] ?? null,
+                            ]);
 
-                        Notification::make()
-                            ->title('Mesa aberta!')
-                            ->success()
-                            ->send();
+                            Notification::make()
+                                ->title('Mesa aberta!')
+                                ->success()
+                                ->send();
 
-                        redirect(TableSessionResource::getUrl('view', ['record' => $session->uuid]));
-                    }),
+                            redirect(TableSessionResource::getUrl('view', ['record' => $session->uuid]));
+                        }),
 
-                Action::make('view_session')
-                    ->label('Ver Sessão')
-                    ->icon('heroicon-o-eye')
-                    ->color('warning')
-                    ->visible(fn (TableModel $record): bool => $record->activeSession !== null)
-                    ->url(fn (TableModel $record): string => TableSessionResource::getUrl('view', [
-                        'record' => $record->activeSession->uuid,
-                    ])),
+                    Action::make('view_session')
+                        ->label('Ver Sessão')
+                        ->icon('heroicon-o-eye')
+                        ->color('warning')
+                        ->visible(fn (TableModel $record): bool => $record->activeSession !== null)
+                        ->url(fn (TableModel $record): string => TableSessionResource::getUrl('view', [
+                            'record' => $record->activeSession->uuid,
+                        ])),
 
-                Action::make('qr_code')
-                    ->label('QR Code')
-                    ->icon('heroicon-o-qr-code')
-                    ->color('gray')
-                    ->modalHeading(fn (TableModel $record): string => 'QR Code — '.$record->name)
-                    ->modalContent(fn (TableModel $record): View => view(
-                        'filament.resources.table.qr-modal',
-                        [
-                            'record' => $record,
-                            'url' => route('table.show', $record->uuid),
-                        ]
-                    ))
-                    ->modalSubmitAction(false)
-                    ->modalCancelActionLabel('Fechar'),
+                    Action::make('qr_code')
+                        ->label('QR Code')
+                        ->icon('heroicon-o-qr-code')
+                        ->color('gray')
+                        ->modalHeading(fn (TableModel $record): string => 'QR Code — '.$record->name)
+                        ->modalContent(fn (TableModel $record): View => view(
+                            'filament.resources.table.qr-modal',
+                            [
+                                'record' => $record,
+                                'url' => route('table.show', $record->uuid),
+                            ]
+                        ))
+                        ->modalSubmitAction(false)
+                        ->modalCancelActionLabel('Fechar'),
 
-                EditAction::make()
-                    ->label('Editar'),
+                    EditAction::make()
+                        ->label('Editar'),
 
-                DeleteAction::make()
-                    ->label('Excluir')
-                    ->visible(fn (TableModel $record): bool => $record->activeSession === null),
+                    DeleteAction::make()
+                        ->label('Excluir')
+                        ->visible(fn (TableModel $record): bool => $record->activeSession === null),
+                ]),
             ])
             ->headerActions([
                 Action::make('create')
                     ->label('Nova Mesa')
                     ->icon('heroicon-o-plus')
                     ->url(static::getUrl('create')),
-            ]);
+            ])
+            ->emptyStateHeading('Nenhuma mesa cadastrada')
+            ->emptyStateDescription('Cadastre uma mesa para começar a receber pedidos via QR Code.')
+            ->emptyStateIcon('heroicon-o-table-cells');
     }
 
     public static function getPages(): array

@@ -130,11 +130,13 @@ class TableSessionResource extends Resource
             ->columns([
                 TextColumn::make('table.name')
                     ->label('Mesa')
+                    ->icon('heroicon-o-table-cells')
                     ->searchable()
                     ->sortable(),
 
                 TextColumn::make('client_display_name')
                     ->label('Cliente')
+                    ->icon('heroicon-o-user')
                     ->getStateUsing(fn (TableSession $record): string => $record->client_display_name),
 
                 TextColumn::make('status')
@@ -162,6 +164,7 @@ class TableSessionResource extends Resource
 
                 TextColumn::make('opened_at')
                     ->label('Aberta em')
+                    ->icon('heroicon-o-clock')
                     ->dateTime('d/m/Y H:i')
                     ->sortable(),
 
@@ -336,7 +339,10 @@ class TableSessionResource extends Resource
                             ->success()
                             ->send();
                     }),
-            ]);
+            ])
+            ->emptyStateHeading('Nenhuma sessão registrada')
+            ->emptyStateDescription('As sessões aparecem aqui quando uma mesa é aberta.')
+            ->emptyStateIcon('heroicon-o-clipboard-document-list');
     }
 
     public static function getRelations(): array
