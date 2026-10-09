@@ -15,5 +15,9 @@ class VerifyCsrfToken extends Middleware
         'sso-callback',
         'entrega/*/localizacao',
         'entrega/*/pagamento',
+        'entrega/*/retirada',
+        'entrega/*/concluir',
+        'entrega/*/problema',
+        'entrega/*/avaliacao',
     ];
 }
