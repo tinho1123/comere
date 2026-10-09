@@ -238,22 +238,18 @@ export default function MarketplaceIndex({ companies, lastVisited, categories, s
 
             {/* Categorias */}
             {categories.length > 0 && (
-                <div className="flex gap-4 overflow-x-auto pb-4 mb-8 no-scrollbar">
+                <div className="flex gap-3 overflow-x-auto pb-4 mb-8 no-scrollbar">
                     {categories.map((cat) => (
                         <Link
                             key={cat.uuid}
                             href={`/?category=${cat.uuid}`}
-                            className={`flex-shrink-0 px-6 py-8 rounded-2xl border transition-all hover:shadow-lg flex flex-col items-center gap-2 group ${selectedCategory === cat.uuid
-                                    ? 'bg-red-50 border-red-200 ring-2 ring-red-500/20'
-                                    : 'bg-white border-gray-100 hover:border-red-100'
+                            className={`flex-shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-full border font-bold text-sm transition-all ${selectedCategory === cat.uuid
+                                    ? 'bg-red-500 border-red-500 text-white shadow-md shadow-red-500/20'
+                                    : 'bg-white border-gray-100 text-gray-600 hover:border-red-200'
                                 }`}
                         >
-                            <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform text-2xl">
-                                {cat.icon}
-                            </div>
-                            <span className={`text-sm font-semibold ${selectedCategory === cat.uuid ? 'text-red-600' : 'text-gray-600'}`}>
-                                {cat.name}
-                            </span>
+                            <span className="text-base">{cat.icon}</span>
+                            {cat.name}
                         </Link>
                     ))}
                 </div>
@@ -261,7 +257,7 @@ export default function MarketplaceIndex({ companies, lastVisited, categories, s
 
             {/* Favoritos */}
             {favoriteCompanies.length > 0 && (
-                <div className="mb-12">
+                <div id="favoritos" className="mb-12 scroll-mt-20">
                     <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
                         <Heart size={20} className="text-red-500" fill="currentColor" /> Favoritos
                     </h3>
