@@ -20,7 +20,7 @@ class VerifyCsrfTokenExceptionsTest extends TestCase
     #[Test]
     public function it_excepts_every_fetch_based_delivery_tracking_endpoint_from_csrf()
     {
-        $except = (new VerifyCsrfToken(app()))->getExcludedPaths();
+        $except = app(VerifyCsrfToken::class)->getExcludedPaths();
 
         foreach ([
             'entrega/*/localizacao',
