@@ -3,6 +3,7 @@
 namespace Tests\Feature\Marketplace;
 
 use App\Models\Client;
+use App\Models\ClientAddress;
 use App\Models\Company;
 use App\Models\Delivery;
 use App\Models\Driver;
@@ -18,7 +19,7 @@ class DeliveryTrackingTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function makeDispatchedDelivery(Company $company, Client $client): Delivery
+    private function makeDispatchedDelivery(Company $company, Client $client, bool $withOrderAddress = true): Delivery
     {
         $order = Order::create([
             'uuid' => (string) Str::uuid(),
@@ -30,8 +31,8 @@ class DeliveryTrackingTest extends TestCase
             'discount_amount' => 0,
             'fee_amount' => 0,
             'total_amount' => 50,
-            'delivery_latitude' => -23.55,
-            'delivery_longitude' => -46.63,
+            'delivery_latitude' => $withOrderAddress ? -23.55 : null,
+            'delivery_longitude' => $withOrderAddress ? -46.63 : null,
         ]);
 
         $driver = Driver::create([
@@ -85,6 +86,55 @@ class DeliveryTrackingTest extends TestCase
         $response->assertOk();
         $response->assertSee($company->name);
         $response->assertSee(strtoupper(substr($delivery->order->uuid, 0, 8)));
+    }
+
+    #[Test]
+    public function it_falls_back_to_the_clients_default_address_when_the_order_has_no_delivery_address()
+    {
+        // Regressão: MarketplaceController::storeOrder() nunca preenche
+        // delivery_street/.../delivery_longitude no pedido (isso só acontece
+        // pra pedidos criados manualmente com endereço digitado) — ou seja,
+        // todo pedido online real cai aqui. Antes do fix, a view mostrava
+        // vírgulas soltas no lugar do endereço e o mapa nunca inicializava
+        // (sem lat/lng), porque usava os campos do pedido direto, sem cair
+        // pro endereço padrão do cliente como o admin já fazia.
+        $company = Company::factory()->create();
+        $client = Client::factory()->create(['company_id' => $company->id]);
+        ClientAddress::create([
+            'uuid' => (string) Str::uuid(),
+            'client_id' => $client->id,
+            'zip_code' => '28890-000',
+            'street' => 'Rua das Flores',
+            'number' => '42',
+            'neighborhood' => 'Centro',
+            'city' => 'Rio das Ostras',
+            'state' => 'RJ',
+            'latitude' => -22.53,
+            'longitude' => -41.95,
+            'is_default' => true,
+        ]);
+
+        $delivery = $this->makeDispatchedDelivery($company, $client, withOrderAddress: false);
+
+        $response = $this->get(route('delivery.tracking.show', $delivery->tracking_token));
+
+        $response->assertOk();
+        $response->assertSee('Rua das Flores');
+        $response->assertSee('Centro');
+        $response->assertDontSee('Endereço não cadastrado.');
+    }
+
+    #[Test]
+    public function it_shows_a_placeholder_when_neither_the_order_nor_the_client_has_an_address()
+    {
+        $company = Company::factory()->create();
+        $client = Client::factory()->create(['company_id' => $company->id]);
+        $delivery = $this->makeDispatchedDelivery($company, $client, withOrderAddress: false);
+
+        $response = $this->get(route('delivery.tracking.show', $delivery->tracking_token));
+
+        $response->assertOk();
+        $response->assertSee('Endereço não cadastrado.');
     }
 
     #[Test]

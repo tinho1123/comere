@@ -1,3 +1,38 @@
+@php
+    // O checkout do marketplace (MarketplaceController::storeOrder) nunca
+    // preenche delivery_street/number/.../latitude/longitude no pedido —
+    // só a OrderResource do admin faz isso pra pedidos com endereço digitado
+    // manualmente. Pra pedidos online "normais", caímos no endereço padrão
+    // do cliente, igual o order-location.blade.php do admin já faz.
+    $hasOrderAddress = $delivery->order->delivery_latitude && $delivery->order->delivery_longitude;
+
+    if ($hasOrderAddress) {
+        $destAddr = [
+            'street' => $delivery->order->delivery_street,
+            'number' => $delivery->order->delivery_number,
+            'complement' => $delivery->order->delivery_complement,
+            'neighborhood' => $delivery->order->delivery_neighborhood,
+            'city' => $delivery->order->delivery_city,
+            'state' => $delivery->order->delivery_state,
+            'lat' => (float) $delivery->order->delivery_latitude,
+            'lng' => (float) $delivery->order->delivery_longitude,
+        ];
+    } else {
+        $clientAddr = $delivery->order->client?->defaultAddress()->first();
+        $destAddr = [
+            'street' => $clientAddr?->street,
+            'number' => $clientAddr?->number,
+            'complement' => $clientAddr?->complement,
+            'neighborhood' => $clientAddr?->neighborhood,
+            'city' => $clientAddr?->city,
+            'state' => $clientAddr?->state,
+            'lat' => $clientAddr?->latitude ? (float) $clientAddr->latitude : null,
+            'lng' => $clientAddr?->longitude ? (float) $clientAddr->longitude : null,
+        ];
+    }
+
+    $hasDestAddress = $destAddr['street'] || $destAddr['neighborhood'];
+@endphp
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -90,12 +125,16 @@
                 <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Entrega · cliente</p>
                 <h1 class="text-lg font-black text-gray-900">{{ $delivery->order->client->name ?? 'Cliente' }}</h1>
                 <p class="text-sm text-gray-500 mt-1">
-                    {{ $delivery->order->delivery_street }}, {{ $delivery->order->delivery_number }}
-                    @if ($delivery->order->delivery_complement)
-                        — {{ $delivery->order->delivery_complement }}
+                    @if ($hasDestAddress)
+                        {{ $destAddr['street'] }}@if ($destAddr['number']), {{ $destAddr['number'] }}@endif
+                        @if ($destAddr['complement'])
+                            — {{ $destAddr['complement'] }}
+                        @endif
+                        <br>
+                        {{ $destAddr['neighborhood'] }}@if ($destAddr['city']), {{ $destAddr['city'] }}@endif@if ($destAddr['state'])/{{ $destAddr['state'] }}@endif
+                    @else
+                        Endereço não cadastrado.
                     @endif
-                    <br>
-                    {{ $delivery->order->delivery_neighborhood }}, {{ $delivery->order->delivery_city }}/{{ $delivery->order->delivery_state }}
                 </p>
                 <p id="transit-distance" class="text-xs font-bold text-gray-400 mt-2"></p>
             </div>
@@ -130,9 +169,13 @@
             <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Entrega · cliente</p>
             <h1 class="text-lg font-black text-gray-900">{{ $delivery->order->client->name ?? 'Cliente' }}</h1>
             <p class="text-sm text-gray-500 mt-1">
-                {{ $delivery->order->delivery_street }}, {{ $delivery->order->delivery_number }}
-                @if ($delivery->order->delivery_complement)
-                    — {{ $delivery->order->delivery_complement }}
+                @if ($hasDestAddress)
+                    {{ $destAddr['street'] }}@if ($destAddr['number']), {{ $destAddr['number'] }}@endif
+                    @if ($destAddr['complement'])
+                        — {{ $destAddr['complement'] }}
+                    @endif
+                @else
+                    Endereço não cadastrado.
                 @endif
             </p>
         </div>
@@ -241,8 +284,8 @@
         feedback: @json(route('delivery.tracking.feedback', $delivery->tracking_token)),
     };
     const DESTINATION = {
-        lat: @json($delivery->order->delivery_latitude),
-        lng: @json($delivery->order->delivery_longitude),
+        lat: @json($destAddr['lat']),
+        lng: @json($destAddr['lng']),
     };
     const ARRIVAL_RADIUS_METERS = 150;
 
