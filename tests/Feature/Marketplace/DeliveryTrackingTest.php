@@ -103,6 +103,7 @@ class DeliveryTrackingTest extends TestCase
         ClientAddress::create([
             'uuid' => (string) Str::uuid(),
             'client_id' => $client->id,
+            'zip_code' => '28890-000',
             'street' => 'Rua das Flores',
             'number' => '42',
             'neighborhood' => 'Centro',
