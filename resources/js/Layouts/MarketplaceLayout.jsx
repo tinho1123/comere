@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, LogIn, X, Mail, LogOut, ShoppingCart, Search, Package, MapPin, ChevronDown, Plus, Check, Trash2 } from 'lucide-react';
+import { User, LogIn, X, Mail, LogOut, ShoppingCart, Search, Package, MapPin, ChevronDown, Plus, Check, Trash2, Home, Heart } from 'lucide-react';
 import axios from 'axios';
 
 export default function MarketplaceLayout({ children }) {
-    const { auth, orders_count, default_address } = usePage().props;
+    const { props: { auth, orders_count, default_address }, url } = usePage();
     const [isAuthOpen, setIsAuthOpen] = useState(false);
     const [isAddressOpen, setIsAddressOpen] = useState(false);
+    const [isProfileSheetOpen, setIsProfileSheetOpen] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -361,9 +362,100 @@ export default function MarketplaceLayout({ children }) {
                 </div>
             </nav>
 
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 min-h-[calc(100vh-12rem)]">
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8 min-h-[calc(100vh-12rem)]">
                 {children}
             </main>
+
+            {/* Abas fixas — só no mobile; no desktop a navegação fica no topo */}
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-100 flex items-stretch justify-around pb-[env(safe-area-inset-bottom)]">
+                <Link
+                    href="/"
+                    className={`flex flex-col items-center justify-center gap-1 py-2.5 flex-1 ${url === '/' ? 'text-red-500' : 'text-gray-400'}`}
+                >
+                    <Home size={20} />
+                    <span className={`text-[11px] ${url === '/' ? 'font-bold' : 'font-medium'}`}>Início</span>
+                </Link>
+                <Link
+                    href="/meus-pedidos"
+                    className={`flex flex-col items-center justify-center gap-1 py-2.5 flex-1 ${url.startsWith('/meus-pedidos') ? 'text-red-500' : 'text-gray-400'}`}
+                >
+                    <Package size={20} />
+                    <span className={`text-[11px] ${url.startsWith('/meus-pedidos') ? 'font-bold' : 'font-medium'}`}>Pedidos</span>
+                </Link>
+                <Link
+                    href="/#favoritos"
+                    className="flex flex-col items-center justify-center gap-1 py-2.5 flex-1 text-gray-400"
+                >
+                    <Heart size={20} />
+                    <span className="text-[11px] font-medium">Favoritos</span>
+                </Link>
+                <button
+                    onClick={() => (isAuthenticated ? setIsProfileSheetOpen(true) : setIsAuthOpen(true))}
+                    className="flex flex-col items-center justify-center gap-1 py-2.5 flex-1 text-gray-400"
+                >
+                    <User size={20} />
+                    <span className="text-[11px] font-medium">Perfil</span>
+                </button>
+            </nav>
+
+            {/* Perfil — bottom sheet mobile */}
+            <AnimatePresence>
+                {isProfileSheetOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsProfileSheetOpen(false)}
+                            className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+                        />
+                        <motion.div
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+                            className="md:hidden fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-3xl shadow-2xl p-6"
+                        >
+                            <div className="flex items-center gap-3 mb-5">
+                                <div className="h-12 w-12 rounded-full bg-gradient-to-tr from-red-500 to-red-400 p-0.5 shadow-sm flex-shrink-0">
+                                    <div className="h-full w-full rounded-full bg-white flex items-center justify-center">
+                                        <User size={20} className="text-red-500" />
+                                    </div>
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Bem-vindo</p>
+                                    <p className="text-sm font-bold text-gray-900 truncate">{displayUser?.name || 'Usuário'}</p>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => { setIsProfileSheetOpen(false); openAddressModal(); }}
+                                className="w-full flex items-center gap-3 px-2 py-3 text-sm font-semibold text-gray-700 border-t border-gray-100"
+                            >
+                                <MapPin size={18} className="text-gray-400" />
+                                {defaultAddressLabel}
+                            </button>
+
+                            <Link
+                                href="/meus-pedidos"
+                                onClick={() => setIsProfileSheetOpen(false)}
+                                className="w-full flex items-center gap-3 px-2 py-3 text-sm font-semibold text-gray-700 border-t border-gray-100"
+                            >
+                                <Package size={18} className="text-gray-400" />
+                                Meus Pedidos
+                            </Link>
+
+                            <button
+                                onClick={() => { setIsProfileSheetOpen(false); handleLogout(); }}
+                                className="w-full flex items-center gap-3 px-2 py-3 text-sm font-semibold text-red-500 border-t border-gray-100"
+                            >
+                                <LogOut size={18} />
+                                Sair
+                            </button>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
 
             {/* Auth Drawer */}
             <AnimatePresence>
