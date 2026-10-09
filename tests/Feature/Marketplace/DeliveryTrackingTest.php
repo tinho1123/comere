@@ -19,7 +19,7 @@ class DeliveryTrackingTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function makeDispatchedDelivery(Company $company, Client $client): Delivery
+    private function makeDispatchedDelivery(Company $company, Client $client, bool $withOrderAddress = true): Delivery
     {
         $order = Order::create([
             'uuid' => (string) Str::uuid(),
@@ -31,8 +31,8 @@ class DeliveryTrackingTest extends TestCase
             'discount_amount' => 0,
             'fee_amount' => 0,
             'total_amount' => 50,
-            'delivery_latitude' => -23.55,
-            'delivery_longitude' => -46.63,
+            'delivery_latitude' => $withOrderAddress ? -23.55 : null,
+            'delivery_longitude' => $withOrderAddress ? -46.63 : null,
         ]);
 
         $driver = Driver::create([
@@ -114,7 +114,7 @@ class DeliveryTrackingTest extends TestCase
             'is_default' => true,
         ]);
 
-        $delivery = $this->makeDispatchedDelivery($company, $client);
+        $delivery = $this->makeDispatchedDelivery($company, $client, withOrderAddress: false);
 
         $response = $this->get(route('delivery.tracking.show', $delivery->tracking_token));
 
@@ -129,7 +129,7 @@ class DeliveryTrackingTest extends TestCase
     {
         $company = Company::factory()->create();
         $client = Client::factory()->create(['company_id' => $company->id]);
-        $delivery = $this->makeDispatchedDelivery($company, $client);
+        $delivery = $this->makeDispatchedDelivery($company, $client, withOrderAddress: false);
 
         $response = $this->get(route('delivery.tracking.show', $delivery->tracking_token));
 
