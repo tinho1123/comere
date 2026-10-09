@@ -101,6 +101,7 @@ class DeliveryTrackingTest extends TestCase
         $company = Company::factory()->create();
         $client = Client::factory()->create(['company_id' => $company->id]);
         ClientAddress::create([
+            'uuid' => (string) Str::uuid(),
             'client_id' => $client->id,
             'street' => 'Rua das Flores',
             'number' => '42',
