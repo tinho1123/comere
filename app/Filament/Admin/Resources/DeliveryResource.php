@@ -12,6 +12,7 @@ use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -42,8 +43,11 @@ class DeliveryResource extends Resource
     public static function form(Schema $form): Schema
     {
         return $form->schema([
-            Forms\Components\TextInput::make('notes')
-                ->label('Observações'),
+            Section::make('Observações')
+                ->schema([
+                    Forms\Components\TextInput::make('notes')
+                        ->label('Observações'),
+                ]),
         ]);
     }
 
@@ -106,17 +110,17 @@ class DeliveryResource extends Resource
                     ->label('Valor entrega')
                     ->money('BRL'),
 
-                Tables\Columns\IconColumn::make('is_paid')
+                Tables\Columns\TextColumn::make('is_paid')
                     ->label('Pago')
-                    ->boolean()
-                    ->trueColor('success')
-                    ->falseColor('gray'),
+                    ->badge()
+                    ->formatStateUsing(fn (bool $state): string => $state ? 'Pago' : 'Pendente')
+                    ->color(fn (bool $state): string => $state ? 'success' : 'gray'),
 
-                Tables\Columns\IconColumn::make('payment_collected')
+                Tables\Columns\TextColumn::make('payment_collected')
                     ->label('Cliente pagou')
-                    ->boolean()
-                    ->trueColor('success')
-                    ->falseColor('gray'),
+                    ->badge()
+                    ->formatStateUsing(fn (bool $state): string => $state ? 'Sim' : 'Não')
+                    ->color(fn (bool $state): string => $state ? 'success' : 'gray'),
 
                 Tables\Columns\TextColumn::make('dispatched_at')
                     ->label('Despachado em')
@@ -216,7 +220,10 @@ class DeliveryResource extends Resource
                         ->deselectRecordsAfterCompletion()
                         ->action(fn (Collection $records) => $records->each->update(['is_paid' => true])),
                 ]),
-            ]);
+            ])
+            ->emptyStateHeading('Nenhuma entrega registrada')
+            ->emptyStateDescription('Entregas aparecem aqui quando um pedido online é despachado.')
+            ->emptyStateIcon('heroicon-o-map-pin');
     }
 
     public static function getPages(): array

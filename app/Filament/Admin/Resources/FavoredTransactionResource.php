@@ -63,113 +63,134 @@ class FavoredTransactionResource extends Resource
                 ])
                 ->visibleOn('create'),
 
-            Forms\Components\TextInput::make('client_name')
-                ->label('Devedor')
-                ->disabled()
-                ->dehydrated(false)
+            Schemas\Components\Section::make('Devedor')
+                ->schema([
+                    Forms\Components\TextInput::make('client_name')
+                        ->label('Devedor')
+                        ->disabled()
+                        ->dehydrated(false)
+                        ->visibleOn('edit'),
+                ])
                 ->visibleOn('edit'),
 
-            Forms\Components\DatePicker::make('due_date')
-                ->label('Vencimento')
-                ->nullable()
-                ->displayFormat('d/m/Y'),
-
-            Forms\Components\Repeater::make('items')
-                ->label('Produtos')
+            Schemas\Components\Section::make('Vencimento')
                 ->schema([
-                    Forms\Components\Select::make('product_id')
-                        ->label('Produto')
-                        ->options(function (): array {
-                            $companyId = Filament::getTenant()->id;
+                    Forms\Components\DatePicker::make('due_date')
+                        ->label('Vencimento')
+                        ->nullable()
+                        ->displayFormat('d/m/Y'),
+                ]),
 
-                            $products = Product::with('subcategory')
-                                ->where('company_id', $companyId)
-                                ->where('is_for_favored', true)
-                                ->where('active', true)
-                                ->orderBy('name')
-                                ->get();
+            Schemas\Components\Section::make('Produtos')
+                ->schema([
+                    Forms\Components\Repeater::make('items')
+                        ->label('Produtos')
+                        ->schema([
+                            Forms\Components\Select::make('product_id')
+                                ->label('Produto')
+                                ->options(function (): array {
+                                    $companyId = Filament::getTenant()->id;
 
-                            $grouped = [];
-                            foreach ($products as $p) {
-                                $group = $p->subcategory?->name ?? 'Outros';
-                                $grouped[$group][$p->id] = $p->name.' — R$ '.number_format($p->favored_price ?? $p->amount, 2, ',', '.');
-                            }
-                            ksort($grouped);
+                                    $products = Product::with('subcategory')
+                                        ->where('company_id', $companyId)
+                                        ->where('is_for_favored', true)
+                                        ->where('active', true)
+                                        ->orderBy('name')
+                                        ->get();
 
-                            return $grouped;
-                        })
-                        ->searchable()
-                        ->required()
-                        ->live()
-                        ->afterStateUpdated(function ($state, Set $set): void {
-                            if (! $state) {
-                                return;
-                            }
-                            $product = Product::find($state);
-                            if ($product) {
-                                $set('favored_price', number_format($product->favored_price ?? $product->amount, 2, '.', ''));
-                                $set('product_name', $product->name);
-                            }
-                        })
-                        ->columnSpan(2),
+                                    $grouped = [];
+                                    foreach ($products as $p) {
+                                        $group = $p->subcategory?->name ?? 'Outros';
+                                        $grouped[$group][$p->id] = $p->name.' — R$ '.number_format($p->favored_price ?? $p->amount, 2, ',', '.');
+                                    }
+                                    ksort($grouped);
 
-                    Forms\Components\TextInput::make('quantity')
-                        ->label('Qtd')
-                        ->numeric()
-                        ->default(1)
-                        ->minValue(1)
-                        ->required()
-                        ->columnSpan(1),
+                                    return $grouped;
+                                })
+                                ->searchable()
+                                ->required()
+                                ->live()
+                                ->afterStateUpdated(function ($state, Set $set): void {
+                                    if (! $state) {
+                                        return;
+                                    }
+                                    $product = Product::find($state);
+                                    if ($product) {
+                                        $set('favored_price', number_format($product->favored_price ?? $product->amount, 2, '.', ''));
+                                        $set('product_name', $product->name);
+                                    }
+                                })
+                                ->columnSpan(2),
 
-                    Forms\Components\TextInput::make('favored_price')
-                        ->label('Preço Fiado (R$)')
-                        ->numeric()
-                        ->prefix('R$')
-                        ->required()
-                        ->columnSpan(1),
+                            Forms\Components\TextInput::make('quantity')
+                                ->label('Qtd')
+                                ->numeric()
+                                ->default(1)
+                                ->minValue(1)
+                                ->required()
+                                ->columnSpan(1),
 
-                    Forms\Components\Hidden::make('product_name'),
+                            Forms\Components\TextInput::make('favored_price')
+                                ->label('Preço Fiado (R$)')
+                                ->numeric()
+                                ->prefix('R$')
+                                ->required()
+                                ->columnSpan(1),
+
+                            Forms\Components\Hidden::make('product_name'),
+                        ])
+                        ->columns(4)
+                        ->minItems(1)
+                        ->addActionLabel('Adicionar produto')
+                        ->columnSpanFull()
+                        ->dehydrated(false)
+                        ->visibleOn('create'),
                 ])
-                ->columns(4)
-                ->minItems(1)
-                ->addActionLabel('Adicionar produto')
-                ->columnSpanFull()
-                ->dehydrated(false)
                 ->visibleOn('create'),
 
-            Schemas\Components\Grid::make(2)
+            Schemas\Components\Section::make('Produto')
                 ->schema([
-                    Forms\Components\TextInput::make('name')
-                        ->label('Produto')
-                        ->disabled()
-                        ->dehydrated(false),
+                    Schemas\Components\Grid::make(2)
+                        ->schema([
+                            Forms\Components\TextInput::make('name')
+                                ->label('Produto')
+                                ->disabled()
+                                ->dehydrated(false),
 
-                    Forms\Components\TextInput::make('quantity')
-                        ->label('Quantidade')
-                        ->numeric()
-                        ->required(),
+                            Forms\Components\TextInput::make('quantity')
+                                ->label('Quantidade')
+                                ->numeric()
+                                ->required(),
+                        ]),
                 ])
                 ->visibleOn('edit'),
 
-            Schemas\Components\Grid::make(2)
+            Schemas\Components\Section::make('Valores')
                 ->schema([
-                    Forms\Components\TextInput::make('favored_total')
-                        ->label('Valor Total do Fiado')
-                        ->numeric()
-                        ->prefix('R$')
-                        ->required(),
+                    Schemas\Components\Grid::make(2)
+                        ->schema([
+                            Forms\Components\TextInput::make('favored_total')
+                                ->label('Valor Total do Fiado')
+                                ->numeric()
+                                ->prefix('R$')
+                                ->required(),
 
-                    Forms\Components\TextInput::make('favored_paid_amount')
-                        ->label('Valor Pago')
-                        ->numeric()
-                        ->prefix('R$')
-                        ->default(0),
+                            Forms\Components\TextInput::make('favored_paid_amount')
+                                ->label('Valor Pago')
+                                ->numeric()
+                                ->prefix('R$')
+                                ->default(0),
+                        ]),
                 ])
                 ->visibleOn('edit'),
 
-            Forms\Components\Toggle::make('active')
-                ->label('Ativo')
-                ->default(true)
+            Schemas\Components\Section::make('Status')
+                ->schema([
+                    Forms\Components\Toggle::make('active')
+                        ->label('Ativo')
+                        ->default(true)
+                        ->visibleOn('edit'),
+                ])
                 ->visibleOn('edit'),
         ]);
     }
@@ -181,6 +202,8 @@ class FavoredTransactionResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('person_name')
                     ->label('Pessoa')
+                    ->icon('heroicon-o-user')
+                    ->weight('medium')
                     ->getStateUsing(fn (FavoredTransaction $record): string => $record->client?->name ?? $record->client_name ?? '—')
                     ->searchable(query: fn ($query, $search) => $query
                         ->whereHas('client', fn ($q) => $q->where('name', 'like', "%{$search}%"))
@@ -189,6 +212,7 @@ class FavoredTransactionResource extends Resource
 
                 Tables\Columns\TextColumn::make('name')
                     ->label('Produto')
+                    ->color('gray')
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('quantity')
@@ -213,13 +237,16 @@ class FavoredTransactionResource extends Resource
 
                 Tables\Columns\TextColumn::make('due_date')
                     ->label('Vencimento')
+                    ->icon('heroicon-o-calendar')
                     ->date('d/m/Y')
                     ->placeholder('—')
                     ->sortable(),
 
-                Tables\Columns\IconColumn::make('active')
-                    ->label('Ativo')
-                    ->boolean(),
+                Tables\Columns\TextColumn::make('active')
+                    ->label('Status')
+                    ->badge()
+                    ->formatStateUsing(fn (bool $state): string => $state ? 'Ativo' : 'Inativo')
+                    ->color(fn (bool $state): string => $state ? 'success' : 'danger'),
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('active')
@@ -252,7 +279,10 @@ class FavoredTransactionResource extends Resource
                 Actions\BulkActionGroup::make([
                     Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->emptyStateHeading('Nenhum fiado registrado')
+            ->emptyStateDescription('Registre um fiado para começar a controlar os valores devidos.')
+            ->emptyStateIcon('heroicon-o-banknotes');
     }
 
     public static function getEloquentQuery(): Builder

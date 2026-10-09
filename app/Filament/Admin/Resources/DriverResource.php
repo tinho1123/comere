@@ -11,6 +11,7 @@ use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -43,13 +44,16 @@ class DriverResource extends Resource
     public static function form(Schema $form): Schema
     {
         return $form->schema([
-            Forms\Components\TextInput::make('delivery_fee')
-                ->label('Valor por entrega')
-                ->numeric()
-                ->prefix('R$')
-                ->minValue(0)
-                ->step(0.01)
-                ->required(),
+            Section::make('Valor da entrega')
+                ->schema([
+                    Forms\Components\TextInput::make('delivery_fee')
+                        ->label('Valor por entrega')
+                        ->numeric()
+                        ->prefix('R$')
+                        ->minValue(0)
+                        ->step(0.01)
+                        ->required(),
+                ]),
         ]);
     }
 
@@ -65,6 +69,8 @@ class DriverResource extends Resource
 
                 Tables\Columns\TextColumn::make('driver.phone')
                     ->label('Telefone')
+                    ->icon('heroicon-o-phone')
+                    ->color('gray')
                     ->placeholder('—'),
 
                 Tables\Columns\BadgeColumn::make('driver.vehicle_type')
@@ -196,7 +202,10 @@ class DriverResource extends Resource
                 Actions\DeleteAction::make()
                     ->label('Remover vínculo')
                     ->visible(fn (DriverCompany $record): bool => $record->status !== Driver::LINK_PENDING),
-            ]);
+            ])
+            ->emptyStateHeading('Nenhum motorista vinculado')
+            ->emptyStateDescription('Convide um motorista pelo telefone para começar a despachar entregas.')
+            ->emptyStateIcon('heroicon-o-truck');
     }
 
     public static function getPages(): array

@@ -9,6 +9,7 @@ use Filament\Actions;
 use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -33,15 +34,18 @@ class ProductSubcategoryResource extends Resource
     public static function form(Schema $form): Schema
     {
         return $form->schema([
-            Forms\Components\TextInput::make('name')
-                ->label('Nome')
-                ->required()
-                ->maxLength(100)
-                ->placeholder('Ex: 300ml, 500ml, Garrafa, Lata...'),
+            Section::make('Subcategoria')
+                ->schema([
+                    Forms\Components\TextInput::make('name')
+                        ->label('Nome')
+                        ->required()
+                        ->maxLength(100)
+                        ->placeholder('Ex: 300ml, 500ml, Garrafa, Lata...'),
 
-            Forms\Components\Toggle::make('active')
-                ->label('Ativa')
-                ->default(true),
+                    Forms\Components\Toggle::make('active')
+                        ->label('Ativa')
+                        ->default(true),
+                ]),
         ]);
     }
 
@@ -52,6 +56,8 @@ class ProductSubcategoryResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nome')
+                    ->icon('heroicon-o-tag')
+                    ->weight('medium')
                     ->searchable()
                     ->sortable(),
 
@@ -61,9 +67,11 @@ class ProductSubcategoryResource extends Resource
                     ->badge()
                     ->color('info'),
 
-                Tables\Columns\IconColumn::make('active')
-                    ->label('Ativa')
-                    ->boolean(),
+                Tables\Columns\TextColumn::make('active')
+                    ->label('Status')
+                    ->badge()
+                    ->formatStateUsing(fn (bool $state): string => $state ? 'Ativa' : 'Inativa')
+                    ->color(fn (bool $state): string => $state ? 'success' : 'danger'),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Criada em')
@@ -79,7 +87,10 @@ class ProductSubcategoryResource extends Resource
                 Actions\BulkActionGroup::make([
                     Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->emptyStateHeading('Nenhuma subcategoria cadastrada')
+            ->emptyStateDescription('Cadastre subcategorias para organizar melhor seus produtos.')
+            ->emptyStateIcon('heroicon-o-tag');
     }
 
     public static function getPages(): array

@@ -57,6 +57,7 @@ class SaleItemResource extends Resource
             ->columns([
                 TextColumn::make('product_name')
                     ->label('Produto')
+                    ->icon('heroicon-o-shopping-bag')
                     ->searchable()
                     ->sortable(),
 
@@ -81,6 +82,7 @@ class SaleItemResource extends Resource
 
                 TextColumn::make('order.client.name')
                     ->label('Cliente')
+                    ->icon('heroicon-o-user')
                     ->searchable()
                     ->placeholder('—'),
 
@@ -159,7 +161,10 @@ class SaleItemResource extends Resource
                         ? $query
                         : $query->whereHas('order', fn (Builder $q) => $q->where('channel', $data['value']))
                     ),
-            ]);
+            ])
+            ->emptyStateHeading('Nenhuma transação encontrada')
+            ->emptyStateDescription('As vendas realizadas aparecerão aqui.')
+            ->emptyStateIcon('heroicon-o-receipt-percent');
     }
 
     public static function getPages(): array
