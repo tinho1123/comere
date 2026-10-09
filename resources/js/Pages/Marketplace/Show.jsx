@@ -2,8 +2,17 @@ import { useState } from 'react';
 import MarketplaceLayout from '../../Layouts/MarketplaceLayout';
 import { Head, router, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, X, Plus, Minus, Trash2, LogIn, MapPin, Truck, Heart, Star, ChevronDown, Tag, Check } from 'lucide-react';
+import { ShoppingCart, X, Plus, Minus, Trash2, LogIn, MapPin, Truck, Heart, Star, ChevronDown, Tag, Check, Banknote, CreditCard, QrCode, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
+import { getCurrentPosition, haversineKm } from '../../utils/geo';
+
+const CHECKOUT_DISTANCE_WARNING_KM = 3;
+
+const PAYMENT_METHODS = [
+    { value: 'cash', label: 'Dinheiro', icon: Banknote },
+    { value: 'credit', label: 'Cartão (maquininha)', icon: CreditCard },
+    { value: 'pix', label: 'Pix', icon: QrCode },
+];
 
 function StarRating({ company }) {
     const { auth } = usePage().props;
@@ -64,7 +73,7 @@ function StarRating({ company }) {
 }
 
 export default function MarketplaceShow({ company, productsByCategory }) {
-    const { auth } = usePage().props;
+    const { auth, default_address } = usePage().props;
     const [activeCategory, setActiveCategory] = useState(Object.keys(productsByCategory)[0]);
     const [cart, setCart] = useState({});
     const [isCartOpen, setIsCartOpen] = useState(false);
@@ -75,6 +84,9 @@ export default function MarketplaceShow({ company, productsByCategory }) {
     const [couponStatus, setCouponStatus] = useState('idle'); // idle | checking | valid | invalid
     const [couponDiscount, setCouponDiscount] = useState(0);
     const [couponMessage, setCouponMessage] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState(null);
+    const [checkingLocation, setCheckingLocation] = useState(false);
+    const [rangeWarningDistance, setRangeWarningDistance] = useState(null);
 
     const toggleFavorite = async () => {
         if (!auth || favLoading) return;
@@ -154,7 +166,7 @@ export default function MarketplaceShow({ company, productsByCategory }) {
         });
     };
 
-    const handleCheckout = () => {
+    const submitOrder = () => {
         setIsCheckingOut(true);
         router.post(`/store/${company.uuid}/orders`, {
             items: cartItems.map(item => ({
@@ -162,14 +174,44 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                 quantity: item.quantity,
             })),
             coupon_code: couponStatus === 'valid' ? couponCode.trim() : undefined,
+            payment_method: paymentMethod,
         }, {
             onSuccess: () => {
                 setCart({});
                 setIsCartOpen(false);
                 clearCoupon();
+                setPaymentMethod(null);
             },
             onFinish: () => setIsCheckingOut(false),
         });
+    };
+
+    const handleCheckout = async () => {
+        if (!paymentMethod) return;
+
+        if (default_address?.latitude && default_address?.longitude) {
+            setCheckingLocation(true);
+            try {
+                const { latitude, longitude } = await getCurrentPosition();
+                const distance = haversineKm(default_address.latitude, default_address.longitude, latitude, longitude);
+                setCheckingLocation(false);
+
+                if (distance > CHECKOUT_DISTANCE_WARNING_KM) {
+                    setRangeWarningDistance(distance);
+                    return;
+                }
+            } catch {
+                setCheckingLocation(false);
+                // sem GPS disponível ou permissão negada: não bloqueia o pedido
+            }
+        }
+
+        submitOrder();
+    };
+
+    const confirmCheckoutAnyway = () => {
+        setRangeWarningDistance(null);
+        submitOrder();
     };
 
     return (
@@ -516,13 +558,36 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                                 </div>
 
                                 {auth.user ? (
-                                    <button
-                                        onClick={handleCheckout}
-                                        disabled={isCheckingOut}
-                                        className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-red-500/20 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-sm"
-                                    >
-                                        {isCheckingOut ? 'Enviando...' : 'Finalizar pedido'}
-                                    </button>
+                                    <>
+                                        <div>
+                                            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Pagamento na entrega</p>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                {PAYMENT_METHODS.map(({ value, label, icon: Icon }) => (
+                                                    <button
+                                                        key={value}
+                                                        onClick={() => setPaymentMethod(value)}
+                                                        className={`flex flex-col items-center gap-1 py-3 rounded-xl border text-xs font-semibold transition-all ${
+                                                            paymentMethod === value
+                                                                ? 'border-red-500 bg-red-50 text-red-600'
+                                                                : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                                                        }`}
+                                                    >
+                                                        <Icon size={18} />
+                                                        {label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <p className="text-[11px] text-gray-400 mt-2">O pagamento é feito direto com a loja/entregador — o Comere não processa cobranças.</p>
+                                        </div>
+
+                                        <button
+                                            onClick={handleCheckout}
+                                            disabled={isCheckingOut || checkingLocation || !paymentMethod}
+                                            className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-red-500/20 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-sm"
+                                        >
+                                            {isCheckingOut ? 'Enviando...' : checkingLocation ? 'Verificando localização...' : 'Finalizar pedido'}
+                                        </button>
+                                    </>
                                 ) : (
                                     <div className="text-center bg-gray-50 rounded-xl p-4">
                                         <LogIn size={24} className="mx-auto text-gray-400 mb-2" />
@@ -538,6 +603,48 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                                         </button>
                                     </div>
                                 )}
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Aviso: cliente longe do endereço de entrega escolhido */}
+            <AnimatePresence>
+                {rangeWarningDistance !== null && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70]"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[80] bg-white rounded-2xl shadow-2xl p-6 w-[90%] max-w-sm"
+                        >
+                            <div className="flex items-center gap-2 text-amber-600 font-bold mb-3">
+                                <AlertTriangle size={20} />
+                                <span>Longe do endereço de entrega</span>
+                            </div>
+                            <p className="text-sm text-gray-600 mb-5">
+                                Sua localização atual está a <strong>{rangeWarningDistance.toFixed(1)} km</strong> de {default_address ? `"${default_address.street}, ${default_address.number} — ${default_address.city}"` : 'seu endereço de entrega'}, o endereço escolhido para esse pedido. Confirme se é mesmo esse o endereço antes de continuar.
+                            </p>
+                            <div className="flex flex-col gap-2">
+                                <button
+                                    onClick={() => setRangeWarningDistance(null)}
+                                    className="w-full border border-gray-200 text-gray-700 font-bold py-3 rounded-xl hover:bg-gray-50 transition-all"
+                                >
+                                    Cancelar pedido
+                                </button>
+                                <button
+                                    onClick={confirmCheckoutAnyway}
+                                    className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl transition-all"
+                                >
+                                    Pedir mesmo assim
+                                </button>
                             </div>
                         </motion.div>
                     </>

@@ -65,6 +65,7 @@ class OrderFlowTest extends TestCase
                     ['product_id' => $product->id, 'quantity' => 2],
                 ],
                 'coupon_code' => 'desconto10',
+                'payment_method' => 'cash',
             ]);
 
         $response->assertRedirect(route('marketplace.orders'));
@@ -90,6 +91,7 @@ class OrderFlowTest extends TestCase
                     ['product_id' => $product->id, 'quantity' => 1],
                 ],
                 'coupon_code' => 'NAOEXISTE',
+                'payment_method' => 'cash',
             ]);
 
         $response->assertRedirect(route('marketplace.orders'));
@@ -123,6 +125,7 @@ class OrderFlowTest extends TestCase
                     ['product_id' => $product->id, 'quantity' => 1],
                 ],
                 'coupon_code' => 'FORADALOJA',
+                'payment_method' => 'cash',
             ]);
 
         $response->assertRedirect(route('marketplace.orders'));
@@ -144,6 +147,7 @@ class OrderFlowTest extends TestCase
                 'items' => [
                     ['product_id' => $product->id, 'quantity' => 1],
                 ],
+                'payment_method' => 'cash',
             ]);
 
         $order = Order::where('company_id', $company->id)->firstOrFail();
@@ -169,6 +173,7 @@ class OrderFlowTest extends TestCase
                     ['product_id' => $activeProduct->id, 'quantity' => 1],
                     ['product_id' => $discontinuedProduct->id, 'quantity' => 1],
                 ],
+                'payment_method' => 'cash',
             ]);
 
         $originalOrder = Order::where('company_id', $company->id)->firstOrFail();
@@ -202,6 +207,7 @@ class OrderFlowTest extends TestCase
                 'items' => [
                     ['product_id' => $product->id, 'quantity' => 1],
                 ],
+                'payment_method' => 'cash',
             ]);
 
         $order = Order::where('client_id', $client->id)->firstOrFail();

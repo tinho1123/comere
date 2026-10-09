@@ -278,7 +278,32 @@ class MarketplaceController extends Controller
             'items.*.quantity' => 'required|integer|min:1',
             'notes' => 'nullable|string|max:1000',
             'coupon_code' => 'nullable|string|max:50',
+            'payment_method' => 'required|in:'.implode(',', [
+                Order::PAYMENT_CASH,
+                Order::PAYMENT_DEBIT,
+                Order::PAYMENT_CREDIT,
+                Order::PAYMENT_PIX,
+            ]),
         ]);
+
+        $defaultAddress = $client->addresses()->where('is_default', true)->first();
+
+        $feeAmount = 0;
+
+        if ($defaultAddress) {
+            $distanceService = new DistanceService;
+
+            if ($distanceService->canCalculate(
+                $defaultAddress->latitude, $defaultAddress->longitude,
+                $company->latitude, $company->longitude
+            )) {
+                $distance = $distanceService->calculate(
+                    $defaultAddress->latitude, $defaultAddress->longitude,
+                    $company->latitude, $company->longitude
+                );
+                $feeAmount = $distanceService->getFeeForDistance($distance, $company->deliveryFeeRanges) ?? 0;
+            }
+        }
 
         $order = Order::create([
             'uuid' => Str::uuid(),
@@ -286,12 +311,22 @@ class MarketplaceController extends Controller
             'client_id' => $client->id,
             'status' => Order::STATUS_PENDING,
             'channel' => Order::CHANNEL_ONLINE,
+            'payment_method' => $request->payment_method,
             'notes' => $request->notes,
             'subtotal' => 0,
             'discount_amount' => 0,
-            'fee_amount' => 0,
+            'fee_amount' => $feeAmount,
             'total_amount' => 0,
             'estimated_ready_at' => now()->addMinutes($company->avg_preparation_minutes ?? 30),
+            'delivery_zip' => $defaultAddress?->zip_code,
+            'delivery_street' => $defaultAddress?->street,
+            'delivery_number' => $defaultAddress?->number,
+            'delivery_complement' => $defaultAddress?->complement,
+            'delivery_neighborhood' => $defaultAddress?->neighborhood,
+            'delivery_city' => $defaultAddress?->city,
+            'delivery_state' => $defaultAddress?->state,
+            'delivery_latitude' => $defaultAddress?->latitude,
+            'delivery_longitude' => $defaultAddress?->longitude,
         ]);
 
         $subtotal = 0;
@@ -338,7 +373,7 @@ class MarketplaceController extends Controller
             'subtotal' => $subtotal,
             'discount_amount' => $discountAmount,
             'coupon_id' => $coupon?->id,
-            'total_amount' => $subtotal - $discountAmount,
+            'total_amount' => $subtotal - $discountAmount + $order->fee_amount,
         ]);
 
         return redirect()->route('marketplace.orders');
@@ -403,11 +438,21 @@ class MarketplaceController extends Controller
             'client_id' => $client->id,
             'status' => Order::STATUS_PENDING,
             'channel' => Order::CHANNEL_ONLINE,
+            'payment_method' => $order->payment_method,
             'subtotal' => 0,
             'discount_amount' => 0,
-            'fee_amount' => 0,
+            'fee_amount' => $order->fee_amount,
             'total_amount' => 0,
             'estimated_ready_at' => now()->addMinutes($company->avg_preparation_minutes ?? 30),
+            'delivery_zip' => $order->delivery_zip,
+            'delivery_street' => $order->delivery_street,
+            'delivery_number' => $order->delivery_number,
+            'delivery_complement' => $order->delivery_complement,
+            'delivery_neighborhood' => $order->delivery_neighborhood,
+            'delivery_city' => $order->delivery_city,
+            'delivery_state' => $order->delivery_state,
+            'delivery_latitude' => $order->delivery_latitude,
+            'delivery_longitude' => $order->delivery_longitude,
         ]);
 
         $subtotal = 0;
@@ -433,7 +478,7 @@ class MarketplaceController extends Controller
 
         $newOrder->update([
             'subtotal' => $subtotal,
-            'total_amount' => $subtotal,
+            'total_amount' => $subtotal + $newOrder->fee_amount,
         ]);
 
         $skippedCount = $previousItems->count() - $availableItems->count();
