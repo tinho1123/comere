@@ -149,9 +149,16 @@ class TableSessionResource extends Resource
                 TextColumn::make('pending_items_count')
                     ->label('Pendentes')
                     ->badge()
-                    ->getStateUsing(fn (TableSession $record): int => $record->pending_items_count)
-                    ->color(fn (int $state): string => $state > 0 ? 'danger' : 'gray')
-                    ->formatStateUsing(fn (int $state): string => $state > 0 ? $state.' pendente(s)' : 'Nenhum'),
+                    ->getStateUsing(function (TableSession $record): string {
+                        if (! $record->isOpen()) {
+                            return '—';
+                        }
+
+                        $pending = $record->pending_items_count;
+
+                        return $pending > 0 ? $pending.' pendente(s)' : 'Nenhum';
+                    })
+                    ->color(fn (string $state): string => str_ends_with($state, 'pendente(s)') ? 'danger' : 'gray'),
 
                 TextColumn::make('subtotal_live')
                     ->label('Subtotal')

@@ -6,7 +6,7 @@
         (function () {
             const companyUuid = @js($tenant->uuid);
             const endpoint = @js(route('admin.pending-orders.count'));
-            let lastCount = null;
+            let lastItemId = null;
 
             function beep() {
                 try {
@@ -44,12 +44,17 @@
 
                     const data = await res.json();
 
-                    if (lastCount !== null && data.count > lastCount) {
+                    // Compare by the highest item id ever seen (not the pending
+                    // count), so a new order isn't masked by another item being
+                    // delivered in the same polling interval.
+                    if (lastItemId !== null && data.latest_item_id !== null && data.latest_item_id > lastItemId) {
                         beep();
                         showToast('🔔 Novo pedido pendente na mesa!');
                     }
 
-                    lastCount = data.count;
+                    if (data.latest_item_id !== null) {
+                        lastItemId = data.latest_item_id;
+                    }
                 } catch (e) {}
             }
 

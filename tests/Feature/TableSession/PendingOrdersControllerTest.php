@@ -84,13 +84,16 @@ class PendingOrdersControllerTest extends TestCase
         $user = User::factory()->create();
         $user->companies()->attach($company->id);
 
-        $this->openSessionWithItems($company, pending: 2, delivered: 3);
+        $session = $this->openSessionWithItems($company, pending: 2, delivered: 3);
 
         $response = $this->actingAs($user)
             ->getJson('/admin/pedidos-pendentes?company='.$company->uuid);
 
         $response->assertStatus(200);
-        $response->assertJson(['count' => 2]);
+        $response->assertJson([
+            'count' => 2,
+            'latest_item_id' => $session->items()->max('id'),
+        ]);
     }
 
     #[Test]
@@ -107,7 +110,10 @@ class PendingOrdersControllerTest extends TestCase
             ->getJson('/admin/pedidos-pendentes?company='.$company->uuid);
 
         $response->assertStatus(200);
-        $response->assertJson(['count' => 0]);
+        $response->assertJson([
+            'count' => 0,
+            'latest_item_id' => null,
+        ]);
     }
 
     #[Test]
