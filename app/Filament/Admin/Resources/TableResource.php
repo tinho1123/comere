@@ -6,6 +6,7 @@ use App\Filament\Admin\Resources\TableResource\Pages;
 use App\Models\Client;
 use App\Models\Table as TableModel;
 use App\Models\TableSession;
+use App\Models\TableSessionItem;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -43,9 +44,24 @@ class TableResource extends Resource
         return 'Mesas';
     }
 
+    protected static function pendingItemsCount(): int
+    {
+        $tenant = filament()->getTenant();
+
+        return TableSessionItem::where('is_delivered', false)
+            ->whereHas('session', fn ($query) => $query->where('company_id', $tenant->id)->where('status', 'open'))
+            ->count();
+    }
+
     public static function getNavigationBadge(): ?string
     {
         try {
+            $pending = static::pendingItemsCount();
+
+            if ($pending > 0) {
+                return (string) $pending;
+            }
+
             $tenant = filament()->getTenant();
             $count = TableSession::where('company_id', $tenant->id)
                 ->where('status', 'open')
@@ -59,7 +75,11 @@ class TableResource extends Resource
 
     public static function getNavigationBadgeColor(): ?string
     {
-        return 'warning';
+        try {
+            return static::pendingItemsCount() > 0 ? 'danger' : 'warning';
+        } catch (\Throwable) {
+            return 'warning';
+        }
     }
 
     public static function form(Schema $form): Schema
@@ -90,7 +110,8 @@ class TableResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->with('activeSession.client'))
+            ->poll('10s')
+            ->modifyQueryUsing(fn ($query) => $query->with('activeSession.client', 'activeSession.items'))
             ->columns([
                 TextColumn::make('name')
                     ->label('Mesa')
@@ -120,6 +141,17 @@ class TableResource extends Resource
                     ->getStateUsing(fn (TableModel $record): string => $record->activeSession
                         ? $record->activeSession->client_display_name
                         : '—'),
+
+                TextColumn::make('pending_items')
+                    ->label('Pedido')
+                    ->badge()
+                    ->color('danger')
+                    ->placeholder('—')
+                    ->getStateUsing(function (TableModel $record): ?string {
+                        $pending = $record->activeSession?->pending_items_count ?? 0;
+
+                        return $pending > 0 ? $pending.' pendente(s)' : null;
+                    }),
             ])
             ->actions([
                 ActionGroup::make([
