@@ -3,6 +3,7 @@
 namespace Tests\Feature\TableSession;
 
 use App\Models\Company;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductsCategories;
 use App\Models\Table as TableModel;
@@ -126,5 +127,56 @@ class PendingOrdersControllerTest extends TestCase
             ->getJson('/admin/pedidos-pendentes?company='.$company->uuid);
 
         $response->assertStatus(403);
+    }
+
+    #[Test]
+    public function it_reports_the_latest_order_id_and_pending_orders_count_for_the_company()
+    {
+        $company = Company::factory()->create();
+        $otherCompany = Company::factory()->create();
+        $user = User::factory()->create();
+        $user->companies()->attach($company->id);
+
+        Order::create([
+            'uuid' => (string) str()->uuid(),
+            'company_id' => $company->id,
+            'status' => Order::STATUS_PENDING,
+            'channel' => Order::CHANNEL_ONLINE,
+            'subtotal' => 0,
+            'discount_amount' => 0,
+            'fee_amount' => 0,
+            'total_amount' => 0,
+        ]);
+
+        $lastOrder = Order::create([
+            'uuid' => (string) str()->uuid(),
+            'company_id' => $company->id,
+            'status' => Order::STATUS_DELIVERED,
+            'channel' => Order::CHANNEL_ONLINE,
+            'subtotal' => 0,
+            'discount_amount' => 0,
+            'fee_amount' => 0,
+            'total_amount' => 0,
+        ]);
+
+        Order::create([
+            'uuid' => (string) str()->uuid(),
+            'company_id' => $otherCompany->id,
+            'status' => Order::STATUS_PENDING,
+            'channel' => Order::CHANNEL_ONLINE,
+            'subtotal' => 0,
+            'discount_amount' => 0,
+            'fee_amount' => 0,
+            'total_amount' => 0,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->getJson('/admin/pedidos-pendentes?company='.$company->uuid);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'pending_orders_count' => 1,
+            'latest_order_id' => $lastOrder->id,
+        ]);
     }
 }
