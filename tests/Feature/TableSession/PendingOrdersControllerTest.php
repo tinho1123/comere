@@ -3,6 +3,8 @@
 namespace Tests\Feature\TableSession;
 
 use App\Models\Company;
+use App\Models\Product;
+use App\Models\ProductsCategories;
 use App\Models\Table as TableModel;
 use App\Models\TableSession;
 use App\Models\TableSessionItem;
@@ -17,6 +19,20 @@ class PendingOrdersControllerTest extends TestCase
 
     private function openSessionWithItems(Company $company, int $pending, int $delivered = 0): TableSession
     {
+        $category = ProductsCategories::forceCreate(['name' => 'Categoria de teste']);
+
+        $product = Product::forceCreate([
+            'company_id' => $company->id,
+            'category_id' => $category->id,
+            'name' => 'Produto de teste',
+            'description' => 'Produto de teste',
+            'amount' => 10,
+            'discounts' => 0,
+            'total_amount' => 10,
+            'quantity' => 100,
+            'active' => true,
+        ]);
+
         $table = TableModel::create([
             'uuid' => (string) str()->uuid(),
             'company_id' => $company->id,
@@ -36,6 +52,7 @@ class PendingOrdersControllerTest extends TestCase
         for ($i = 0; $i < $pending; $i++) {
             TableSessionItem::create([
                 'table_session_id' => $session->id,
+                'product_id' => $product->id,
                 'product_name' => 'Item pendente '.$i,
                 'quantity' => 1,
                 'unit_price' => 10,
@@ -47,6 +64,7 @@ class PendingOrdersControllerTest extends TestCase
         for ($i = 0; $i < $delivered; $i++) {
             TableSessionItem::create([
                 'table_session_id' => $session->id,
+                'product_id' => $product->id,
                 'product_name' => 'Item entregue '.$i,
                 'quantity' => 1,
                 'unit_price' => 10,
