@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\Table as TableModel;
 use App\Models\TableSession;
 use App\Models\TableSessionItem;
+use App\Services\PushNotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -147,6 +148,17 @@ class TableController extends Controller
             'unit_price' => $product->amount,
             'total_amount' => $product->amount * $qty,
         ]);
+
+        try {
+            app(PushNotificationService::class)->notifyCompany(
+                $table->company_id,
+                '🍽️ Novo pedido na mesa!',
+                $qty.'x '.$product->name.' — '.$table->name,
+                "/admin/{$table->company->uuid}/table-sessions/{$session->uuid}"
+            );
+        } catch (\Throwable) {
+            // Nunca falhar a adição do item por causa de erro na notificação
+        }
 
         return redirect()->route('table.show', $uuid)->with('success', $qty.'x '.$product->name.' adicionado ao pedido!');
     }

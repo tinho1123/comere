@@ -125,8 +125,9 @@ class TableSessionResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->poll('10s')
             ->defaultSort('opened_at', 'desc')
-            ->modifyQueryUsing(fn ($query) => $query->with(['table', 'client']))
+            ->modifyQueryUsing(fn ($query) => $query->with(['table', 'client', 'items']))
             ->columns([
                 TextColumn::make('table.name')
                     ->label('Mesa')
@@ -144,6 +145,20 @@ class TableSessionResource extends Resource
                     ->badge()
                     ->color(fn (string $state): string => $state === 'open' ? 'success' : 'gray')
                     ->formatStateUsing(fn (string $state): string => $state === 'open' ? 'Aberta' : 'Fechada'),
+
+                TextColumn::make('pending_items_count')
+                    ->label('Pendentes')
+                    ->badge()
+                    ->getStateUsing(function (TableSession $record): string {
+                        if (! $record->isOpen()) {
+                            return '—';
+                        }
+
+                        $pending = $record->pending_items_count;
+
+                        return $pending > 0 ? $pending.' pendente(s)' : 'Nenhum';
+                    })
+                    ->color(fn (string $state): string => str_ends_with($state, 'pendente(s)') ? 'danger' : 'gray'),
 
                 TextColumn::make('subtotal_live')
                     ->label('Subtotal')

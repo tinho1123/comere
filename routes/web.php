@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\MenuExportController;
+use App\Http\Controllers\Admin\PendingOrdersController;
 use App\Http\Controllers\Admin\SelectCompanyController;
 use App\Http\Controllers\Admin\TableQrController;
 use App\Http\Controllers\Auth\LoginController;
@@ -93,6 +94,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/push/subscribe', [PushSubscriptionController::class, 'subscribe'])->name('push.subscribe');
     Route::post('/push/unsubscribe', [PushSubscriptionController::class, 'unsubscribe'])->name('push.unsubscribe');
     Route::get('/admin/table/{uuid}/qr-image', [TableQrController::class, 'image'])->name('table.qr-image');
+    Route::get('/admin/pedidos-pendentes', [PendingOrdersController::class, 'count'])->name('admin.pending-orders.count');
     Route::get('/admin/produtos/{company:uuid}/cardapio', [MenuExportController::class, 'show'])->name('admin.products.menu');
     Route::get('/admin/select-company', [SelectCompanyController::class, 'show'])->name('admin.select-company');
     Route::post('/admin/select-company', [SelectCompanyController::class, 'store'])->name('admin.select-company.store');

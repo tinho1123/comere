@@ -68,6 +68,15 @@ class TableSession extends Model
         return $this->status === 'open';
     }
 
+    public function getPendingItemsCountAttribute(): int
+    {
+        if ($this->relationLoaded('items')) {
+            return $this->items->where('is_delivered', false)->count();
+        }
+
+        return $this->items()->where('is_delivered', false)->count();
+    }
+
     public function getClientDisplayNameAttribute(): string
     {
         if ($this->client) {

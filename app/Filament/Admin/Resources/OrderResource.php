@@ -49,7 +49,22 @@ class OrderResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        return static::getModel()::where('status', Order::STATUS_PENDING)->count();
+        try {
+            $tenant = filament()->getTenant();
+
+            $count = static::getModel()::where('company_id', $tenant->id)
+                ->where('status', Order::STATUS_PENDING)
+                ->count();
+
+            return $count > 0 ? (string) $count : null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'warning';
     }
 
     public static function form(Schema $form): Schema
@@ -438,6 +453,7 @@ class OrderResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->poll('10s')
             ->modifyQueryUsing(fn ($query) => $query->with('delivery'))
             ->defaultSort('created_at', 'desc')
             ->columns([

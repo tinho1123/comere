@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Marketplace;
 
 use App\Http\Controllers\Controller;
+use App\Models\Client;
 use App\Models\Company;
 use App\Models\CompanyHour;
 use App\Models\CompanyType;
@@ -11,6 +12,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Services\DistanceService;
+use App\Services\PushNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -376,6 +378,8 @@ class MarketplaceController extends Controller
             'total_amount' => $subtotal - $discountAmount + $order->fee_amount,
         ]);
 
+        $this->notifyCompanyOfNewOrder($company, $client, $order);
+
         return redirect()->route('marketplace.orders');
     }
 
@@ -483,10 +487,28 @@ class MarketplaceController extends Controller
 
         $skippedCount = $previousItems->count() - $availableItems->count();
 
+        $this->notifyCompanyOfNewOrder($company, $client, $newOrder);
+
         return redirect()->route('marketplace.orders')
             ->with('success', $skippedCount > 0
                 ? "Pedido recriado! {$skippedCount} item(ns) não estava(m) mais disponível(is)."
                 : 'Pedido recriado com sucesso!');
+    }
+
+    private function notifyCompanyOfNewOrder(Company $company, Client $client, Order $order): void
+    {
+        try {
+            $itemCount = $order->items()->count();
+
+            app(PushNotificationService::class)->notifyCompany(
+                $company->id,
+                '🛒 Novo pedido recebido!',
+                ($client->name ?? 'Um cliente').' fez um pedido com '.$itemCount.' '.($itemCount === 1 ? 'item' : 'itens').'.',
+                "/admin/{$company->uuid}/orders"
+            );
+        } catch (\Throwable) {
+            // Nunca falhar a criação do pedido por causa de erro na notificação
+        }
     }
 
     public function search(Request $request)
