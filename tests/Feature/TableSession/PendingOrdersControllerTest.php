@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\TableSession;
 
+use App\Models\Client;
 use App\Models\Company;
 use App\Models\Order;
 use App\Models\Product;
@@ -137,9 +138,13 @@ class PendingOrdersControllerTest extends TestCase
         $user = User::factory()->create();
         $user->companies()->attach($company->id);
 
+        $client = Client::factory()->create(['company_id' => $company->id]);
+        $otherClient = Client::factory()->create(['company_id' => $otherCompany->id]);
+
         Order::create([
             'uuid' => (string) str()->uuid(),
             'company_id' => $company->id,
+            'client_id' => $client->id,
             'status' => Order::STATUS_PENDING,
             'channel' => Order::CHANNEL_ONLINE,
             'subtotal' => 0,
@@ -151,6 +156,7 @@ class PendingOrdersControllerTest extends TestCase
         $lastOrder = Order::create([
             'uuid' => (string) str()->uuid(),
             'company_id' => $company->id,
+            'client_id' => $client->id,
             'status' => Order::STATUS_DELIVERED,
             'channel' => Order::CHANNEL_ONLINE,
             'subtotal' => 0,
@@ -162,6 +168,7 @@ class PendingOrdersControllerTest extends TestCase
         Order::create([
             'uuid' => (string) str()->uuid(),
             'company_id' => $otherCompany->id,
+            'client_id' => $otherClient->id,
             'status' => Order::STATUS_PENDING,
             'channel' => Order::CHANNEL_ONLINE,
             'subtotal' => 0,
