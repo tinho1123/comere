@@ -26,7 +26,6 @@ use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\HtmlString;
@@ -450,6 +449,10 @@ class OrderResource extends Resource
                     Infolists\Components\TextEntry::make('fee_amount')->label('Taxas')->money('BRL'),
                     Infolists\Components\TextEntry::make('total_amount')->label('Total Final')->money('BRL'),
                 ])->columns(2),
+
+            Infolists\Components\ViewEntry::make('chat')
+                ->view('filament.resources.order.chat-modal')
+                ->columnSpanFull(),
         ]);
     }
 
@@ -541,13 +544,6 @@ class OrderResource extends Resource
                     ]),
             ])
             ->actions([
-                Action::make('approve')
-                    ->label('Aprovar')
-                    ->icon('heroicon-o-check-circle')
-                    ->color('info')
-                    ->visible(fn (Order $record): bool => $record->canBeApproved())
-                    ->action(fn (Order $record) => $record->approve())
-                    ->requiresConfirmation(),
                 Action::make('ship')
                     ->label('Despachar')
                     ->icon('heroicon-o-truck')
@@ -714,39 +710,11 @@ class OrderResource extends Resource
                     ->visible(fn (Order $record): bool => $record->canBeDelivered() && ! $record->hasUnresolvedFailedDelivery())
                     ->action(fn (Order $record) => $record->deliver())
                     ->requiresConfirmation(),
-                Action::make('cancel')
-                    ->label('Cancelar')
-                    ->icon('heroicon-o-x-circle')
-                    ->color('danger')
-                    ->visible(fn (Order $record): bool => $record->canBeCancelled())
-                    ->requiresConfirmation()
-                    ->modalHeading('Cancelar pedido')
-                    ->modalDescription('Tem certeza que deseja cancelar este pedido? Essa ação não pode ser desfeita.')
-                    ->modalSubmitActionLabel('Cancelar pedido')
-                    ->action(function (Order $record): void {
-                        $record->cancel();
-
-                        Notification::make()
-                            ->success()
-                            ->title('Pedido cancelado!')
-                            ->send();
-                    }),
-                Action::make('chat')
-                    ->label('Mensagens')
-                    ->icon('heroicon-o-chat-bubble-left-right')
-                    ->color('gray')
+                Actions\ViewAction::make()
                     ->badge(fn (Order $record): ?int => OrderMessage::where('order_id', $record->id)
                         ->where('sender_type', OrderMessage::SENDER_CLIENT)
                         ->whereNull('read_at')
                         ->count() ?: null)
-                    ->modalHeading(fn (Order $record): string => 'Mensagens — Pedido #'.Str::substr($record->uuid, 0, 8))
-                    ->modalContent(fn (Order $record): View => view(
-                        'filament.resources.order.chat-modal',
-                        ['record' => $record]
-                    ))
-                    ->modalSubmitAction(false)
-                    ->modalCancelActionLabel('Fechar'),
-                Actions\ViewAction::make()
                     ->extraModalFooterActions(fn (Order $record): array => array_filter([
                         $record->canBeApproved()
                             ? Action::make('approveFromView')
