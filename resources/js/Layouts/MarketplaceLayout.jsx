@@ -279,7 +279,7 @@ export default function MarketplaceLayout({ children }) {
         : 'Adicionar endereço';
 
     return (
-        <div className="min-h-screen bg-gray-50 font-sans text-gray-900 overflow-x-hidden">
+        <div className="min-h-screen bg-gray-50 font-sans text-gray-900 overflow-x-clip">
             <Head>
                 <title>Comere Marketplace</title>
                 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
