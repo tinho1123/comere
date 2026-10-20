@@ -8,10 +8,16 @@
            componente usa apenas regras escopadas sob .coa-*, nunca classes
            como "flex" ou "rounded-xl" (mesmo padrão de order-location.blade.php). */
         #comere-order-alerts {
+            /* Shrink-to-fit (nunca "right: 0") para que o retângulo do
+               container corresponda à pilha de cards visível — arrastar
+               precisa medir a posição real, não uma barra invisível do
+               tamanho da viewport inteira. Centralizado por padrão via
+               left: 50% + transform; ao arrastar, o JS troca para
+               left/top em px e remove o transform. */
             position: fixed;
             top: 0;
-            left: 0;
-            right: 0;
+            left: 50%;
+            transform: translateX(-50%);
             z-index: 9999;
             display: flex;
             flex-direction: column;
@@ -19,6 +25,34 @@
             gap: 0.5rem;
             padding: 0.75rem;
             pointer-events: none;
+        }
+        .coa-drag-handle {
+            pointer-events: auto;
+            align-self: center;
+            width: clamp(320px, 92vw, 560px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.375rem;
+            padding: 0.125rem;
+            margin-bottom: -0.25rem;
+            cursor: grab;
+            color: #9ca3af;
+            font-size: 0.625rem;
+            letter-spacing: 0.05em;
+            touch-action: none;
+            user-select: none;
+        }
+        .coa-drag-handle:active {
+            cursor: grabbing;
+        }
+        .coa-drag-handle-dots {
+            font-size: 0.875rem;
+            line-height: 1;
+            opacity: 0.6;
+        }
+        .coa-drag-handle:hover .coa-drag-handle-dots {
+            opacity: 1;
         }
         .coa-card {
             pointer-events: auto;
@@ -295,6 +329,85 @@
             let lastItemId = null;
             let marketplaceInitialized = false;
             const renderedOrderIds = new Set();
+            const POSITION_KEY = 'comere_order_alerts_position';
+
+            function clamp(value, min, max) {
+                return Math.min(Math.max(value, min), max);
+            }
+
+            function applySavedPosition() {
+                const container = document.getElementById('comere-order-alerts');
+                let saved = null;
+                try {
+                    saved = JSON.parse(localStorage.getItem(POSITION_KEY));
+                } catch (e) {}
+                if (!saved || typeof saved.left !== 'number' || typeof saved.top !== 'number') return;
+
+                container.style.left = saved.left + 'px';
+                container.style.top = saved.top + 'px';
+                container.style.transform = 'none';
+            }
+
+            function initDragHandle(handle) {
+                const container = document.getElementById('comere-order-alerts');
+                let dragging = false;
+                let startX = 0;
+                let startY = 0;
+                let startLeft = 0;
+                let startTop = 0;
+
+                handle.addEventListener('pointerdown', (event) => {
+                    dragging = true;
+                    handle.setPointerCapture(event.pointerId);
+
+                    const rect = container.getBoundingClientRect();
+                    container.style.left = rect.left + 'px';
+                    container.style.top = rect.top + 'px';
+                    container.style.transform = 'none';
+
+                    startX = event.clientX;
+                    startY = event.clientY;
+                    startLeft = rect.left;
+                    startTop = rect.top;
+                    event.preventDefault();
+                });
+
+                handle.addEventListener('pointermove', (event) => {
+                    if (!dragging) return;
+
+                    const rect = container.getBoundingClientRect();
+                    const maxLeft = Math.max(0, window.innerWidth - rect.width);
+                    const maxTop = Math.max(0, window.innerHeight - rect.height);
+
+                    const newLeft = clamp(startLeft + (event.clientX - startX), 0, maxLeft);
+                    const newTop = clamp(startTop + (event.clientY - startY), 0, maxTop);
+
+                    container.style.left = newLeft + 'px';
+                    container.style.top = newTop + 'px';
+                });
+
+                handle.addEventListener('pointerup', (event) => {
+                    if (!dragging) return;
+                    dragging = false;
+                    handle.releasePointerCapture(event.pointerId);
+
+                    const rect = container.getBoundingClientRect();
+                    try {
+                        localStorage.setItem(POSITION_KEY, JSON.stringify({ left: rect.left, top: rect.top }));
+                    } catch (e) {}
+                });
+            }
+
+            function ensureDragHandle(container) {
+                if (container.querySelector('.coa-drag-handle')) return;
+
+                const handle = document.createElement('div');
+                handle.className = 'coa-drag-handle';
+                handle.title = 'Arraste para mover — a posição é lembrada para os próximos pedidos';
+                handle.innerHTML = '<span class="coa-drag-handle-dots">⠿⠿⠿</span>';
+                container.insertBefore(handle, container.firstChild);
+                initDragHandle(handle);
+            }
 
             function beep() {
                 try {
@@ -348,6 +461,7 @@
                 const card = document.createElement('div');
                 card.className = 'coa-card';
                 card.dataset.orderId = String(order.id);
+                card.dataset.createdAt = order.created_at;
 
                 const isMinimized = localStorage.getItem(minimizedKey(order.id)) === '1';
                 if (isMinimized) card.classList.add('coa-minimized');
@@ -417,7 +531,7 @@
                     }
 
                     if (action === 'open') {
-                        window.open(`${ordersIndexUrl}?tableSearch=${encodeURIComponent(order.uuid)}`, '_blank');
+                        window.open(`${ordersIndexUrl}?pedido=${encodeURIComponent(order.uuid)}`, '_blank');
                         return;
                     }
 
@@ -492,6 +606,15 @@
                         }
                     });
 
+                    // A alça de arrastar só aparece quando há algo pra mover —
+                    // a posição arrastada já foi salva e continua valendo para
+                    // os próximos cards (ensureDragHandle não mexe na posição).
+                    if (renderedOrderIds.size > 0) {
+                        ensureDragHandle(container);
+                    } else {
+                        container.querySelector('.coa-drag-handle')?.remove();
+                    }
+
                     marketplaceInitialized = true;
                 } catch (e) {}
             }
@@ -522,10 +645,21 @@
                 } catch (e) {}
             }
 
+            function updateCardTimes() {
+                document.querySelectorAll('#comere-order-alerts .coa-card').forEach((card) => {
+                    const timeEl = card.querySelector('.coa-time');
+                    if (timeEl && card.dataset.createdAt) {
+                        timeEl.textContent = '· ' + timeAgoLabel(card.dataset.createdAt);
+                    }
+                });
+            }
+
+            applySavedPosition();
             checkMesaItems();
             checkMarketplaceOrders();
             setInterval(checkMesaItems, 8000);
             setInterval(checkMarketplaceOrders, 8000);
+            setInterval(updateCardTimes, 15000);
         })();
     </script>
 @endif
