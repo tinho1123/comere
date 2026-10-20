@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import MarketplaceLayout from '../../Layouts/MarketplaceLayout';
 import { Head, router, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -83,8 +83,10 @@ function CartPanel({
     paymentMethod, setPaymentMethod,
     isCheckingOut, checkingLocation, handleCheckout,
     onAddMoreItems, onOpenLogin,
+    maxVisibleItems = Infinity,
 }) {
     const { auth } = usePage().props;
+    const [showAllItems, setShowAllItems] = useState(false);
 
     if (cartCount === 0) {
         return (
@@ -96,10 +98,13 @@ function CartPanel({
         );
     }
 
+    const isTruncated = !showAllItems && cartItems.length > maxVisibleItems;
+    const visibleItems = isTruncated ? cartItems.slice(0, maxVisibleItems) : cartItems;
+
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-3">
-                {cartItems.map(({ product, quantity, notes }) => (
+            <div className={`flex flex-col gap-3 ${showAllItems && cartItems.length > maxVisibleItems ? 'max-h-80 overflow-y-auto pr-1' : ''}`}>
+                {visibleItems.map(({ product, quantity, notes }) => (
                     <div key={product.id} className="bg-white border border-gray-100 rounded-2xl p-3 flex gap-3 items-center">
                         <button
                             type="button"
@@ -128,6 +133,15 @@ function CartPanel({
                     </div>
                 ))}
             </div>
+
+            {isTruncated && (
+                <button
+                    onClick={() => setShowAllItems(true)}
+                    className="text-sm font-bold text-red-500 hover:underline text-center"
+                >
+                    Ver todos os itens ({cartItems.length})
+                </button>
+            )}
 
             {onAddMoreItems && (
                 <button
@@ -264,10 +278,36 @@ function CartPanel({
     );
 }
 
+function cartStorageKey(companyUuid) {
+    return `marketplace_cart_${companyUuid}`;
+}
+
+function restoreCart(companyUuid, productsByCategory) {
+    try {
+        const raw = sessionStorage.getItem(cartStorageKey(companyUuid));
+        if (!raw) return {};
+
+        const saved = JSON.parse(raw);
+        const allProducts = Object.values(productsByCategory).flat();
+        const restored = {};
+
+        for (const { product_id, quantity, notes } of saved) {
+            const product = allProducts.find(p => p.id === product_id);
+            if (product && quantity > 0) {
+                restored[product_id] = { product, quantity, notes: notes ?? null };
+            }
+        }
+
+        return restored;
+    } catch {
+        return {};
+    }
+}
+
 export default function MarketplaceShow({ company, productsByCategory }) {
     const { auth, default_address } = usePage().props;
     const [activeCategory, setActiveCategory] = useState(Object.keys(productsByCategory)[0]);
-    const [cart, setCart] = useState({});
+    const [cart, setCart] = useState(() => restoreCart(company.uuid, productsByCategory));
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [isCheckingOut, setIsCheckingOut] = useState(false);
     const [favorited, setFavorited] = useState(company.is_favorited);
@@ -312,6 +352,19 @@ export default function MarketplaceShow({ company, productsByCategory }) {
     const cartTotal = cartItems.reduce((sum, item) => sum + Number(item.product.amount) * item.quantity, 0);
     const deliveryFee = company.delivery_fee !== null && company.delivery_fee !== undefined ? Number(company.delivery_fee) : 0;
     const finalTotal = Math.max(cartTotal + deliveryFee - couponDiscount, 0);
+
+    useEffect(() => {
+        try {
+            if (cartItems.length > 0) {
+                const toSave = cartItems.map(({ product, quantity, notes }) => ({ product_id: product.id, quantity, notes: notes ?? null }));
+                sessionStorage.setItem(cartStorageKey(company.uuid), JSON.stringify(toSave));
+            } else {
+                sessionStorage.removeItem(cartStorageKey(company.uuid));
+            }
+        } catch {
+            // sessionStorage indisponível (modo privado, etc.) — carrinho só dura a sessão da página
+        }
+    }, [cart]);
 
     const applyCoupon = async () => {
         if (!couponCode.trim() || couponStatus === 'checking') return;
@@ -399,6 +452,11 @@ export default function MarketplaceShow({ company, productsByCategory }) {
         }, {
             onSuccess: () => {
                 setCart({});
+                try {
+                    sessionStorage.removeItem(cartStorageKey(company.uuid));
+                } catch {
+                    // sessionStorage indisponível
+                }
                 setIsCartOpen(false);
                 clearCoupon();
                 setPaymentMethod(null);
@@ -644,7 +702,7 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                             <ShoppingCart size={18} className="text-red-500" />
                             Seu carrinho {cartCount > 0 && `(${cartCount})`}
                         </h3>
-                        <CartPanel {...cartPanelProps} />
+                        <CartPanel {...cartPanelProps} maxVisibleItems={4} />
                     </div>
                 </div>
             </div>

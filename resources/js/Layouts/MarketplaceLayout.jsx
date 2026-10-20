@@ -170,7 +170,7 @@ export default function MarketplaceLayout({ children }) {
     const handleManualLogin = (e) => {
         e.preventDefault();
         setIsLoading(true);
-        router.post('/marketplace/login', { email, password, remember: rememberMe }, {
+        router.post('/marketplace/login', { email, password, remember: rememberMe, redirect_to: window.location.pathname + window.location.search }, {
             onFinish: () => setIsLoading(false),
             onSuccess: () => { setIsAuthOpen(false); setEmail(''); setPassword(''); setRememberMe(false); },
         });
@@ -179,7 +179,7 @@ export default function MarketplaceLayout({ children }) {
     const handleRegister = (e) => {
         e.preventDefault();
         setIsLoading(true);
-        router.post('/cadastro', registerForm, {
+        router.post('/cadastro', { ...registerForm, redirect_to: window.location.pathname + window.location.search }, {
             onFinish: () => setIsLoading(false),
             onSuccess: () => { setIsAuthOpen(false); resetAuthState(); },
         });
