@@ -1,6 +1,29 @@
 @php
     $tenant = filament()->getTenant();
+
+    // Deep link usado pelo "Abrir pedido" do card de alerta (?pedido=<uuid>)
+    // e pela notificação em segundo plano — resolvido aqui (e não no
+    // mount() da página) porque mountTableAction() só pode ser chamado
+    // depois que a tabela do Livewire já foi montada; chamá-lo direto no
+    // mount() da página dá erro fatal ("$table must not be accessed
+    // before initialization"). Em vez disso, disparamos a ação via JS
+    // depois que o componente Livewire já carregou normalmente.
+    $autoOpenOrderKey = null;
+    if ($tenant && ($pedidoUuid = request()->query('pedido'))) {
+        $autoOpenOrderKey = \App\Models\Order::where('company_id', $tenant->id)
+            ->where('uuid', $pedidoUuid)
+            ->value('id');
+    }
 @endphp
+@if ($autoOpenOrderKey)
+    <script>
+        document.addEventListener('livewire:init', () => {
+            window.addEventListener('load', () => {
+                Livewire.first()?.call('mountTableAction', 'view', @js((string) $autoOpenOrderKey));
+            });
+        });
+    </script>
+@endif
 @if ($tenant)
     <style>
         /* Classes utilitárias Tailwind não existem no CSS compilado do painel
