@@ -266,6 +266,7 @@ function DeliveryMap({ order }) {
 
 function OrderChat({ order, open }) {
     const [messages, setMessages] = useState([]);
+    const [chatOpen, setChatOpen] = useState(order.chat_open);
     const [loading, setLoading] = useState(true);
     const [text, setText] = useState('');
     const [sending, setSending] = useState(false);
@@ -278,7 +279,10 @@ function OrderChat({ order, open }) {
         const fetchMessages = async () => {
             try {
                 const res = await axios.get(`/meus-pedidos/${order.uuid}/mensagens`);
-                if (!cancelled) setMessages(res.data.messages);
+                if (!cancelled) {
+                    setMessages(res.data.messages);
+                    setChatOpen(res.data.chat_open);
+                }
             } catch {
                 // silently ignore, keep last known state
             } finally {
@@ -352,7 +356,7 @@ function OrderChat({ order, open }) {
                     )}
                 </div>
 
-                {order.chat_open ? (
+                {chatOpen ? (
                     <form onSubmit={handleSend} className="flex items-center gap-2 border-t border-gray-100 p-2">
                         <input
                             type="text"

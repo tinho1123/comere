@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Marketplace;
 
+use App\Filament\Admin\Resources\OrderResource;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderMessage;
 use App\Services\PushNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class OrderChatController extends Controller
 {
@@ -45,12 +47,25 @@ class OrderChatController extends Controller
             'message' => $data['message'],
         ]);
 
-        app(PushNotificationService::class)->notifyCompany(
-            $order->company_id,
-            'Nova mensagem sobre o pedido',
-            "{$client->name}: {$data['message']}",
-            "/admin/pedidos?order={$order->uuid}"
-        );
+        try {
+            $ordersUrl = OrderResource::getUrl('index', ['tenant' => $order->company]);
+
+            app(PushNotificationService::class)->notifyCompany(
+                $order->company_id,
+                'Nova mensagem sobre o pedido',
+                "{$client->name}: {$data['message']}",
+                "{$ordersUrl}?pedido={$order->uuid}"
+            );
+        } catch (\Throwable $e) {
+            // A mensagem já foi salva; uma falha no push não pode virar um 500
+            // para o cliente (que veria "erro ao enviar" numa mensagem que, na
+            // verdade, já chegou e pode gerar duplicata num retry).
+            Log::warning('Chat push notification failed', [
+                'order_id' => $order->id,
+                'company_id' => $order->company_id,
+                'message' => $e->getMessage(),
+            ]);
+        }
 
         return response()->json([
             'message' => $this->format($message),
