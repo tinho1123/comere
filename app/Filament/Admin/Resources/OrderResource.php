@@ -433,6 +433,7 @@ class OrderResource extends Resource
                             Infolists\Components\TextEntry::make('quantity')->label('Qtd'),
                             Infolists\Components\TextEntry::make('unit_price')->label('Preço Unit.')->money('BRL'),
                             Infolists\Components\TextEntry::make('total_amount')->label('Subtotal')->money('BRL'),
+                            Infolists\Components\TextEntry::make('notes')->label('Obs.')->placeholder('—')->columnSpanFull(),
                         ])->columns(4),
                 ]),
 

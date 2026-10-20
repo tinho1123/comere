@@ -78,7 +78,7 @@ function StarRating({ company }) {
  */
 function CartPanel({
     company, cartItems, cartCount, cartTotal, finalTotal,
-    updateQuantity, removeFromCart,
+    updateQuantity, removeFromCart, onEditItem,
     couponCode, setCouponCode, couponStatus, setCouponStatus, couponDiscount, couponMessage, applyCoupon, clearCoupon,
     paymentMethod, setPaymentMethod,
     isCheckingOut, checkingLocation, handleCheckout,
@@ -99,15 +99,20 @@ function CartPanel({
     return (
         <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-3">
-                {cartItems.map(({ product, quantity }) => (
+                {cartItems.map(({ product, quantity, notes }) => (
                     <div key={product.id} className="bg-white border border-gray-100 rounded-2xl p-3 flex gap-3 items-center">
-                        <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 border border-gray-50">
+                        <button
+                            type="button"
+                            onClick={() => onEditItem?.(product)}
+                            className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 border border-gray-50"
+                        >
                             <img src={product.image ?? '/icons/icon-192x192.png'} className="w-full h-full object-cover" alt={product.name} />
-                        </div>
-                        <div className="flex-grow min-w-0">
+                        </button>
+                        <button type="button" onClick={() => onEditItem?.(product)} className="flex-grow min-w-0 text-left">
                             <p className="font-bold text-sm text-gray-900 truncate">{product.name}</p>
                             <p className="text-xs font-bold text-red-500">R$ {Number(product.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                        </div>
+                            {notes && <p className="text-[11px] text-gray-400 italic truncate mt-0.5">Obs: {notes}</p>}
+                        </button>
                         <div className="flex items-center gap-2 flex-shrink-0 border border-gray-200 rounded-lg px-2 py-1.5">
                             <button onClick={() => updateQuantity(product.id, quantity - 1)} className="text-red-500 hover:scale-110 transition-transform">
                                 <Minus size={13} />
@@ -275,6 +280,20 @@ export default function MarketplaceShow({ company, productsByCategory }) {
     const [checkingLocation, setCheckingLocation] = useState(false);
     const [rangeWarningDistance, setRangeWarningDistance] = useState(null);
 
+    // Tela de detalhe do produto
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [detailQuantity, setDetailQuantity] = useState(1);
+    const [detailNotes, setDetailNotes] = useState('');
+
+    const openProductDetail = (product) => {
+        const existing = cart[product.id];
+        setSelectedProduct(product);
+        setDetailQuantity(existing?.quantity ?? 1);
+        setDetailNotes(existing?.notes ?? '');
+    };
+
+    const closeProductDetail = () => setSelectedProduct(null);
+
     const toggleFavorite = async () => {
         if (!auth || favLoading) return;
         setFavLoading(true);
@@ -331,8 +350,21 @@ export default function MarketplaceShow({ company, productsByCategory }) {
             [product.id]: {
                 product,
                 quantity: (prev[product.id]?.quantity ?? 0) + 1,
+                notes: prev[product.id]?.notes ?? null,
             },
         }));
+    };
+
+    const confirmProductDetail = () => {
+        setCart(prev => ({
+            ...prev,
+            [selectedProduct.id]: {
+                product: selectedProduct,
+                quantity: detailQuantity,
+                notes: detailNotes.trim() || null,
+            },
+        }));
+        closeProductDetail();
     };
 
     const updateQuantity = (productId, quantity) => {
@@ -360,6 +392,7 @@ export default function MarketplaceShow({ company, productsByCategory }) {
             items: cartItems.map(item => ({
                 product_id: item.product.id,
                 quantity: item.quantity,
+                notes: item.notes || undefined,
             })),
             coupon_code: couponStatus === 'valid' ? couponCode.trim() : undefined,
             payment_method: paymentMethod,
@@ -404,7 +437,7 @@ export default function MarketplaceShow({ company, productsByCategory }) {
 
     const cartPanelProps = {
         company, cartItems, cartCount, cartTotal, finalTotal,
-        updateQuantity, removeFromCart,
+        updateQuantity, removeFromCart, onEditItem: openProductDetail,
         couponCode, setCouponCode, couponStatus, setCouponStatus, couponDiscount, couponMessage, applyCoupon, clearCoupon,
         paymentMethod, setPaymentMethod,
         isCheckingOut, checkingLocation, handleCheckout,
@@ -555,7 +588,11 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                 <div className="flex-grow">
                     {productsByCategory[activeCategory]?.map((product) => (
                         <div key={product.uuid} className="flex gap-4 py-4 border-b border-gray-50 last:border-0">
-                            <div className="flex-grow flex flex-col justify-center min-w-0">
+                            <button
+                                type="button"
+                                onClick={() => openProductDetail(product)}
+                                className="flex-grow flex flex-col justify-center min-w-0 text-left"
+                            >
                                 <h4 className="font-bold text-gray-900 truncate">{product.name}</h4>
                                 <p className="text-xs text-gray-400 mt-1 line-clamp-2 leading-relaxed">
                                     {product.description ?? 'Sem descrição disponível para este produto.'}
@@ -568,7 +605,7 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                                         <span className="bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded-full italic">❄️ GELADA</span>
                                     )}
                                 </div>
-                            </div>
+                            </button>
                             <div className="w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 border border-gray-100 relative">
                                 <img src={product.image ?? '/icons/icon-192x192.png'} className="w-full h-full object-cover" alt={product.name} />
                                 {cart[product.id] ? (
@@ -707,6 +744,86 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                                     className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl transition-all"
                                 >
                                     Pedir mesmo assim
+                                </button>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
+            {/* Detalhe do produto */}
+            <AnimatePresence>
+                {selectedProduct && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={closeProductDetail}
+                            className="hidden sm:block fixed inset-0 bg-black/40 backdrop-blur-sm z-[75]"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, y: 24 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 24 }}
+                            transition={{ type: 'spring', damping: 28, stiffness: 220 }}
+                            className="fixed inset-0 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 z-[80] bg-white sm:rounded-3xl sm:shadow-2xl sm:w-[440px] sm:max-h-[85vh] flex flex-col overflow-hidden"
+                        >
+                            <div className="relative flex-shrink-0 bg-gray-100">
+                                <img
+                                    src={selectedProduct.image ?? '/icons/icon-192x192.png'}
+                                    className="w-full h-56 sm:h-64 object-cover"
+                                    alt={selectedProduct.name}
+                                />
+                                <button
+                                    onClick={closeProductDetail}
+                                    className="absolute top-4 left-4 w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-md text-gray-700 hover:bg-white transition-colors"
+                                >
+                                    <ChevronLeft size={20} />
+                                </button>
+                            </div>
+
+                            <div className="flex-grow overflow-y-auto px-5 sm:px-6 py-5 pb-32 sm:pb-5 flex flex-col gap-4">
+                                <div>
+                                    <h2 className="text-xl font-bold text-gray-900">{selectedProduct.name}</h2>
+                                    <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+                                        {selectedProduct.description ?? 'Sem descrição disponível para este produto.'}
+                                    </p>
+                                </div>
+
+                                <span className="text-xl font-black text-red-500">
+                                    R$ {Number(selectedProduct.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </span>
+
+                                <div className="h-px bg-gray-100" />
+
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-sm font-bold text-gray-900">Observações</label>
+                                    <textarea
+                                        value={detailNotes}
+                                        onChange={(e) => setDetailNotes(e.target.value.slice(0, 300))}
+                                        placeholder="Ex: sem cebola, ponto da carne, etc."
+                                        rows={3}
+                                        className="w-full bg-gray-50 border border-gray-100 rounded-xl p-3 text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-500/10 transition-all resize-none"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="fixed sm:static bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 sm:px-6 py-3.5 flex items-center gap-3.5 flex-shrink-0">
+                                <div className="flex items-center gap-2.5 border border-gray-200 rounded-xl px-3 py-2.5 flex-shrink-0">
+                                    <button onClick={() => setDetailQuantity((q) => Math.max(1, q - 1))} className="text-red-500 hover:scale-110 transition-transform">
+                                        <Minus size={15} />
+                                    </button>
+                                    <span className="text-sm font-black w-5 text-center">{detailQuantity}</span>
+                                    <button onClick={() => setDetailQuantity((q) => q + 1)} className="text-red-500 hover:scale-110 transition-transform">
+                                        <Plus size={15} />
+                                    </button>
+                                </div>
+                                <button
+                                    onClick={confirmProductDetail}
+                                    className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3.5 rounded-xl transition-all active:scale-95"
+                                >
+                                    Adicionar · R$ {(Number(selectedProduct.amount) * detailQuantity).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                 </button>
                             </div>
                         </motion.div>
