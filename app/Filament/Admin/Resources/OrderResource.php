@@ -746,7 +746,42 @@ class OrderResource extends Resource
                     ))
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Fechar'),
-                Actions\ViewAction::make(),
+                Actions\ViewAction::make()
+                    ->extraModalFooterActions(fn (Order $record): array => array_filter([
+                        $record->canBeApproved()
+                            ? Action::make('approveFromView')
+                                ->label('Aprovar')
+                                ->icon('heroicon-o-check-circle')
+                                ->color('info')
+                                ->requiresConfirmation()
+                                ->action(function () use ($record): void {
+                                    $record->approve();
+
+                                    Notification::make()
+                                        ->success()
+                                        ->title('Pedido aprovado!')
+                                        ->send();
+                                })
+                            : null,
+                        $record->canBeCancelled()
+                            ? Action::make('cancelFromView')
+                                ->label('Recusar')
+                                ->icon('heroicon-o-x-circle')
+                                ->color('danger')
+                                ->requiresConfirmation()
+                                ->modalHeading('Cancelar pedido')
+                                ->modalDescription('Tem certeza que deseja cancelar este pedido? Essa ação não pode ser desfeita.')
+                                ->modalSubmitActionLabel('Cancelar pedido')
+                                ->action(function () use ($record): void {
+                                    $record->cancel();
+
+                                    Notification::make()
+                                        ->success()
+                                        ->title('Pedido cancelado!')
+                                        ->send();
+                                })
+                            : null,
+                    ])),
                 Actions\EditAction::make(),
             ])
             ->bulkActions([
