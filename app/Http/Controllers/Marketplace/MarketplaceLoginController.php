@@ -6,10 +6,41 @@ use App\Http\Controllers\Controller;
 use App\Models\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class MarketplaceLoginController extends Controller
 {
+    /**
+     * Handle a direct client registration for the marketplace.
+     */
+    public function register(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:clients,email'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'document_number' => ['required', 'string', 'size:11', 'unique:clients,document_number'],
+        ]);
+
+        $client = Client::create([
+            'uuid' => (string) Str::uuid(),
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'document_type' => 'cpf',
+            'document_number' => $validated['document_number'],
+            'active' => true,
+        ]);
+
+        Auth::guard('client')->login($client);
+
+        $request->session()->regenerate();
+
+        return redirect()->intended(route('marketplace.index'));
+    }
+
     /**
      * Handle a manual login request for the marketplace.
      */

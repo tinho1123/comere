@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Marketplace;
 use App\Http\Controllers\Controller;
 use App\Models\Client;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -37,12 +38,15 @@ class SSOCallbackController extends Controller
         }
 
         // 3. Se ainda não existir, criar um registro temporário/novo
+        // Senha aleatória: o cliente autentica via Clerk, não por e-mail/senha,
+        // mas a coluna é NOT NULL; ele pode defini-la depois via "esqueci minha senha".
         if (! $client) {
             $client = Client::create([
                 'uuid' => (string) Str::uuid(),
                 'clerk_id' => $clerkId,
                 'name' => $name,
                 'email' => $email,
+                'password' => Hash::make(Str::random(32)),
                 'active' => true,
                 'document_type' => 'cpf',
             ]);
