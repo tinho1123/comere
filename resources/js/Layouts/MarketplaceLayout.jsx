@@ -296,7 +296,7 @@ export default function MarketplaceLayout({ children }) {
                             <div className="flex-grow flex flex-col items-center justify-center gap-4 px-9 py-10 text-center sm:min-h-[460px]">
                                 <span className="text-4xl font-bold italic">Comere</span>
                                 <p className="text-sm opacity-90 leading-relaxed max-w-[280px]">
-                                    Peça dos seus restaurantes favoritos e gerencie seu crédito fiado em um só lugar.
+                                    Peça dos seus restaurantes favoritos, acompanhe a entrega e gerencie seus pedidos em um só lugar.
                                 </p>
                                 <div className="flex gap-1.5 mt-2">
                                     <span className="w-[22px] h-1 rounded-full bg-white" />

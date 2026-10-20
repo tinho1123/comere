@@ -497,7 +497,7 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                 </div>
 
                 <p className="text-gray-600 text-sm mt-3 max-w-3xl leading-relaxed">
-                    {company.description ?? 'Bem-vindo à nossa loja! Oferecemos os melhores produtos com a qualidade que você já conhece. Peça agora e aproveite nosso sistema de fiado exclusivo.'}
+                    {company.description ?? 'Bem-vindo à nossa loja! Oferecemos os melhores produtos com a qualidade que você já conhece.'}
                 </p>
 
                 {/* Distância e entrega */}
