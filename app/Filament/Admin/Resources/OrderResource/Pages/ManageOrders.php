@@ -6,6 +6,7 @@ use App\Filament\Admin\Resources\OrderResource;
 use App\Filament\Admin\Resources\OrderResource\Widgets\FailedDeliveriesAlertWidget;
 use Filament\Actions;
 use Filament\Resources\Pages\ManageRecords;
+use Livewire\Attributes\On;
 
 class ManageOrders extends ManageRecords
 {
@@ -23,5 +24,11 @@ class ManageOrders extends ManageRecords
         return [
             FailedDeliveriesAlertWidget::class,
         ];
+    }
+
+    #[On('comere-open-order')]
+    public function openOrderFromAlert(string $recordId): void
+    {
+        $this->mountTableAction('view', $recordId);
     }
 }
