@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\PushNotificationService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -97,6 +98,31 @@ class FavoredTransaction extends Model
 
             if (is_null($model->favored_paid_amount)) {
                 $model->favored_paid_amount = 0;
+            }
+        });
+
+        static::updated(function (FavoredTransaction $model) {
+            if (! $model->wasChanged('favored_paid_amount')) {
+                return;
+            }
+
+            if ((float) $model->favored_paid_amount <= (float) $model->getOriginal('favored_paid_amount')) {
+                return;
+            }
+
+            $paidNow = (float) $model->favored_paid_amount - (float) $model->getOriginal('favored_paid_amount');
+            $clientName = $model->client_name ?? $model->client?->name ?? 'Cliente';
+            $companyUuid = $model->company?->uuid ?? $model->company()->value('uuid');
+
+            try {
+                app(PushNotificationService::class)->notifyCompany(
+                    $model->company_id,
+                    '💰 Pagamento de fiado registrado',
+                    $clientName.' pagou R$ '.number_format($paidNow, 2, ',', '.').' de "'.$model->name.'".',
+                    $companyUuid ? "/admin/{$companyUuid}/favored-transactions" : '/admin'
+                );
+            } catch (\Throwable) {
+                // Nunca falhar o registro de pagamento por causa de erro na notificação
             }
         });
     }
