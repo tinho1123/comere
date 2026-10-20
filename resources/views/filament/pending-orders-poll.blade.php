@@ -434,6 +434,14 @@
                                 'X-CSRF-TOKEN': csrfToken,
                             },
                         }).then((res) => {
+                            if (res.status === 409) {
+                                // O pedido já mudou de status em outra tela (aprovado/
+                                // despachado) enquanto este card estava com dados
+                                // defasados — recarrega a lista para descartá-lo.
+                                showToast('⚠️ Este pedido já foi atualizado em outra tela.');
+                                checkMarketplaceOrders();
+                                return;
+                            }
                             if (!res.ok) throw new Error('request failed');
                             localStorage.removeItem(minimizedKey(order.id));
                             renderedOrderIds.delete(order.id);

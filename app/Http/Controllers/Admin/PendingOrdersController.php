@@ -81,6 +81,20 @@ class PendingOrdersController extends Controller
     {
         abort_unless(auth()->user()->canAccessTenant($order->company), 403);
 
+        // O card pode estar com um estado defasado (até 8s de poll) — se o
+        // pedido já saiu de "pending" (aprovado/despachado por outro admin),
+        // recusar agora via Order::cancel() cancelaria uma etapa posterior
+        // (ex.: devolveria estoque de um pedido já despachado). Em vez de
+        // recusar um pedido que não é mais o que o card mostrava, avisa o
+        // front para atualizar e descartar o card.
+        if ($order->status !== Order::STATUS_PENDING) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pedido não está mais pendente.',
+                'status' => $order->status,
+            ], 409);
+        }
+
         $order->cancel();
 
         return response()->json(['success' => true, 'status' => $order->status]);
@@ -88,11 +102,15 @@ class PendingOrdersController extends Controller
 
     private function formatOrder(Order $order, Company $company): array
     {
-        $hasOrderAddress = $order->delivery_latitude && $order->delivery_longitude;
+        $hasOrderAddress = (bool) ($order->delivery_street || $order->delivery_neighborhood);
 
         if ($hasOrderAddress) {
-            $lat = (float) $order->delivery_latitude;
-            $lng = (float) $order->delivery_longitude;
+            // Endereço salvo no próprio pedido tem prioridade mesmo sem
+            // coordenadas (a API de endereços do marketplace permite salvar
+            // sem lat/lng) — o endereço padrão atual do cliente pode já ter
+            // mudado desde que o pedido foi feito.
+            $lat = $order->delivery_latitude ? (float) $order->delivery_latitude : null;
+            $lng = $order->delivery_longitude ? (float) $order->delivery_longitude : null;
             $addressText = implode(', ', array_filter([
                 trim(($order->delivery_street ?? '').', '.($order->delivery_number ?? '')),
                 $order->delivery_neighborhood,
