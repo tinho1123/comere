@@ -101,6 +101,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/push/unsubscribe', [PushSubscriptionController::class, 'unsubscribe'])->name('push.unsubscribe');
     Route::get('/admin/table/{uuid}/qr-image', [TableQrController::class, 'image'])->name('table.qr-image');
     Route::get('/admin/pedidos-pendentes', [PendingOrdersController::class, 'count'])->name('admin.pending-orders.count');
+    Route::get('/admin/pedidos-pendentes/marketplace', [PendingOrdersController::class, 'pendingMarketplaceOrders'])->name('admin.pending-orders.marketplace');
+    Route::post('/admin/pedidos-pendentes/{order:uuid}/aprovar', [PendingOrdersController::class, 'approveOrder'])->name('admin.pending-orders.approve');
+    Route::post('/admin/pedidos-pendentes/{order:uuid}/recusar', [PendingOrdersController::class, 'rejectOrder'])->name('admin.pending-orders.reject');
     Route::get('/admin/produtos/{company:uuid}/cardapio', [MenuExportController::class, 'show'])->name('admin.products.menu');
     Route::get('/admin/select-company', [SelectCompanyController::class, 'show'])->name('admin.select-company');
     Route::post('/admin/select-company', [SelectCompanyController::class, 'store'])->name('admin.select-company.store');
