@@ -1,11 +1,21 @@
 import { useState, useEffect, useRef } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, LogIn, X, Mail, LogOut, ShoppingCart, Search, Package, MapPin, ChevronDown, Plus, Check, Trash2, Home, Heart } from 'lucide-react';
+import { User, LogIn, X, Mail, LogOut, ShoppingCart, Search, Package, MapPin, ChevronDown, ChevronRight, Plus, Check, Trash2, Home, Heart } from 'lucide-react';
 import axios from 'axios';
 
+function initials(name) {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/);
+    return ((parts[0]?.[0] ?? '') + (parts[parts.length - 1]?.[0] ?? '')).toUpperCase();
+}
+
+function formatCurrency(value) {
+    return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
 export default function MarketplaceLayout({ children }) {
-    const { props: { auth, orders_count, default_address }, url } = usePage();
+    const { props: { auth, orders_count, default_address, favored_balance }, url } = usePage();
     const [isAuthOpen, setIsAuthOpen] = useState(false);
     const [isAddressOpen, setIsAddressOpen] = useState(false);
     const [isProfileSheetOpen, setIsProfileSheetOpen] = useState(false);
@@ -295,10 +305,8 @@ export default function MarketplaceLayout({ children }) {
                                             onClick={() => setIsUserMenuOpen((v) => !v)}
                                             className="flex items-center gap-2 rounded-full hover:bg-gray-100 pr-2 transition-colors"
                                         >
-                                            <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-red-500 to-red-400 p-0.5 shadow-sm">
-                                                <div className="h-full w-full rounded-full bg-white flex items-center justify-center">
-                                                    <User size={18} className="text-red-500" />
-                                                </div>
+                                            <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-red-500 to-red-400 flex items-center justify-center text-white text-xs font-bold shadow-sm flex-shrink-0">
+                                                {initials(displayUser?.name)}
                                             </div>
                                             <span className="hidden sm:block text-sm font-semibold text-gray-700 max-w-[100px] truncate">
                                                 {displayUser?.name?.split(' ')[0] || 'Usuário'}
@@ -313,12 +321,36 @@ export default function MarketplaceLayout({ children }) {
                                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                                     exit={{ opacity: 0, y: -6, scale: 0.97 }}
                                                     transition={{ duration: 0.15 }}
-                                                    className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50"
+                                                    className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50"
                                                 >
-                                                    <div className="px-4 py-3 border-b border-gray-100">
-                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Bem-vindo</p>
-                                                        <p className="text-sm font-bold text-gray-900 truncate">{displayUser?.name || 'Usuário'}</p>
+                                                    <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-100">
+                                                        <div className="h-11 w-11 rounded-full bg-gradient-to-tr from-red-500 to-red-400 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                                                            {initials(displayUser?.name)}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="text-sm font-bold text-gray-900 truncate">{displayUser?.name || 'Usuário'}</p>
+                                                            <p className="text-xs text-gray-400 truncate">{displayUser?.email}</p>
+                                                        </div>
                                                     </div>
+
+                                                    <div className="grid grid-cols-2 gap-2 px-4 py-3 border-b border-gray-100">
+                                                        <div className="bg-gray-50 rounded-xl py-2.5 text-center">
+                                                            <p className="text-sm font-bold text-gray-900">{formatCurrency(favored_balance)}</p>
+                                                            <p className="text-[10px] text-gray-500 font-medium">Saldo fiado</p>
+                                                        </div>
+                                                        <div className="bg-gray-50 rounded-xl py-2.5 text-center">
+                                                            <p className="text-sm font-bold text-gray-900">{orders_count?.total ?? 0}</p>
+                                                            <p className="text-[10px] text-gray-500 font-medium">Pedidos</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <button
+                                                        onClick={() => { setIsUserMenuOpen(false); openAddressModal(); }}
+                                                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                                    >
+                                                        <MapPin size={16} className="text-gray-400" />
+                                                        Endereços
+                                                    </button>
 
                                                     <Link
                                                         href="/meus-pedidos"
@@ -417,37 +449,53 @@ export default function MarketplaceLayout({ children }) {
                             className="md:hidden fixed bottom-0 left-0 right-0 z-[60] bg-white rounded-t-3xl shadow-2xl p-6"
                         >
                             <div className="flex items-center gap-3 mb-5">
-                                <div className="h-12 w-12 rounded-full bg-gradient-to-tr from-red-500 to-red-400 p-0.5 shadow-sm flex-shrink-0">
-                                    <div className="h-full w-full rounded-full bg-white flex items-center justify-center">
-                                        <User size={20} className="text-red-500" />
-                                    </div>
+                                <div className="h-14 w-14 rounded-full bg-gradient-to-tr from-red-500 to-red-400 flex items-center justify-center text-white text-lg font-bold flex-shrink-0">
+                                    {initials(displayUser?.name)}
                                 </div>
                                 <div className="min-w-0">
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Bem-vindo</p>
                                     <p className="text-sm font-bold text-gray-900 truncate">{displayUser?.name || 'Usuário'}</p>
+                                    <p className="text-xs text-gray-400 truncate">{displayUser?.email}</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2.5 mb-2">
+                                <div className="bg-gray-50 rounded-2xl py-3 text-center">
+                                    <p className="text-base font-bold text-gray-900">{formatCurrency(favored_balance)}</p>
+                                    <p className="text-[11px] text-gray-500 font-medium">Saldo fiado</p>
+                                </div>
+                                <div className="bg-gray-50 rounded-2xl py-3 text-center">
+                                    <p className="text-base font-bold text-gray-900">{orders_count?.total ?? 0}</p>
+                                    <p className="text-[11px] text-gray-500 font-medium">Pedidos</p>
                                 </div>
                             </div>
 
                             <button
                                 onClick={() => { setIsProfileSheetOpen(false); openAddressModal(); }}
-                                className="w-full flex items-center gap-3 px-2 py-3 text-sm font-semibold text-gray-700 border-t border-gray-100"
+                                className="w-full flex items-center gap-3 px-2 py-3.5 text-sm font-semibold text-gray-700 border-t border-gray-100"
                             >
                                 <MapPin size={18} className="text-gray-400" />
-                                {defaultAddressLabel}
+                                <span className="flex-1 text-left truncate">{defaultAddressLabel}</span>
+                                <ChevronRight size={16} className="text-gray-300" />
                             </button>
 
                             <Link
                                 href="/meus-pedidos"
                                 onClick={() => setIsProfileSheetOpen(false)}
-                                className="w-full flex items-center gap-3 px-2 py-3 text-sm font-semibold text-gray-700 border-t border-gray-100"
+                                className="w-full flex items-center gap-3 px-2 py-3.5 text-sm font-semibold text-gray-700 border-t border-gray-100"
                             >
                                 <Package size={18} className="text-gray-400" />
-                                Meus Pedidos
+                                <span className="flex-1 text-left">Meus Pedidos</span>
+                                {orders_count?.unfinished > 0 && (
+                                    <span className="bg-red-500 text-white text-[10px] font-bold h-4 px-1.5 rounded-full flex items-center justify-center">
+                                        {orders_count.unfinished}
+                                    </span>
+                                )}
+                                <ChevronRight size={16} className="text-gray-300" />
                             </Link>
 
                             <button
                                 onClick={() => { setIsProfileSheetOpen(false); handleLogout(); }}
-                                className="w-full flex items-center gap-3 px-2 py-3 text-sm font-semibold text-red-500 border-t border-gray-100"
+                                className="w-full flex items-center gap-3 px-2 py-3.5 text-sm font-semibold text-red-500 border-t border-gray-100"
                             >
                                 <LogOut size={18} />
                                 Sair

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\FavoredTransaction;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -55,9 +56,17 @@ class HandleInertiaRequests extends Middleware
                     'unfinished' => Order::where('client_id', auth()->guard('client')->id())
                         ->whereNotIn('status', [Order::STATUS_DELIVERED, Order::STATUS_CANCELLED])
                         ->count(),
+                    'total' => Order::where('client_id', auth()->guard('client')->id())->count(),
                 ] : [
                     'unfinished' => 0,
+                    'total' => 0,
                 ],
+            'favored_balance' => auth()->guard('client')->check()
+                ? FavoredTransaction::where('client_id', auth()->guard('client')->id())
+                    ->where('active', true)
+                    ->selectRaw('COALESCE(SUM(favored_total - favored_paid_amount), 0) as balance')
+                    ->value('balance')
+                : 0,
             'default_address' => auth()->guard('client')->check()
                 ? auth()->guard('client')->user()->addresses()->where('is_default', true)->first()
                 : null,
