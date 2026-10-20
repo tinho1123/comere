@@ -11,6 +11,21 @@ class ManageOrders extends ManageRecords
 {
     protected static string $resource = OrderResource::class;
 
+    public function mount(): void
+    {
+        parent::mount();
+
+        // Deep link usado pelo card de alerta de novo pedido (?pedido=<uuid>)
+        // para abrir direto o modal de visualização do pedido.
+        if ($uuid = request()->query('pedido')) {
+            $record = $this->getTableQuery()->where('uuid', $uuid)->first();
+
+            if ($record) {
+                $this->mountTableAction('view', $record->getKey());
+            }
+        }
+    }
+
     protected function getHeaderActions(): array
     {
         return [
