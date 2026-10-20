@@ -396,6 +396,31 @@
                 container.style.transform = 'none';
             }
 
+            function clampContainerToViewport() {
+                const container = document.getElementById('comere-order-alerts');
+                // Só se aplica quando o container já foi tirado da posição
+                // centralizada padrão (left: 50%) — ou seja, quando já tem
+                // uma posição arrastada/salva em px pra reconferir.
+                if (!container.style.left || container.style.left.endsWith('%')) return;
+
+                const rect = container.getBoundingClientRect();
+                if (rect.width === 0 && rect.height === 0) return;
+
+                const maxLeft = Math.max(0, window.innerWidth - rect.width);
+                const maxTop = Math.max(0, window.innerHeight - rect.height);
+                const clampedLeft = clamp(rect.left, 0, maxLeft);
+                const clampedTop = clamp(rect.top, 0, maxTop);
+
+                if (clampedLeft === rect.left && clampedTop === rect.top) return;
+
+                container.style.left = clampedLeft + 'px';
+                container.style.top = clampedTop + 'px';
+
+                try {
+                    localStorage.setItem(POSITION_KEY, JSON.stringify({ left: clampedLeft, top: clampedTop }));
+                } catch (e) {}
+            }
+
             function initDragHandle(handle) {
                 const container = document.getElementById('comere-order-alerts');
                 let dragging = false;
@@ -660,6 +685,10 @@
                     // os próximos cards (ensureDragHandle não mexe na posição).
                     if (renderedOrderIds.size > 0) {
                         ensureDragHandle(container);
+                        // Reconfere a cada atualização (não só na primeira vez) —
+                        // uma posição salva num monitor maior pode cair fora da
+                        // viewport atual (janela menor, celular, etc.).
+                        clampContainerToViewport();
                     } else {
                         container.querySelector('.coa-drag-handle')?.remove();
                     }
@@ -704,6 +733,7 @@
             }
 
             applySavedPosition();
+            window.addEventListener('resize', clampContainerToViewport);
             checkMesaItems();
             checkMarketplaceOrders();
             setInterval(checkMesaItems, 8000);
