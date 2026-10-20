@@ -9,6 +9,7 @@ use App\Models\Delivery;
 use App\Models\Driver;
 use App\Models\DriverCompany;
 use App\Models\Order;
+use App\Models\OrderMessage;
 use App\Models\Product;
 use App\Services\PushNotificationService;
 use BackedEnum;
@@ -25,6 +26,7 @@ use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\HtmlString;
@@ -729,6 +731,21 @@ class OrderResource extends Resource
                             ->title('Pedido cancelado!')
                             ->send();
                     }),
+                Action::make('chat')
+                    ->label('Mensagens')
+                    ->icon('heroicon-o-chat-bubble-left-right')
+                    ->color('gray')
+                    ->badge(fn (Order $record): ?int => OrderMessage::where('order_id', $record->id)
+                        ->where('sender_type', OrderMessage::SENDER_CLIENT)
+                        ->whereNull('read_at')
+                        ->count() ?: null)
+                    ->modalHeading(fn (Order $record): string => 'Mensagens — Pedido #'.Str::substr($record->uuid, 0, 8))
+                    ->modalContent(fn (Order $record): View => view(
+                        'filament.resources.order.chat-modal',
+                        ['record' => $record]
+                    ))
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Fechar'),
                 Actions\ViewAction::make(),
                 Actions\EditAction::make(),
             ])

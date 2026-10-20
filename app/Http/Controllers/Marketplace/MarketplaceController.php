@@ -10,6 +10,7 @@ use App\Models\CompanyType;
 use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderMessage;
 use App\Models\Product;
 use App\Services\DistanceService;
 use App\Services\PushNotificationService;
@@ -196,8 +197,18 @@ class MarketplaceController extends Controller
         $orders = Order::where('client_id', auth()->guard('client')->id())
             ->with(['items', 'company', 'delivery.driver'])
             ->latest()
-            ->get()
-            ->map(fn ($order) => [
+            ->get();
+
+        // Contagem de mensagens não lidas (loja -> cliente) por pedido, numa
+        // única query, para não paginar N+1 ao montar a lista de pedidos.
+        $unreadByOrder = OrderMessage::whereIn('order_id', $orders->pluck('id'))
+            ->where('sender_type', OrderMessage::SENDER_COMPANY)
+            ->whereNull('read_at')
+            ->selectRaw('order_id, count(*) as total')
+            ->groupBy('order_id')
+            ->pluck('total', 'order_id');
+
+        $orders = $orders->map(fn ($order) => [
                 'uuid' => $order->uuid,
                 'status' => $order->status,
                 'total_amount' => $order->total_amount,
@@ -216,6 +227,8 @@ class MarketplaceController extends Controller
                         ->count()
                     : null,
                 'can_reorder' => $order->items->isNotEmpty(),
+                'chat_open' => $order->isChatOpen(),
+                'unread_messages_count' => $unreadByOrder->get($order->id, 0),
                 'company' => [
                     'uuid' => $order->company->uuid,
                     'name' => $order->company->name,

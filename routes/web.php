@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\MenuExportController;
+use App\Http\Controllers\Admin\OrderChatController as AdminOrderChatController;
 use App\Http\Controllers\Admin\PendingOrdersController;
 use App\Http\Controllers\Admin\SelectCompanyController;
 use App\Http\Controllers\Admin\TableQrController;
@@ -17,6 +18,7 @@ use App\Http\Controllers\Marketplace\DriverHistoryController;
 use App\Http\Controllers\Marketplace\DriverPushSubscriptionController;
 use App\Http\Controllers\Marketplace\MarketplaceController;
 use App\Http\Controllers\Marketplace\MarketplaceLoginController;
+use App\Http\Controllers\Marketplace\OrderChatController;
 use App\Http\Controllers\Marketplace\SSOCallbackController;
 use App\Http\Controllers\Marketplace\TableController;
 use App\Http\Controllers\PushSubscriptionController;
@@ -82,6 +84,8 @@ Route::post('/complete-profile', [SSOCallbackController::class, 'storeProfile'])
 Route::middleware('auth:client')->group(function () {
     Route::get('/meus-pedidos', [MarketplaceController::class, 'orders'])->name('marketplace.orders');
     Route::get('/meus-pedidos/{order:uuid}/rastreio', [MarketplaceController::class, 'trackOrder'])->name('marketplace.order.track');
+    Route::get('/meus-pedidos/{order:uuid}/mensagens', [OrderChatController::class, 'index'])->name('marketplace.order.chat.index');
+    Route::post('/meus-pedidos/{order:uuid}/mensagens', [OrderChatController::class, 'store'])->name('marketplace.order.chat.store');
     Route::post('/store/{company:uuid}/orders', [MarketplaceController::class, 'storeOrder'])->name('marketplace.order.store');
     Route::post('/store/{company:uuid}/orders/{order:uuid}/reorder', [MarketplaceController::class, 'reorder'])->name('marketplace.order.reorder');
     Route::post('/store/{company:uuid}/coupons/validate', [MarketplaceController::class, 'validateCoupon'])->name('marketplace.coupon.validate');
@@ -104,6 +108,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/pedidos-pendentes/marketplace', [PendingOrdersController::class, 'pendingMarketplaceOrders'])->name('admin.pending-orders.marketplace');
     Route::post('/admin/pedidos-pendentes/{order:uuid}/aprovar', [PendingOrdersController::class, 'approveOrder'])->name('admin.pending-orders.approve');
     Route::post('/admin/pedidos-pendentes/{order:uuid}/recusar', [PendingOrdersController::class, 'rejectOrder'])->name('admin.pending-orders.reject');
+    Route::get('/admin/pedidos/{order:uuid}/mensagens', [AdminOrderChatController::class, 'index'])->name('admin.order.chat.index');
+    Route::post('/admin/pedidos/{order:uuid}/mensagens', [AdminOrderChatController::class, 'store'])->name('admin.order.chat.store');
+    Route::get('/admin/pedidos-mensagens/nao-lidas', [AdminOrderChatController::class, 'unreadCount'])->name('admin.order.chat.unread-count');
     Route::get('/admin/produtos/{company:uuid}/cardapio', [MenuExportController::class, 'show'])->name('admin.products.menu');
     Route::get('/admin/select-company', [SelectCompanyController::class, 'show'])->name('admin.select-company');
     Route::post('/admin/select-company', [SelectCompanyController::class, 'store'])->name('admin.select-company.store');

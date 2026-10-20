@@ -278,4 +278,18 @@ class Order extends Model
     {
         return $this->hasOne(Delivery::class);
     }
+
+    public function messages(): HasMany
+    {
+        return $this->hasMany(OrderMessage::class);
+    }
+
+    /**
+     * Whether the chat between client and store should still accept new
+     * messages (closed/cancelled orders keep their history read-only).
+     */
+    public function isChatOpen(): bool
+    {
+        return ! in_array($this->status, [self::STATUS_DELIVERED, self::STATUS_CANCELLED], true);
+    }
 }
