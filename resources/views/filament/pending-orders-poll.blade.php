@@ -2,12 +2,299 @@
     $tenant = filament()->getTenant();
 @endphp
 @if ($tenant)
+    <style>
+        /* Classes utilitárias Tailwind não existem no CSS compilado do painel
+           (que só publica o que o Filament usa internamente) — por isso este
+           componente usa apenas regras escopadas sob .coa-*, nunca classes
+           como "flex" ou "rounded-xl" (mesmo padrão de order-location.blade.php). */
+        #comere-order-alerts {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            pointer-events: none;
+        }
+        .coa-card {
+            pointer-events: auto;
+            width: clamp(320px, 92vw, 560px);
+            background: #ffffff;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+            border: 1px solid #e5e7eb;
+            border-top: 3px solid #4f46e5;
+            overflow: hidden;
+            animation: coa-slide-in 0.25s ease-out;
+            font-family: inherit;
+        }
+        html.dark .coa-card {
+            background: #1f2937;
+            border-color: #374151;
+        }
+        @keyframes coa-slide-in {
+            from { transform: translateY(-16px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .coa-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.625rem 0.875rem;
+            cursor: pointer;
+            user-select: none;
+        }
+        .coa-header-title {
+            flex: 1;
+            font-size: 0.8125rem;
+            font-weight: 700;
+            color: #1f2937;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+        html.dark .coa-header-title {
+            color: #f3f4f6;
+        }
+        .coa-pulse {
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 50%;
+            background: #f97316;
+            flex-shrink: 0;
+            animation: coa-pulse 1.4s ease-in-out infinite;
+        }
+        @keyframes coa-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.55); }
+            50% { box-shadow: 0 0 0 5px rgba(249, 115, 22, 0); }
+        }
+        .coa-time {
+            font-size: 0.6875rem;
+            color: #9ca3af;
+            font-weight: 500;
+        }
+        .coa-toggle {
+            border: none;
+            background: transparent;
+            color: #9ca3af;
+            cursor: pointer;
+            padding: 0.25rem;
+            display: flex;
+            border-radius: 0.375rem;
+        }
+        .coa-toggle:hover {
+            background: #f3f4f6;
+        }
+        html.dark .coa-toggle:hover {
+            background: #374151;
+        }
+        .coa-body {
+            padding: 0 0.875rem 0.875rem;
+        }
+        .coa-card.coa-minimized .coa-body {
+            display: none;
+        }
+        .coa-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .coa-client {
+            font-size: 0.8125rem;
+            color: #1f2937;
+            font-weight: 600;
+            margin: 0;
+        }
+        html.dark .coa-client {
+            color: #e5e7eb;
+        }
+        .coa-total {
+            font-size: 1.0625rem;
+            font-weight: 700;
+            color: #4f46e5;
+            margin: 0;
+            white-space: nowrap;
+        }
+        html.dark .coa-total {
+            color: #a5b4fc;
+        }
+        .coa-items {
+            max-height: 90px;
+            overflow-y: auto;
+            background: #f9fafb;
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.625rem;
+            margin-bottom: 0.5rem;
+        }
+        html.dark .coa-items {
+            background: rgba(255, 255, 255, 0.04);
+        }
+        .coa-item-line {
+            font-size: 0.75rem;
+            color: #4b5563;
+            display: flex;
+            gap: 0.375rem;
+            line-height: 1.4;
+        }
+        html.dark .coa-item-line {
+            color: #d1d5db;
+        }
+        .coa-item-qty {
+            font-weight: 700;
+            color: #4f46e5;
+            flex-shrink: 0;
+        }
+        html.dark .coa-item-qty {
+            color: #a5b4fc;
+        }
+        .coa-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.375rem;
+            margin-bottom: 0.75rem;
+        }
+        .coa-chip {
+            font-size: 0.6875rem;
+            font-weight: 600;
+            color: #4338ca;
+            background: #eef2ff;
+            border-radius: 9999px;
+            padding: 0.25rem 0.625rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        html.dark .coa-chip {
+            color: #c7d2fe;
+            background: rgba(99, 102, 241, 0.16);
+        }
+        .coa-chip--payment {
+            color: #92400e;
+            background: #fef3c7;
+        }
+        html.dark .coa-chip--payment {
+            color: #fde68a;
+            background: rgba(245, 158, 11, 0.16);
+        }
+        .coa-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .coa-btn {
+            flex: 1;
+            border: none;
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.625rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+            transition: opacity 0.15s;
+        }
+        .coa-btn:disabled {
+            opacity: 0.6;
+            cursor: default;
+        }
+        .coa-btn--approve {
+            background: #059669;
+            color: #fff;
+        }
+        .coa-btn--reject {
+            background: #fff;
+            color: #e11d48;
+            border: 1px solid #fecdd3;
+        }
+        html.dark .coa-btn--reject {
+            background: transparent;
+            color: #fb7185;
+            border-color: rgba(251, 113, 133, 0.35);
+        }
+        .coa-btn--open {
+            background: #fff;
+            color: #4338ca;
+            border: 1px solid #c7d2fe;
+            flex: 0 0 auto;
+            padding: 0.5rem 0.75rem;
+        }
+        html.dark .coa-btn--open {
+            background: transparent;
+            color: #a5b4fc;
+            border-color: rgba(99, 102, 241, 0.35);
+        }
+        /* Minimizado: tira a pílula */
+        .coa-mini-bar {
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.875rem;
+        }
+        .coa-card.coa-minimized .coa-mini-bar {
+            display: flex;
+        }
+        .coa-card.coa-minimized .coa-header {
+            display: none;
+        }
+        .coa-mini-label {
+            flex: 1;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        html.dark .coa-mini-label {
+            color: #e5e7eb;
+        }
+        .coa-mini-actions {
+            display: flex;
+            gap: 0.375rem;
+        }
+        .coa-mini-btn {
+            border: none;
+            border-radius: 0.375rem;
+            width: 1.75rem;
+            height: 1.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+        .coa-mini-btn--approve {
+            background: #059669;
+            color: #fff;
+        }
+        .coa-mini-btn--reject {
+            background: #fde8e8;
+            color: #e11d48;
+        }
+        html.dark .coa-mini-btn--reject {
+            background: rgba(225, 29, 72, 0.18);
+            color: #fb7185;
+        }
+    </style>
+
+    <div id="comere-order-alerts"></div>
+
     <script>
         (function () {
             const companyUuid = @js($tenant->uuid);
-            const endpoint = @js(route('admin.pending-orders.count'));
+            const mesaEndpoint = @js(route('admin.pending-orders.count'));
+            const marketplaceEndpoint = @js(route('admin.pending-orders.marketplace'));
+            const ordersIndexUrl = @js(\App\Filament\Admin\Resources\OrderResource::getUrl('index'));
+            const csrfToken = @js(csrf_token());
+            const approveUrl = (uuid) => @js(url('/admin/pedidos-pendentes')) + '/' + uuid + '/aprovar';
+            const rejectUrl = (uuid) => @js(url('/admin/pedidos-pendentes')) + '/' + uuid + '/recusar';
+
             let lastItemId = null;
-            let lastOrderId = null;
+            let marketplaceInitialized = false;
+            const renderedOrderIds = new Set();
 
             function beep() {
                 try {
@@ -33,9 +320,177 @@
                 setTimeout(() => toast.remove(), 6000);
             }
 
-            async function checkPending() {
+            function escapeHtml(value) {
+                const div = document.createElement('div');
+                div.textContent = value ?? '';
+                return div.innerHTML;
+            }
+
+            function formatMoney(value) {
+                return 'R$ ' + Number(value || 0).toFixed(2).replace('.', ',');
+            }
+
+            function timeAgoLabel(isoDate) {
+                const diffMs = Date.now() - new Date(isoDate).getTime();
+                const minutes = Math.max(0, Math.floor(diffMs / 60000));
+                if (minutes < 1) return 'agora mesmo';
+                if (minutes === 1) return 'há 1 minuto';
+                if (minutes < 60) return `há ${minutes} minutos`;
+                const hours = Math.floor(minutes / 60);
+                return hours === 1 ? 'há 1 hora' : `há ${hours} horas`;
+            }
+
+            function minimizedKey(orderId) {
+                return `comere_order_alert_minimized_${orderId}`;
+            }
+
+            function buildCard(order) {
+                const card = document.createElement('div');
+                card.className = 'coa-card';
+                card.dataset.orderId = String(order.id);
+
+                const isMinimized = localStorage.getItem(minimizedKey(order.id)) === '1';
+                if (isMinimized) card.classList.add('coa-minimized');
+
+                const itemsHtml = order.items.map((item) => `
+                    <div class="coa-item-line">
+                        <span class="coa-item-qty">${item.quantity}x</span>
+                        <span>${escapeHtml(item.name)}</span>
+                    </div>
+                `).join('');
+
+                const addressChip = order.address
+                    ? `<span class="coa-chip">📍 ${escapeHtml(order.neighborhood || order.address)}</span>`
+                    : '<span class="coa-chip">📍 Endereço não informado</span>';
+
+                const distanceChip = order.distance_km !== null
+                    ? `<span class="coa-chip">📏 ${Number(order.distance_km).toFixed(1).replace('.', ',')} km</span>`
+                    : '';
+
+                const paymentChip = `<span class="coa-chip coa-chip--payment">💳 ${escapeHtml(order.payment_method_label)}</span>`;
+
+                card.innerHTML = `
+                    <div class="coa-header" data-action="toggle">
+                        <span class="coa-pulse"></span>
+                        <span class="coa-header-title">
+                            🛒 Novo pedido no marketplace
+                            <span class="coa-time">· ${timeAgoLabel(order.created_at)}</span>
+                        </span>
+                        <button type="button" class="coa-toggle" data-action="toggle" title="Minimizar">▾</button>
+                    </div>
+                    <div class="coa-body">
+                        <div class="coa-row">
+                            <p class="coa-client">${escapeHtml(order.client_name || 'Cliente')} · ${order.items_count} ${order.items_count === 1 ? 'item' : 'itens'}</p>
+                            <p class="coa-total">${formatMoney(order.total_amount)}</p>
+                        </div>
+                        <div class="coa-items">${itemsHtml}</div>
+                        <div class="coa-meta">
+                            ${addressChip}
+                            ${distanceChip}
+                            ${paymentChip}
+                        </div>
+                        <div class="coa-actions">
+                            <button type="button" class="coa-btn coa-btn--approve" data-action="approve">✓ Aprovar</button>
+                            <button type="button" class="coa-btn coa-btn--reject" data-action="reject">✕ Recusar</button>
+                            <button type="button" class="coa-btn--open" data-action="open" title="Abrir pedido">↗</button>
+                        </div>
+                    </div>
+                    <div class="coa-mini-bar">
+                        <span class="coa-pulse"></span>
+                        <span class="coa-mini-label">${escapeHtml(order.client_name || 'Cliente')} · ${formatMoney(order.total_amount)}</span>
+                        <div class="coa-mini-actions">
+                            <button type="button" class="coa-mini-btn coa-mini-btn--approve" data-action="approve" title="Aprovar">✓</button>
+                            <button type="button" class="coa-mini-btn coa-mini-btn--reject" data-action="reject" title="Recusar">✕</button>
+                            <button type="button" class="coa-mini-btn" data-action="toggle" title="Expandir">▴</button>
+                        </div>
+                    </div>
+                `;
+
+                card.addEventListener('click', (event) => {
+                    const action = event.target.closest('[data-action]')?.dataset.action;
+                    if (!action) return;
+
+                    if (action === 'toggle') {
+                        const minimized = card.classList.toggle('coa-minimized');
+                        localStorage.setItem(minimizedKey(order.id), minimized ? '1' : '0');
+                        return;
+                    }
+
+                    if (action === 'open') {
+                        window.open(`${ordersIndexUrl}?tableSearch=${encodeURIComponent(order.uuid)}`, '_blank');
+                        return;
+                    }
+
+                    if (action === 'approve' || action === 'reject') {
+                        const buttons = card.querySelectorAll('button');
+                        buttons.forEach((btn) => (btn.disabled = true));
+
+                        const endpoint = action === 'approve' ? approveUrl(order.uuid) : rejectUrl(order.uuid);
+
+                        fetch(endpoint, {
+                            method: 'POST',
+                            headers: {
+                                Accept: 'application/json',
+                                'X-CSRF-TOKEN': csrfToken,
+                            },
+                        }).then((res) => {
+                            if (!res.ok) throw new Error('request failed');
+                            localStorage.removeItem(minimizedKey(order.id));
+                            renderedOrderIds.delete(order.id);
+                            card.remove();
+                        }).catch(() => {
+                            buttons.forEach((btn) => (btn.disabled = false));
+                        });
+                    }
+                });
+
+                return card;
+            }
+
+            async function checkMarketplaceOrders() {
                 try {
-                    const res = await fetch(endpoint + '?company=' + companyUuid, {
+                    const res = await fetch(marketplaceEndpoint + '?company=' + companyUuid, {
+                        headers: { Accept: 'application/json' },
+                    });
+                    if (!res.ok) return;
+
+                    const data = await res.json();
+                    const orders = data.orders || [];
+                    const container = document.getElementById('comere-order-alerts');
+                    const currentIds = new Set(orders.map((o) => o.id));
+
+                    // Remove cards for orders that are no longer pending (aprovado/recusado
+                    // por este card ou pela tela de Pedidos/Sessões).
+                    renderedOrderIds.forEach((id) => {
+                        if (!currentIds.has(id)) {
+                            const el = container.querySelector(`[data-order-id="${id}"]`);
+                            if (el) el.remove();
+                            renderedOrderIds.delete(id);
+                            localStorage.removeItem(minimizedKey(id));
+                        }
+                    });
+
+                    orders.forEach((order) => {
+                        if (renderedOrderIds.has(order.id)) return;
+
+                        renderedOrderIds.add(order.id);
+                        container.appendChild(buildCard(order));
+
+                        // No primeiro carregamento da página, pedidos pendentes só
+                        // reaparecem na tela (sem som) — o alerta sonoro é só para
+                        // pedidos genuinamente novos durante a sessão.
+                        if (marketplaceInitialized) {
+                            beep();
+                        }
+                    });
+
+                    marketplaceInitialized = true;
+                } catch (e) {}
+            }
+
+            async function checkMesaItems() {
+                try {
+                    const res = await fetch(mesaEndpoint + '?company=' + companyUuid, {
                         headers: { Accept: 'application/json' },
                     });
 
@@ -45,31 +500,24 @@
 
                     const data = await res.json();
 
-                    // Compare by the highest item/order id ever seen (not the
-                    // pending count), so a new order isn't masked by another
-                    // item being delivered in the same polling interval.
+                    // Compare by the highest item id ever seen (not the pending
+                    // count), so a new order isn't masked by another item being
+                    // delivered in the same polling interval.
                     if (lastItemId !== null && data.latest_item_id !== null && data.latest_item_id > lastItemId) {
                         beep();
                         showToast('🔔 Novo pedido pendente na mesa!');
                     }
 
-                    if (lastOrderId !== null && data.latest_order_id !== null && data.latest_order_id > lastOrderId) {
-                        beep();
-                        showToast('🛒 Novo pedido no marketplace!');
-                    }
-
                     if (data.latest_item_id !== null) {
                         lastItemId = data.latest_item_id;
-                    }
-
-                    if (data.latest_order_id !== null) {
-                        lastOrderId = data.latest_order_id;
                     }
                 } catch (e) {}
             }
 
-            checkPending();
-            setInterval(checkPending, 8000);
+            checkMesaItems();
+            checkMarketplaceOrders();
+            setInterval(checkMesaItems, 8000);
+            setInterval(checkMarketplaceOrders, 8000);
         })();
     </script>
 @endif

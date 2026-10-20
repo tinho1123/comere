@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Order;
 use App\Models\TableSessionItem;
+use App\Services\DistanceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -42,5 +43,95 @@ class PendingOrdersController extends Controller
             'pending_orders_count' => $pendingOrdersCount,
             'latest_order_id' => $latestOrderId,
         ]);
+    }
+
+    /**
+     * List pending marketplace orders for the current tenant, with enough
+     * detail (items, total, address, distance, payment method) to render
+     * the admin's "novo pedido" alert card without a second round-trip.
+     */
+    public function pendingMarketplaceOrders(Request $request): JsonResponse
+    {
+        $company = Company::where('uuid', $request->query('company'))->firstOrFail();
+
+        abort_unless(auth()->user()->canAccessTenant($company), 403);
+
+        $orders = Order::where('company_id', $company->id)
+            ->where('status', Order::STATUS_PENDING)
+            ->where('channel', Order::CHANNEL_ONLINE)
+            ->with(['client', 'items'])
+            ->orderBy('id')
+            ->get();
+
+        return response()->json([
+            'orders' => $orders->map(fn (Order $order) => $this->formatOrder($order, $company))->all(),
+        ]);
+    }
+
+    public function approveOrder(Request $request, Order $order): JsonResponse
+    {
+        abort_unless(auth()->user()->canAccessTenant($order->company), 403);
+
+        $order->approve();
+
+        return response()->json(['success' => true, 'status' => $order->status]);
+    }
+
+    public function rejectOrder(Request $request, Order $order): JsonResponse
+    {
+        abort_unless(auth()->user()->canAccessTenant($order->company), 403);
+
+        $order->cancel();
+
+        return response()->json(['success' => true, 'status' => $order->status]);
+    }
+
+    private function formatOrder(Order $order, Company $company): array
+    {
+        $hasOrderAddress = $order->delivery_latitude && $order->delivery_longitude;
+
+        if ($hasOrderAddress) {
+            $lat = (float) $order->delivery_latitude;
+            $lng = (float) $order->delivery_longitude;
+            $addressText = implode(', ', array_filter([
+                trim(($order->delivery_street ?? '').', '.($order->delivery_number ?? '')),
+                $order->delivery_neighborhood,
+                ($order->delivery_city ?? '').($order->delivery_state ? '/'.$order->delivery_state : ''),
+            ]));
+            $neighborhood = $order->delivery_neighborhood;
+        } else {
+            $addr = $order->client?->defaultAddress()->first();
+            $lat = $addr?->latitude ? (float) $addr->latitude : null;
+            $lng = $addr?->longitude ? (float) $addr->longitude : null;
+            $addressText = $addr
+                ? "{$addr->street}, {$addr->number} — {$addr->neighborhood}, {$addr->city}/{$addr->state}"
+                : null;
+            $neighborhood = $addr?->neighborhood;
+        }
+
+        $storeLat = $company->latitude ? (float) $company->latitude : null;
+        $storeLng = $company->longitude ? (float) $company->longitude : null;
+
+        $distanceKm = ($lat && $lng && $storeLat && $storeLng)
+            ? app(DistanceService::class)->calculate($storeLat, $storeLng, $lat, $lng)
+            : null;
+
+        return [
+            'id' => $order->id,
+            'uuid' => $order->uuid,
+            'created_at' => $order->created_at->toIso8601String(),
+            'client_name' => $order->client?->name,
+            'payment_method' => $order->payment_method,
+            'payment_method_label' => Order::paymentOptions()[$order->payment_method] ?? $order->payment_method,
+            'total_amount' => (float) $order->total_amount,
+            'items_count' => $order->items->sum('quantity'),
+            'items' => $order->items->map(fn ($item) => [
+                'name' => $item->product_name,
+                'quantity' => $item->quantity,
+            ])->all(),
+            'address' => $addressText,
+            'neighborhood' => $neighborhood,
+            'distance_km' => $distanceKm,
+        ];
     }
 }
