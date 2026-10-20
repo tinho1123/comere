@@ -264,11 +264,14 @@ function DeliveryMap({ order }) {
     );
 }
 
+const itemCount = (order) => order.items.reduce((sum, item) => sum + item.quantity, 0);
+
 function OrderCard({ order, index }) {
     const [expanded, setExpanded] = useState(false);
     const [reordering, setReordering] = useState(false);
     const config = statusConfig[order.status] || statusConfig.pending;
     const StatusIcon = config.icon;
+    const isActive = order.status === 'shipped';
 
     const handleReorder = () => {
         if (reordering) return;
@@ -283,48 +286,48 @@ function OrderCard({ order, index }) {
             key={order.uuid}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+            transition={{ delay: index * 0.05 }}
+            className={`bg-white rounded-2xl overflow-hidden border transition-shadow hover:shadow-md ${isActive ? 'border-red-200 bg-red-50/40' : 'border-gray-100'}`}
         >
-            <div className="p-6">
-                <div className="flex flex-wrap justify-between items-start gap-4 mb-4">
-                    <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center p-2 overflow-hidden">
+            <button
+                onClick={() => setExpanded(!expanded)}
+                className="w-full text-left p-5 flex flex-col gap-2"
+            >
+                <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center p-1.5 overflow-hidden flex-shrink-0">
                             <img src={order.company.logo} alt={order.company.name} className="w-full h-full object-contain" />
                         </div>
-                        <div>
-                            <h3 className="font-bold text-lg text-gray-900">{order.company.name}</h3>
-                            <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Pedido #{order.uuid.substring(0, 8)}</p>
-                        </div>
+                        <h3 className="font-bold text-gray-900 truncate">{order.company.name}</h3>
                     </div>
-                    <div className="flex flex-col items-end gap-1.5">
-                        <div className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm ${config.bg} ${config.color}`}>
-                            <StatusIcon size={18} />
-                            {config.label}
-                        </div>
-                        <QueueBadge order={order} />
-                        <EtaBadge order={order} />
-                    </div>
+                    <span className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs ${config.bg} ${config.color}`}>
+                        <StatusIcon size={13} />
+                        {config.label}
+                    </span>
                 </div>
 
-                <div className="flex justify-between items-center">
-                    <div>
-                        <span className="text-xs text-gray-400 font-medium block">Realizado em {order.created_at}</span>
-                        <span className="text-lg font-extrabold text-red-500">
-                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.total_amount)}
-                        </span>
-                    </div>
-                    <button
-                        onClick={() => setExpanded(!expanded)}
-                        className="flex items-center gap-1 text-sm font-bold text-red-500 hover:text-red-600 transition-colors"
-                    >
-                        Detalhes do Pedido
+                <p className="text-sm text-gray-500">
+                    Pedido #{order.uuid.substring(0, 8)} · {itemCount(order)} {itemCount(order) === 1 ? 'item' : 'itens'} ·{' '}
+                    <span className="font-bold text-gray-900">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.total_amount)}</span>
+                </p>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                    <QueueBadge order={order} />
+                    <EtaBadge order={order} />
+                </div>
+
+                <div className="flex items-center justify-between mt-1">
+                    <span className="text-xs text-gray-400 font-medium">Realizado em {order.created_at}</span>
+                    <span className="flex items-center gap-1 text-xs font-bold text-red-500">
+                        Detalhes do pedido
                         <motion.span animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                            <ChevronDown size={16} />
+                            <ChevronDown size={14} />
                         </motion.span>
-                    </button>
+                    </span>
                 </div>
+            </button>
 
+            <div className="px-5">
                 <AnimatePresence>
                     {expanded && (
                         <motion.div
@@ -334,7 +337,7 @@ function OrderCard({ order, index }) {
                             transition={{ duration: 0.2 }}
                             className="overflow-hidden"
                         >
-                            <div className="bg-gray-50 rounded-2xl p-4 mt-4">
+                            <div className="bg-gray-50 rounded-2xl p-4 mt-4 mb-5">
                                 {order.status === 'shipped' && order.payment_method !== 'credit' && order.delivery?.payment_confirmation_code && (
                                     <DeliveryCodeReveal code={order.delivery.payment_confirmation_code} />
                                 )}
@@ -419,13 +422,21 @@ function FlashToast() {
     );
 }
 
+const FINISHED_STATUSES = ['delivered', 'cancelled'];
+
 export default function Orders({ orders }) {
+    const [tab, setTab] = useState('active');
+
+    const activeOrders = orders.filter((o) => !FINISHED_STATUSES.includes(o.status));
+    const finishedOrders = orders.filter((o) => FINISHED_STATUSES.includes(o.status));
+    const visibleOrders = tab === 'active' ? activeOrders : finishedOrders;
+
     return (
         <MarketplaceLayout>
             <Head title="Meus Pedidos - Comere" />
 
             <div className="max-w-4xl mx-auto">
-                <header className="mb-8">
+                <header className="mb-6">
                     <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Meus Pedidos</h1>
                     <p className="text-gray-500 mt-2 font-medium">Acompanhe suas compras e o status da entrega em tempo real.</p>
                 </header>
@@ -451,11 +462,36 @@ export default function Orders({ orders }) {
                         </Link>
                     </motion.div>
                 ) : (
-                    <div className="space-y-6">
-                        {orders.map((order, index) => (
-                            <OrderCard key={order.uuid} order={order} index={index} />
-                        ))}
-                    </div>
+                    <>
+                        <nav className="flex gap-6 border-b border-gray-100 mb-6">
+                            <button
+                                onClick={() => setTab('active')}
+                                className={`text-sm font-bold pb-3 border-b-2 transition-colors ${tab === 'active' ? 'text-red-500 border-red-500' : 'text-gray-400 border-transparent hover:text-gray-600'}`}
+                            >
+                                Em andamento{activeOrders.length > 0 && ` (${activeOrders.length})`}
+                            </button>
+                            <button
+                                onClick={() => setTab('finished')}
+                                className={`text-sm font-bold pb-3 border-b-2 transition-colors ${tab === 'finished' ? 'text-red-500 border-red-500' : 'text-gray-400 border-transparent hover:text-gray-600'}`}
+                            >
+                                Finalizados{finishedOrders.length > 0 && ` (${finishedOrders.length})`}
+                            </button>
+                        </nav>
+
+                        {visibleOrders.length === 0 ? (
+                            <div className="bg-white rounded-3xl p-10 text-center border border-gray-100">
+                                <p className="text-gray-500 font-medium">
+                                    {tab === 'active' ? 'Nenhum pedido em andamento no momento.' : 'Nenhum pedido finalizado ainda.'}
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {visibleOrders.map((order, index) => (
+                                    <OrderCard key={order.uuid} order={order} index={index} />
+                                ))}
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
         </MarketplaceLayout>
