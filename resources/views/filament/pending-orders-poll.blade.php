@@ -330,6 +330,54 @@
             let marketplaceInitialized = false;
             const renderedOrderIds = new Set();
             const POSITION_KEY = 'comere_order_alerts_position';
+            let swRegistration = null;
+
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready.then((reg) => {
+                    swRegistration = reg;
+                }).catch(() => {});
+
+                // Quando Aprovar/Recusar é clicado direto na notificação do
+                // sistema (aba em segundo plano), o service worker avisa a
+                // página pra atualizar a lista na hora, sem esperar o poll.
+                navigator.serviceWorker.addEventListener('message', (event) => {
+                    if (event.data?.type === 'comere-order-resolved') {
+                        checkMarketplaceOrders();
+                    }
+                });
+            }
+
+            function notifyNewOrderInBackground(order) {
+                // Só manda notificação do sistema quando a aba não está em
+                // primeiro plano (minimizada/outra aba/outra janela) — com
+                // a aba visível o card já aparece na tela, sem precisar
+                // disso. Usa o mesmo service worker do push para poder
+                // mostrar os botões de ação (Aprovar/Recusar).
+                if (document.visibilityState === 'visible' && document.hasFocus()) return;
+                if (!swRegistration || typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+
+                const deepLink = `${ordersIndexUrl}?pedido=${encodeURIComponent(order.uuid)}`;
+
+                swRegistration.showNotification('🛒 Novo pedido no marketplace', {
+                    body: `${order.client_name || 'Cliente'} · ${order.items_count} ${order.items_count === 1 ? 'item' : 'itens'} · ${formatMoney(order.total_amount)}`,
+                    icon: '/icons/icon-192x192.png',
+                    badge: '/icons/icon-72x72.png',
+                    tag: `comere-order-${order.id}`,
+                    requireInteraction: true,
+                    vibrate: [200, 100, 200],
+                    data: {
+                        type: 'comere-order-alert',
+                        url: deepLink,
+                        orderUuid: order.uuid,
+                        approveUrl: approveUrl(order.uuid),
+                        rejectUrl: rejectUrl(order.uuid),
+                    },
+                    actions: [
+                        { action: 'approve', title: '✓ Aprovar' },
+                        { action: 'reject', title: '✕ Recusar' },
+                    ],
+                }).catch(() => {});
+            }
 
             function clamp(value, min, max) {
                 return Math.min(Math.max(value, min), max);
@@ -603,6 +651,7 @@
                         // pedidos genuinamente novos durante a sessão.
                         if (marketplaceInitialized) {
                             beep();
+                            notifyNewOrderInBackground(order);
                         }
                     });
 
