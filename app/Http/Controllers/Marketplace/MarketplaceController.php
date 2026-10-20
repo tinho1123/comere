@@ -10,6 +10,7 @@ use App\Models\CompanyType;
 use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderMessage;
 use App\Models\Product;
 use App\Services\DistanceService;
 use App\Services\PushNotificationService;
@@ -196,43 +197,55 @@ class MarketplaceController extends Controller
         $orders = Order::where('client_id', auth()->guard('client')->id())
             ->with(['items', 'company', 'delivery.driver'])
             ->latest()
-            ->get()
-            ->map(fn ($order) => [
-                'uuid' => $order->uuid,
-                'status' => $order->status,
-                'total_amount' => $order->total_amount,
-                'discount_amount' => $order->discount_amount,
-                'payment_method' => $order->payment_method,
-                'created_at' => $order->created_at->format('d/m/Y H:i'),
-                'confirmed_at' => $order->confirmed_at?->format('d/m/Y H:i'),
-                'shipped_at' => $order->shipped_at?->format('d/m/Y H:i'),
-                'delivered_at' => $order->delivered_at?->format('d/m/Y H:i'),
-                'cancelled_at' => $order->cancelled_at?->format('d/m/Y H:i'),
-                'estimated_ready_at' => $order->estimated_ready_at?->toIso8601String(),
-                'queue_position' => in_array($order->status, [Order::STATUS_PENDING, Order::STATUS_PROCESSING], true)
-                    ? Order::where('company_id', $order->company_id)
-                        ->whereIn('status', [Order::STATUS_PENDING, Order::STATUS_PROCESSING])
-                        ->where('created_at', '<', $order->created_at)
-                        ->count()
-                    : null,
-                'can_reorder' => $order->items->isNotEmpty(),
-                'company' => [
-                    'uuid' => $order->company->uuid,
-                    'name' => $order->company->name,
-                    'logo' => $order->company->logo_path ? Storage::url($order->company->logo_path) : '/default-store-logo.png',
-                ],
-                'items' => $order->items->map(fn ($item) => [
-                    'product_name' => $item->product_name,
-                    'quantity' => $item->quantity,
-                    'total_amount' => $item->total_amount,
-                ]),
-                'delivery' => $order->delivery ? [
-                    'payment_confirmation_code' => $order->delivery->payment_confirmation_code,
-                    'payment_collected' => $order->delivery->payment_collected,
-                    'payment_collected_at' => $order->delivery->payment_collected_at?->format('H:i'),
-                    'driver_name' => $order->delivery->driver->name,
-                ] : null,
-            ]);
+            ->get();
+
+        // Contagem de mensagens não lidas (loja -> cliente) por pedido, numa
+        // única query, para não paginar N+1 ao montar a lista de pedidos.
+        $unreadByOrder = OrderMessage::whereIn('order_id', $orders->pluck('id'))
+            ->where('sender_type', OrderMessage::SENDER_COMPANY)
+            ->whereNull('read_at')
+            ->selectRaw('order_id, count(*) as total')
+            ->groupBy('order_id')
+            ->pluck('total', 'order_id');
+
+        $orders = $orders->map(fn ($order) => [
+            'uuid' => $order->uuid,
+            'status' => $order->status,
+            'total_amount' => $order->total_amount,
+            'discount_amount' => $order->discount_amount,
+            'payment_method' => $order->payment_method,
+            'created_at' => $order->created_at->format('d/m/Y H:i'),
+            'confirmed_at' => $order->confirmed_at?->format('d/m/Y H:i'),
+            'shipped_at' => $order->shipped_at?->format('d/m/Y H:i'),
+            'delivered_at' => $order->delivered_at?->format('d/m/Y H:i'),
+            'cancelled_at' => $order->cancelled_at?->format('d/m/Y H:i'),
+            'estimated_ready_at' => $order->estimated_ready_at?->toIso8601String(),
+            'queue_position' => in_array($order->status, [Order::STATUS_PENDING, Order::STATUS_PROCESSING], true)
+                ? Order::where('company_id', $order->company_id)
+                    ->whereIn('status', [Order::STATUS_PENDING, Order::STATUS_PROCESSING])
+                    ->where('created_at', '<', $order->created_at)
+                    ->count()
+                : null,
+            'can_reorder' => $order->items->isNotEmpty(),
+            'chat_open' => $order->isChatOpen(),
+            'unread_messages_count' => $unreadByOrder->get($order->id, 0),
+            'company' => [
+                'uuid' => $order->company->uuid,
+                'name' => $order->company->name,
+                'logo' => $order->company->logo_path ? Storage::url($order->company->logo_path) : '/default-store-logo.png',
+            ],
+            'items' => $order->items->map(fn ($item) => [
+                'product_name' => $item->product_name,
+                'quantity' => $item->quantity,
+                'total_amount' => $item->total_amount,
+            ]),
+            'delivery' => $order->delivery ? [
+                'payment_confirmation_code' => $order->delivery->payment_confirmation_code,
+                'payment_collected' => $order->delivery->payment_collected,
+                'payment_collected_at' => $order->delivery->payment_collected_at?->format('H:i'),
+                'driver_name' => $order->delivery->driver->name,
+            ] : null,
+        ]);
 
         return Inertia::render('Marketplace/Orders', [
             'orders' => $orders,

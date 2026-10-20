@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import MarketplaceLayout from '@/Layouts/MarketplaceLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, Clock, CheckCircle2, Truck, AlertCircle, ChevronDown, ShoppingBag, RotateCcw, X, ListOrdered, KeyRound } from 'lucide-react';
+import { Package, Clock, CheckCircle2, Truck, AlertCircle, ChevronDown, ShoppingBag, RotateCcw, X, ListOrdered, KeyRound, MessageCircle, Send } from 'lucide-react';
 import axios from 'axios';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -264,10 +264,130 @@ function DeliveryMap({ order }) {
     );
 }
 
+function OrderChat({ order, open }) {
+    const [messages, setMessages] = useState([]);
+    const [chatOpen, setChatOpen] = useState(order.chat_open);
+    const [loading, setLoading] = useState(true);
+    const [text, setText] = useState('');
+    const [sending, setSending] = useState(false);
+    const listRef = useRef(null);
+
+    useEffect(() => {
+        if (!open) return;
+        let cancelled = false;
+
+        const fetchMessages = async () => {
+            try {
+                const res = await axios.get(`/meus-pedidos/${order.uuid}/mensagens`);
+                if (!cancelled) {
+                    setMessages(res.data.messages);
+                    setChatOpen(res.data.chat_open);
+                }
+            } catch {
+                // silently ignore, keep last known state
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        };
+
+        fetchMessages();
+        const interval = setInterval(fetchMessages, 6000);
+
+        return () => {
+            cancelled = true;
+            clearInterval(interval);
+        };
+    }, [open, order.uuid]);
+
+    useEffect(() => {
+        if (listRef.current) {
+            listRef.current.scrollTop = listRef.current.scrollHeight;
+        }
+    }, [messages]);
+
+    const handleSend = async (e) => {
+        e.preventDefault();
+        const trimmed = text.trim();
+        if (!trimmed || sending) return;
+
+        setSending(true);
+        try {
+            const res = await axios.post(`/meus-pedidos/${order.uuid}/mensagens`, { message: trimmed });
+            setMessages((prev) => [...prev, res.data.message]);
+            setText('');
+        } catch {
+            // mantém o texto no campo para o cliente tentar de novo
+        } finally {
+            setSending(false);
+        }
+    };
+
+    if (!open) return null;
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+        >
+            <div className="bg-white border border-gray-200 rounded-2xl mt-2 flex flex-col">
+                <div ref={listRef} className="max-h-64 overflow-y-auto p-3 space-y-2">
+                    {loading ? (
+                        <p className="text-xs text-gray-400 text-center py-4">Carregando conversa...</p>
+                    ) : messages.length === 0 ? (
+                        <p className="text-xs text-gray-400 text-center py-4">Envie uma mensagem para a loja sobre este pedido.</p>
+                    ) : (
+                        messages.map((m) => (
+                            <div key={m.uuid} className={`flex ${m.sender_type === 'client' ? 'justify-end' : 'justify-start'}`}>
+                                <div
+                                    className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${
+                                        m.sender_type === 'client' ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-800'
+                                    }`}
+                                >
+                                    <p className="whitespace-pre-wrap break-words">{m.message}</p>
+                                    <p className={`text-[10px] mt-1 ${m.sender_type === 'client' ? 'text-red-100' : 'text-gray-400'}`}>
+                                        {new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    </p>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+
+                {chatOpen ? (
+                    <form onSubmit={handleSend} className="flex items-center gap-2 border-t border-gray-100 p-2">
+                        <input
+                            type="text"
+                            value={text}
+                            onChange={(e) => setText(e.target.value)}
+                            placeholder="Escreva uma mensagem..."
+                            maxLength={1000}
+                            className="flex-1 bg-gray-50 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-red-200"
+                        />
+                        <button
+                            type="submit"
+                            disabled={sending || !text.trim()}
+                            className="w-9 h-9 flex items-center justify-center rounded-xl bg-red-500 text-white disabled:opacity-40 flex-shrink-0"
+                        >
+                            <Send size={16} />
+                        </button>
+                    </form>
+                ) : (
+                    <p className="text-[11px] text-gray-400 text-center py-2 border-t border-gray-100">Conversa encerrada — pedido finalizado.</p>
+                )}
+            </div>
+        </motion.div>
+    );
+}
+
 const itemCount = (order) => order.items.reduce((sum, item) => sum + item.quantity, 0);
 
 function OrderCard({ order, index }) {
     const [expanded, setExpanded] = useState(false);
+    const [chatOpen, setChatOpen] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(order.unread_messages_count || 0);
     const [reordering, setReordering] = useState(false);
     const config = statusConfig[order.status] || statusConfig.pending;
     const StatusIcon = config.icon;
@@ -326,6 +446,34 @@ function OrderCard({ order, index }) {
                     </span>
                 </div>
             </button>
+
+            <div className="px-5 pb-3">
+                <button
+                    onClick={() => {
+                        setChatOpen((v) => !v);
+                        if (!chatOpen) setUnreadCount(0);
+                    }}
+                    className="w-full flex items-center justify-between gap-2 rounded-xl bg-gray-50 hover:bg-gray-100 px-3 py-2 transition-colors"
+                >
+                    <span className="flex items-center gap-2 text-xs font-bold text-gray-600">
+                        <MessageCircle size={14} className="text-red-500" />
+                        Mensagens com a loja
+                    </span>
+                    <span className="flex items-center gap-2">
+                        {unreadCount > 0 && (
+                            <span className="bg-red-500 text-white text-[10px] font-extrabold rounded-full min-w-[1.25rem] h-5 px-1 flex items-center justify-center">
+                                {unreadCount}
+                            </span>
+                        )}
+                        <motion.span animate={{ rotate: chatOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                            <ChevronDown size={14} className="text-gray-400" />
+                        </motion.span>
+                    </span>
+                </button>
+                <AnimatePresence>
+                    <OrderChat order={order} open={chatOpen} />
+                </AnimatePresence>
+            </div>
 
             <div className="px-5">
                 <AnimatePresence>
