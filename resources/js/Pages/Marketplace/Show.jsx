@@ -2,7 +2,7 @@ import { useState } from 'react';
 import MarketplaceLayout from '../../Layouts/MarketplaceLayout';
 import { Head, router, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, X, Plus, Minus, Trash2, LogIn, MapPin, Truck, Heart, Star, ChevronDown, Tag, Check, Banknote, CreditCard, QrCode, AlertTriangle } from 'lucide-react';
+import { ShoppingCart, X, Plus, Minus, Trash2, LogIn, MapPin, Truck, Heart, Star, ChevronDown, ChevronLeft, Tag, Check, Banknote, CreditCard, QrCode, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
 import { getCurrentPosition, haversineKm } from '../../utils/geo';
 
@@ -40,7 +40,7 @@ function StarRating({ company }) {
     const display = hovered || selected || Math.round(average);
 
     return (
-        <div className="flex items-center gap-3 mt-1 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-100 shadow-sm w-max">
+        <div className="flex items-center gap-3 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-100 shadow-sm w-max">
             <div
                 className="flex items-center gap-0.5"
                 onMouseLeave={() => setHovered(0)}
@@ -67,6 +67,193 @@ function StarRating({ company }) {
             </span>
             {count > 0 && (
                 <span className="text-xs text-gray-400">({count})</span>
+            )}
+        </div>
+    );
+}
+
+/**
+ * Conteúdo do carrinho/checkout, compartilhado entre o drawer mobile e a
+ * barra lateral fixa do desktop (ver mockup VitrineDesktop/Carrinho).
+ */
+function CartPanel({
+    company, cartItems, cartCount, cartTotal, finalTotal,
+    updateQuantity, removeFromCart,
+    couponCode, setCouponCode, couponStatus, setCouponStatus, couponDiscount, couponMessage, applyCoupon, clearCoupon,
+    paymentMethod, setPaymentMethod,
+    isCheckingOut, checkingLocation, handleCheckout,
+    onAddMoreItems, onOpenLogin,
+}) {
+    const { auth } = usePage().props;
+
+    if (cartCount === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center text-center py-10 px-4">
+                <ShoppingCart size={32} className="text-gray-300 mb-3" />
+                <p className="text-sm font-semibold text-gray-500">Seu carrinho está vazio</p>
+                <p className="text-xs text-gray-400 mt-1">Adicione itens do cardápio para continuar</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3">
+                {cartItems.map(({ product, quantity }) => (
+                    <div key={product.id} className="bg-white border border-gray-100 rounded-2xl p-3 flex gap-3 items-center">
+                        <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 border border-gray-50">
+                            <img src={product.image ?? '/icons/icon-192x192.png'} className="w-full h-full object-cover" alt={product.name} />
+                        </div>
+                        <div className="flex-grow min-w-0">
+                            <p className="font-bold text-sm text-gray-900 truncate">{product.name}</p>
+                            <p className="text-xs font-bold text-red-500">R$ {Number(product.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0 border border-gray-200 rounded-lg px-2 py-1.5">
+                            <button onClick={() => updateQuantity(product.id, quantity - 1)} className="text-red-500 hover:scale-110 transition-transform">
+                                <Minus size={13} />
+                            </button>
+                            <span className="text-xs font-black w-4 text-center">{quantity}</span>
+                            <button onClick={() => updateQuantity(product.id, quantity + 1)} className="text-red-500 hover:scale-110 transition-transform">
+                                <Plus size={13} />
+                            </button>
+                        </div>
+                        <button onClick={() => removeFromCart(product.id)} className="text-gray-300 hover:text-red-500 transition-colors flex-shrink-0">
+                            <Trash2 size={15} />
+                        </button>
+                    </div>
+                ))}
+            </div>
+
+            {onAddMoreItems && (
+                <button
+                    onClick={onAddMoreItems}
+                    className="border border-dashed border-gray-200 rounded-xl px-4 py-3 flex items-center gap-2 text-sm font-semibold text-gray-600 hover:border-red-300 hover:text-red-500 transition-colors"
+                >
+                    <Plus size={14} className="text-red-500" />
+                    Adicionar mais itens
+                </button>
+            )}
+
+            {/* Cupom de desconto */}
+            {auth.user && (
+                <div>
+                    {couponStatus === 'valid' ? (
+                        <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5">
+                            <div className="flex items-center gap-2 text-emerald-700 text-sm font-bold">
+                                <Check size={16} />
+                                Cupom {couponCode.trim().toUpperCase()} aplicado
+                            </div>
+                            <button onClick={clearCoupon} className="text-emerald-600 hover:text-emerald-800">
+                                <X size={16} />
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col gap-1.5">
+                            <div className="flex items-center gap-2">
+                                <div className="flex-grow relative">
+                                    <Tag size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        value={couponCode}
+                                        onChange={(e) => { setCouponCode(e.target.value); setCouponStatus('idle'); }}
+                                        onKeyDown={(e) => e.key === 'Enter' && applyCoupon()}
+                                        placeholder="Cupom de desconto"
+                                        className="w-full pl-9 pr-3 py-2.5 text-sm font-medium rounded-xl border border-gray-200 focus:border-red-400 focus:outline-none uppercase"
+                                    />
+                                </div>
+                                <button
+                                    onClick={applyCoupon}
+                                    disabled={!couponCode.trim() || couponStatus === 'checking'}
+                                    className="px-4 py-2.5 text-sm font-bold rounded-xl bg-gray-900 text-white hover:bg-gray-800 transition-colors disabled:opacity-40"
+                                >
+                                    {couponStatus === 'checking' ? '...' : 'Aplicar'}
+                                </button>
+                            </div>
+                            {couponStatus === 'invalid' && (
+                                <span className="text-xs font-medium text-red-500">{couponMessage}</span>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Resumo financeiro */}
+            <div className="flex flex-col gap-1.5">
+                <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-500 font-medium">Subtotal</span>
+                    <span className="text-gray-700 font-medium">
+                        R$ {cartTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                </div>
+                {company.delivery_fee !== null && company.delivery_fee !== undefined && (
+                    <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-500 font-medium">Taxa de entrega</span>
+                        <span className="text-gray-700 font-medium">
+                            R$ {Number(company.delivery_fee).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                    </div>
+                )}
+                {couponDiscount > 0 && (
+                    <div className="flex justify-between items-center text-sm">
+                        <span className="text-emerald-600 font-medium">Desconto</span>
+                        <span className="text-emerald-600 font-bold">
+                            - R$ {couponDiscount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                    </div>
+                )}
+                <div className="flex justify-between items-center pt-1">
+                    <span className="font-bold text-gray-900">Total</span>
+                    <span className="text-xl font-black text-red-500">
+                        R$ {finalTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                </div>
+            </div>
+
+            {auth.user ? (
+                <>
+                    <div>
+                        <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Pagamento na entrega</p>
+                        <div className="grid grid-cols-3 gap-2">
+                            {PAYMENT_METHODS.map(({ value, label, icon: Icon }) => (
+                                <button
+                                    key={value}
+                                    onClick={() => setPaymentMethod(value)}
+                                    className={`flex flex-col items-center gap-1 py-3 rounded-xl border text-xs font-semibold transition-all ${
+                                        paymentMethod === value
+                                            ? 'border-red-500 bg-red-50 text-red-600'
+                                            : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                                    }`}
+                                >
+                                    <Icon size={18} />
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="bg-gray-50 rounded-lg px-3 py-2 mt-2 text-[11px] text-gray-500 leading-relaxed">
+                            💳 O pagamento é feito direto com a loja/entregador — o Comere não processa cobranças.
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={handleCheckout}
+                        disabled={isCheckingOut || checkingLocation || !paymentMethod}
+                        className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-red-500/20 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-sm"
+                    >
+                        {isCheckingOut
+                            ? 'Enviando...'
+                            : checkingLocation
+                                ? 'Verificando localização...'
+                                : `Ir para o checkout · R$ ${finalTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                    </button>
+                </>
+            ) : (
+                <div className="text-center bg-gray-50 rounded-xl p-4">
+                    <LogIn size={24} className="mx-auto text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-500 mb-3">Faça login para finalizar o pedido</p>
+                    <button onClick={onOpenLogin} className="text-sm font-bold text-red-500 hover:underline">
+                        Entrar na conta
+                    </button>
+                </div>
             )}
         </div>
     );
@@ -104,7 +291,8 @@ export default function MarketplaceShow({ company, productsByCategory }) {
     const cartItems = Object.values(cart);
     const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
     const cartTotal = cartItems.reduce((sum, item) => sum + Number(item.product.amount) * item.quantity, 0);
-    const finalTotal = Math.max(cartTotal - couponDiscount, 0);
+    const deliveryFee = company.delivery_fee !== null && company.delivery_fee !== undefined ? Number(company.delivery_fee) : 0;
+    const finalTotal = Math.max(cartTotal + deliveryFee - couponDiscount, 0);
 
     const applyCoupon = async () => {
         if (!couponCode.trim() || couponStatus === 'checking') return;
@@ -214,62 +402,73 @@ export default function MarketplaceShow({ company, productsByCategory }) {
         submitOrder();
     };
 
+    const cartPanelProps = {
+        company, cartItems, cartCount, cartTotal, finalTotal,
+        updateQuantity, removeFromCart,
+        couponCode, setCouponCode, couponStatus, setCouponStatus, couponDiscount, couponMessage, applyCoupon, clearCoupon,
+        paymentMethod, setPaymentMethod,
+        isCheckingOut, checkingLocation, handleCheckout,
+        onOpenLogin: () => {
+            setIsCartOpen(false);
+            window.dispatchEvent(new CustomEvent('open-auth-modal'));
+        },
+    };
+
     return (
         <MarketplaceLayout>
             <Head title={`${company.name} - Marketplace`} />
 
             {/* Cabeçalho da Loja */}
-            <div className="relative mb-20">
-                <div className="h-48 md:h-64 rounded-3xl overflow-hidden shadow-lg border border-gray-100">
+            <div className="relative mb-6">
+                <div className="h-44 md:h-56 rounded-3xl overflow-hidden shadow-lg border border-gray-100">
                     <img src={company.banner} className="w-full h-full object-cover" alt="Banner" />
                 </div>
+
+                <button
+                    onClick={() => router.visit('/')}
+                    className="absolute top-4 left-4 z-10 w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm text-gray-900 flex items-center justify-center shadow-md hover:bg-white transition-colors"
+                    aria-label="Voltar"
+                >
+                    <ChevronLeft size={18} />
+                </button>
 
                 {auth && (
                     <button
                         onClick={toggleFavorite}
                         disabled={favLoading}
-                        className={`absolute top-4 right-4 z-10 w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all ${
-                            favorited ? 'bg-red-500 text-white' : 'bg-white text-gray-400 hover:text-red-400'
+                        className={`absolute top-4 right-4 z-10 w-9 h-9 rounded-full flex items-center justify-center shadow-md transition-all ${
+                            favorited ? 'bg-red-500 text-white' : 'bg-white/90 backdrop-blur-sm text-gray-400 hover:text-red-400'
                         }`}
                         aria-label={favorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
                     >
-                        <Heart size={18} fill={favorited ? 'currentColor' : 'none'} />
+                        <Heart size={16} fill={favorited ? 'currentColor' : 'none'} />
                     </button>
                 )}
-
-                <div className="absolute -bottom-16 left-8 flex items-end gap-6">
-                    <div className="w-32 h-32 rounded-2xl border-4 border-white shadow-xl overflow-hidden bg-white">
-                        <img src={company.logo} className="w-full h-full object-cover" alt="Logo" />
-                    </div>
-                    <div className="mb-4">
-                        <h1 className="text-3xl font-black text-white drop-shadow-md select-none">{company.name}</h1>
-                        <div className="flex items-center gap-2 flex-wrap mt-1">
-                            <StarRating company={company} />
-                            <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-100 shadow-sm">
-                                <span className="text-xs font-semibold text-gray-600 uppercase tracking-tighter">{company.type}</span>
-                                <span className="text-gray-300">|</span>
-                                <span className="text-xs font-medium text-gray-500">{company.delivery_time}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
-                <p className="text-gray-600 font-medium mb-6 max-w-3xl leading-relaxed">
+            <div className="flex flex-col gap-1 mb-6">
+                <h1 className="text-2xl font-black text-gray-900">{company.name}</h1>
+                <div className="flex items-center gap-2 flex-wrap mt-1">
+                    <StarRating company={company} />
+                    <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
+                        <span className="text-xs font-semibold text-gray-600 uppercase tracking-tighter">{company.type}</span>
+                        <span className="text-gray-300">|</span>
+                        <span className="text-xs font-medium text-gray-500">{company.delivery_time}</span>
+                    </div>
+                    {company.is_open !== null && (
+                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold ${company.is_open ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-500 border border-gray-200'}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${company.is_open ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
+                            {company.is_open ? 'Aberto agora' : 'Fechado no momento'}
+                        </div>
+                    )}
+                </div>
+
+                <p className="text-gray-600 text-sm mt-3 max-w-3xl leading-relaxed">
                     {company.description ?? 'Bem-vindo à nossa loja! Oferecemos os melhores produtos com a qualidade que você já conhece. Peça agora e aproveite nosso sistema de fiado exclusivo.'}
                 </p>
 
-                {/* Status de funcionamento */}
-                {company.is_open !== null && (
-                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-bold mb-6 ${company.is_open ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-500 border border-gray-200'}`}>
-                        <span className={`w-2 h-2 rounded-full ${company.is_open ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
-                        {company.is_open ? 'Aberto agora' : 'Fechado no momento'}
-                    </div>
-                )}
-
                 {/* Distância e entrega */}
-                <div className="flex flex-wrap gap-3 mb-8">
+                <div className="flex flex-wrap gap-3 mt-4">
                     {company.distance_km !== null && (
                         <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-100 px-3 py-2 rounded-xl text-sm">
                             <MapPin size={14} className="text-red-500" />
@@ -303,7 +502,7 @@ export default function MarketplaceShow({ company, productsByCategory }) {
 
                 {/* Horário de Funcionamento */}
                 {company.hours?.length > 0 && (
-                    <details className="mb-8 group">
+                    <details className="mt-4 group">
                         <summary className="cursor-pointer list-none flex items-center gap-2 text-sm font-bold text-gray-700 hover:text-red-500 transition-colors select-none w-max">
                             <span>🕐 Horário de funcionamento</span>
                             <ChevronDown size={15} className="group-open:rotate-180 transition-transform" />
@@ -332,85 +531,88 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                         </div>
                     </details>
                 )}
+            </div>
 
-                <div className="flex flex-col md:flex-row gap-12">
-                    {/* Menu Lateral de Categorias */}
-                    <div className="w-full md:w-64 flex-shrink-0">
-                        <h3 className="text-lg font-bold mb-6 italic uppercase tracking-widest text-gray-400">Categorias</h3>
-                        <nav className="flex md:flex-col gap-2 overflow-x-auto no-scrollbar">
-                            {Object.keys(productsByCategory).map((cat) => (
-                                <button
-                                    key={cat}
-                                    onClick={() => setActiveCategory(cat)}
-                                    className={`text-left px-4 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeCategory === cat
-                                        ? 'bg-red-500 text-white shadow-lg shadow-red-500/20 translate-x-1'
-                                        : 'text-gray-500 hover:bg-gray-50 border border-transparent'
-                                    }`}
-                                >
-                                    {cat}
-                                </button>
-                            ))}
-                        </nav>
-                    </div>
+            {/* Categorias — abas horizontais, iguais em mobile e desktop */}
+            <nav className="flex gap-6 border-b border-gray-100 overflow-x-auto no-scrollbar mb-2">
+                {Object.keys(productsByCategory).map((cat) => (
+                    <button
+                        key={cat}
+                        onClick={() => setActiveCategory(cat)}
+                        className={`text-sm font-bold whitespace-nowrap pb-3 transition-colors border-b-2 ${
+                            activeCategory === cat
+                                ? 'text-red-500 border-red-500'
+                                : 'text-gray-400 border-transparent hover:text-gray-600'
+                        }`}
+                    >
+                        {cat}
+                    </button>
+                ))}
+            </nav>
 
-                    {/* Lista de Produtos */}
-                    <div className="flex-grow">
-                        <h2 className="text-2xl font-black mb-8 border-b-4 border-red-500 inline-block pb-1">{activeCategory}</h2>
-
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-12">
-                            {productsByCategory[activeCategory]?.map((product) => (
-                                <div key={product.uuid} className="flex gap-6 group cursor-pointer">
-                                    <div className="flex-grow flex flex-col justify-between py-1">
-                                        <div>
-                                            <h4 className="font-bold text-gray-900 group-hover:text-red-500 transition-colors uppercase tracking-tight">{product.name}</h4>
-                                            <p className="text-xs text-gray-500 mt-2 line-clamp-2 leading-relaxed">
-                                                {product.description ?? 'Sem descrição disponível para este produto.'}
-                                            </p>
-                                        </div>
-                                        <div className="mt-4 flex items-center gap-4">
-                                            <span className="text-lg font-black text-gray-900">
-                                                R$ {Number(product.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                            </span>
-                                            {product.isCool && (
-                                                <span className="bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded-full italic">❄️ GELADA</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="w-28 h-28 rounded-2xl overflow-hidden flex-shrink-0 shadow-inner border border-gray-100 relative">
-                                        <img src={product.image ?? '/icons/icon-192x192.png'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={product.name} />
-                                        {cart[product.id] ? (
-                                            <div className="absolute bottom-1 right-1 flex items-center gap-1 bg-white rounded-full shadow-lg border border-gray-100 px-1">
-                                                <button
-                                                    onClick={() => updateQuantity(product.id, cart[product.id].quantity - 1)}
-                                                    className="text-red-500 w-6 h-6 flex items-center justify-center font-bold hover:scale-110 transition-all"
-                                                >
-                                                    <Minus size={12} />
-                                                </button>
-                                                <span className="text-xs font-black text-gray-900 min-w-[16px] text-center">{cart[product.id].quantity}</span>
-                                                <button
-                                                    onClick={() => updateQuantity(product.id, cart[product.id].quantity + 1)}
-                                                    className="text-red-500 w-6 h-6 flex items-center justify-center font-bold hover:scale-110 transition-all"
-                                                >
-                                                    <Plus size={12} />
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <button
-                                                onClick={() => addToCart(product)}
-                                                className="absolute bottom-1 right-1 bg-white text-red-500 w-8 h-8 rounded-full shadow-lg flex items-center justify-center font-bold text-xl hover:scale-110 active:scale-90 transition-all border border-gray-100"
-                                            >
-                                                +
-                                            </button>
-                                        )}
-                                    </div>
+            <div className="flex flex-col lg:flex-row gap-10 pt-6">
+                {/* Lista de Produtos */}
+                <div className="flex-grow">
+                    {productsByCategory[activeCategory]?.map((product) => (
+                        <div key={product.uuid} className="flex gap-4 py-4 border-b border-gray-50 last:border-0">
+                            <div className="flex-grow flex flex-col justify-center min-w-0">
+                                <h4 className="font-bold text-gray-900 truncate">{product.name}</h4>
+                                <p className="text-xs text-gray-400 mt-1 line-clamp-2 leading-relaxed">
+                                    {product.description ?? 'Sem descrição disponível para este produto.'}
+                                </p>
+                                <div className="mt-2 flex items-center gap-3">
+                                    <span className="text-sm font-black text-red-500">
+                                        R$ {Number(product.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </span>
+                                    {product.isCool && (
+                                        <span className="bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded-full italic">❄️ GELADA</span>
+                                    )}
                                 </div>
-                            ))}
+                            </div>
+                            <div className="w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 border border-gray-100 relative">
+                                <img src={product.image ?? '/icons/icon-192x192.png'} className="w-full h-full object-cover" alt={product.name} />
+                                {cart[product.id] ? (
+                                    <div className="absolute bottom-1 right-1 flex items-center gap-1 bg-white rounded-full shadow-lg border border-gray-100 px-1">
+                                        <button
+                                            onClick={() => updateQuantity(product.id, cart[product.id].quantity - 1)}
+                                            className="text-red-500 w-6 h-6 flex items-center justify-center font-bold hover:scale-110 transition-all"
+                                        >
+                                            <Minus size={12} />
+                                        </button>
+                                        <span className="text-xs font-black text-gray-900 min-w-[16px] text-center">{cart[product.id].quantity}</span>
+                                        <button
+                                            onClick={() => updateQuantity(product.id, cart[product.id].quantity + 1)}
+                                            className="text-red-500 w-6 h-6 flex items-center justify-center font-bold hover:scale-110 transition-all"
+                                        >
+                                            <Plus size={12} />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => addToCart(product)}
+                                        className="absolute bottom-1 right-1 bg-white text-red-500 w-7 h-7 rounded-full shadow-lg flex items-center justify-center font-bold text-lg hover:scale-110 active:scale-90 transition-all border border-gray-100"
+                                    >
+                                        +
+                                    </button>
+                                )}
+                            </div>
                         </div>
+                    ))}
+                </div>
+
+                {/* Carrinho fixo — só no desktop (no mobile vira a barra flutuante + drawer abaixo) */}
+                <div className="hidden lg:block w-[360px] flex-shrink-0">
+                    <div className="sticky top-24 bg-white border border-gray-100 rounded-3xl shadow-sm p-5">
+                        <h3 className="text-base font-bold text-gray-900 mb-1 flex items-center gap-2">
+                            <ShoppingCart size={18} className="text-red-500" />
+                            Seu carrinho {cartCount > 0 && `(${cartCount})`}
+                        </h3>
+                        <CartPanel {...cartPanelProps} />
                     </div>
                 </div>
             </div>
 
-            {/* Barra flutuante do carrinho */}
+            {/* Barra flutuante do carrinho — só no mobile */}
             <AnimatePresence>
                 {cartCount > 0 && !isCartOpen && (
                     <motion.button
@@ -418,21 +620,21 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: 100, opacity: 0 }}
                         onClick={() => setIsCartOpen(true)}
-                        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-red-500 text-white px-8 py-4 rounded-2xl shadow-2xl shadow-red-500/40 flex items-center gap-4 font-bold hover:bg-red-600 transition-all active:scale-95"
+                        className="lg:hidden fixed bottom-20 left-4 right-4 z-40 bg-red-500 text-white px-6 py-4 rounded-2xl shadow-2xl shadow-red-500/40 flex items-center justify-between gap-4 font-bold hover:bg-red-600 transition-all active:scale-95"
                     >
-                        <div className="relative">
-                            <ShoppingCart size={22} />
-                            <span className="absolute -top-2 -right-2 bg-white text-red-500 text-[10px] font-black h-4 w-4 rounded-full flex items-center justify-center">{cartCount}</span>
+                        <div className="flex items-center gap-3">
+                            <div className="relative">
+                                <ShoppingCart size={20} />
+                                <span className="absolute -top-2 -right-2 bg-white text-red-500 text-[10px] font-black h-4 w-4 rounded-full flex items-center justify-center">{cartCount}</span>
+                            </div>
+                            <span className="text-sm">{cartCount} {cartCount === 1 ? 'item' : 'itens'} · R$ {cartTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                         </div>
-                        <span>Ver carrinho</span>
-                        <span className="ml-2 bg-white/20 px-2 py-0.5 rounded-lg text-sm">
-                            R$ {cartTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </span>
+                        <span className="text-sm">Ver carrinho →</span>
                     </motion.button>
                 )}
             </AnimatePresence>
 
-            {/* Drawer do Carrinho */}
+            {/* Drawer do Carrinho — só no mobile */}
             <AnimatePresence>
                 {isCartOpen && (
                     <>
@@ -441,7 +643,7 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setIsCartOpen(false)}
-                            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+                            className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
                         />
 
                         <motion.div
@@ -449,160 +651,21 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                             animate={{ x: 0 }}
                             exit={{ x: '100%' }}
                             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="fixed top-0 right-0 h-full w-full sm:w-[420px] bg-white z-[60] shadow-2xl flex flex-col"
+                            className="lg:hidden fixed top-0 right-0 h-full w-full sm:w-[420px] bg-white z-[60] shadow-2xl flex flex-col"
                         >
                             <div className="flex items-center justify-between p-6 border-b border-gray-100">
                                 <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                                     <ShoppingCart size={20} className="text-red-500" />
-                                    Carrinho ({cartCount})
+                                    Seu carrinho {cartCount > 0 && `(${cartCount})`}
                                 </h2>
                                 <button onClick={() => setIsCartOpen(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500">
                                     <X size={24} />
                                 </button>
                             </div>
 
-                            <div className="flex-grow overflow-y-auto p-6 flex flex-col gap-4">
-                                {cartItems.map(({ product, quantity }) => (
-                                    <div key={product.id} className="flex gap-4 items-center">
-                                        <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 border border-gray-100">
-                                            <img src={product.image ?? '/icons/icon-192x192.png'} className="w-full h-full object-cover" alt={product.name} />
-                                        </div>
-                                        <div className="flex-grow min-w-0">
-                                            <p className="font-bold text-sm text-gray-900 truncate">{product.name}</p>
-                                            <p className="text-xs text-gray-500">R$ {Number(product.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} cada</p>
-                                        </div>
-                                        <div className="flex items-center gap-2 flex-shrink-0">
-                                            <button onClick={() => updateQuantity(product.id, quantity - 1)} className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center hover:border-red-500 hover:text-red-500 transition-colors">
-                                                <Minus size={12} />
-                                            </button>
-                                            <span className="text-sm font-black w-5 text-center">{quantity}</span>
-                                            <button onClick={() => updateQuantity(product.id, quantity + 1)} className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center hover:border-red-500 hover:text-red-500 transition-colors">
-                                                <Plus size={12} />
-                                            </button>
-                                            <button onClick={() => removeFromCart(product.id)} className="ml-1 text-gray-300 hover:text-red-500 transition-colors">
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div className="p-6 border-t border-gray-100 flex flex-col gap-4">
-                                {/* Cupom de desconto */}
-                                {auth.user && (
-                                    <div>
-                                        {couponStatus === 'valid' ? (
-                                            <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5">
-                                                <div className="flex items-center gap-2 text-emerald-700 text-sm font-bold">
-                                                    <Check size={16} />
-                                                    Cupom {couponCode.trim().toUpperCase()} aplicado
-                                                </div>
-                                                <button onClick={clearCoupon} className="text-emerald-600 hover:text-emerald-800">
-                                                    <X size={16} />
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div className="flex flex-col gap-1.5">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="flex-grow relative">
-                                                        <Tag size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                                        <input
-                                                            type="text"
-                                                            value={couponCode}
-                                                            onChange={(e) => { setCouponCode(e.target.value); setCouponStatus('idle'); }}
-                                                            onKeyDown={(e) => e.key === 'Enter' && applyCoupon()}
-                                                            placeholder="Cupom de desconto"
-                                                            className="w-full pl-9 pr-3 py-2.5 text-sm font-medium rounded-xl border border-gray-200 focus:border-red-400 focus:outline-none uppercase"
-                                                        />
-                                                    </div>
-                                                    <button
-                                                        onClick={applyCoupon}
-                                                        disabled={!couponCode.trim() || couponStatus === 'checking'}
-                                                        className="px-4 py-2.5 text-sm font-bold rounded-xl bg-gray-900 text-white hover:bg-gray-800 transition-colors disabled:opacity-40"
-                                                    >
-                                                        {couponStatus === 'checking' ? '...' : 'Aplicar'}
-                                                    </button>
-                                                </div>
-                                                {couponStatus === 'invalid' && (
-                                                    <span className="text-xs font-medium text-red-500">{couponMessage}</span>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* Resumo financeiro */}
-                                <div className="flex flex-col gap-1.5">
-                                    {couponDiscount > 0 && (
-                                        <>
-                                            <div className="flex justify-between items-center text-sm">
-                                                <span className="text-gray-500 font-medium">Subtotal</span>
-                                                <span className="text-gray-700 font-medium">
-                                                    R$ {cartTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between items-center text-sm">
-                                                <span className="text-emerald-600 font-medium">Desconto</span>
-                                                <span className="text-emerald-600 font-bold">
-                                                    - R$ {couponDiscount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                </span>
-                                            </div>
-                                        </>
-                                    )}
-                                    <div className="flex justify-between items-center">
-                                        <span className="font-bold text-gray-700">Total</span>
-                                        <span className="text-2xl font-black text-gray-900">
-                                            R$ {finalTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {auth.user ? (
-                                    <>
-                                        <div>
-                                            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Pagamento na entrega</p>
-                                            <div className="grid grid-cols-3 gap-2">
-                                                {PAYMENT_METHODS.map(({ value, label, icon: Icon }) => (
-                                                    <button
-                                                        key={value}
-                                                        onClick={() => setPaymentMethod(value)}
-                                                        className={`flex flex-col items-center gap-1 py-3 rounded-xl border text-xs font-semibold transition-all ${
-                                                            paymentMethod === value
-                                                                ? 'border-red-500 bg-red-50 text-red-600'
-                                                                : 'border-gray-200 text-gray-500 hover:border-gray-300'
-                                                        }`}
-                                                    >
-                                                        <Icon size={18} />
-                                                        {label}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                            <p className="text-[11px] text-gray-400 mt-2">O pagamento é feito direto com a loja/entregador — o Comere não processa cobranças.</p>
-                                        </div>
-
-                                        <button
-                                            onClick={handleCheckout}
-                                            disabled={isCheckingOut || checkingLocation || !paymentMethod}
-                                            className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-red-500/20 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-sm"
-                                        >
-                                            {isCheckingOut ? 'Enviando...' : checkingLocation ? 'Verificando localização...' : 'Finalizar pedido'}
-                                        </button>
-                                    </>
-                                ) : (
-                                    <div className="text-center bg-gray-50 rounded-xl p-4">
-                                        <LogIn size={24} className="mx-auto text-gray-400 mb-2" />
-                                        <p className="text-sm text-gray-500 mb-3">Faça login para finalizar o pedido</p>
-                                        <button
-                                            onClick={() => {
-                                                setIsCartOpen(false);
-                                                window.dispatchEvent(new CustomEvent('open-auth-modal'));
-                                            }}
-                                            className="text-sm font-bold text-red-500 hover:underline"
-                                        >
-                                            Entrar na conta
-                                        </button>
-                                    </div>
-                                )}
+                            <div className="flex-grow overflow-y-auto p-6">
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wide block mb-4">{company.name}</span>
+                                <CartPanel {...cartPanelProps} onAddMoreItems={() => setIsCartOpen(false)} />
                             </div>
                         </motion.div>
                     </>
