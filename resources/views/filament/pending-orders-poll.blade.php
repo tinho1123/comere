@@ -510,6 +510,14 @@
                 initDragHandle(handle);
             }
 
+            // Chamado sempre que um card é removido na hora (aprovado/recusado
+            // direto no card, sem esperar o próximo poll) — a alça de arrastar
+            // não pode continuar visível sozinha, sem nenhum pedido pendente.
+            function removeDragHandleIfEmpty() {
+                if (renderedOrderIds.size > 0) return;
+                document.getElementById('comere-order-alerts')?.querySelector('.coa-drag-handle')?.remove();
+            }
+
             function beep() {
                 try {
                     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -661,6 +669,7 @@
                             localStorage.removeItem(minimizedKey(order.id));
                             renderedOrderIds.delete(order.id);
                             card.remove();
+                            removeDragHandleIfEmpty();
                         }).catch(() => {
                             buttons.forEach((btn) => (btn.disabled = false));
                         });
