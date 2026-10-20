@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Selecionar loja — Painel do administrador</title>
+    <link rel="icon" href="/favicon.ico" sizes="any">
     @vite(['resources/css/app.css'])
     <style>
         body { background-color: #0f172a; font-family: ui-sans-serif, system-ui, sans-serif; }
