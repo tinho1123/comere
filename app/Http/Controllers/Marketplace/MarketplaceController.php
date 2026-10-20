@@ -278,6 +278,7 @@ class MarketplaceController extends Controller
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
+            'items.*.notes' => 'nullable|string|max:300',
             'notes' => 'nullable|string|max:1000',
             'coupon_code' => 'nullable|string|max:50',
             'payment_method' => 'required|in:'.implode(',', [
@@ -346,6 +347,7 @@ class MarketplaceController extends Controller
                 'product_id' => $product->id,
                 'product_name' => $product->name,
                 'quantity' => $item['quantity'],
+                'notes' => $item['notes'] ?? null,
                 'unit_price' => $product->amount,
                 'discount_percent' => 0,
                 'discount_amount' => 0,
@@ -471,6 +473,7 @@ class MarketplaceController extends Controller
                 'product_id' => $product->id,
                 'product_name' => $product->name,
                 'quantity' => $item->quantity,
+                'notes' => $item->notes,
                 'unit_price' => $product->amount,
                 'discount_percent' => 0,
                 'discount_amount' => 0,
