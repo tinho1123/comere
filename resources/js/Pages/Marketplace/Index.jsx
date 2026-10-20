@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import MarketplaceLayout from '../../Layouts/MarketplaceLayout';
 import { Link, router, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, MapPin, X } from 'lucide-react';
+import { Heart, MapPin, Search, X } from 'lucide-react';
 import axios from 'axios';
 import { getCurrentPosition, haversineKm, reverseGeocode } from '../../utils/geo';
 
@@ -305,16 +305,29 @@ export default function MarketplaceIndex({ companies, lastVisited, categories, s
                         <Link href="/" className="text-sm font-medium text-red-500 hover:underline">Ver tudo</Link>
                     )}
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {companies.map((store) => (
-                        <StoreCard
-                            key={store.uuid}
-                            store={store}
-                            isFavorited={favorites.has(store.uuid)}
-                            onToggleFavorite={handleToggleFavorite}
-                        />
-                    ))}
-                </div>
+                {companies.length === 0 ? (
+                    <div className="bg-white rounded-3xl p-10 text-center border border-gray-100 flex flex-col items-center gap-2">
+                        <Search size={32} className="text-gray-300 mb-1" />
+                        <p className="text-sm font-bold text-gray-900">Nenhuma loja encontrada</p>
+                        <p className="text-xs text-gray-400 max-w-xs">
+                            {selectedCategory ? 'Não há lojas disponíveis nessa categoria no momento.' : 'Não encontramos lojas disponíveis na sua região no momento.'}
+                        </p>
+                        {selectedCategory && (
+                            <Link href="/" className="mt-2 text-sm font-bold text-red-500 hover:underline">Ver todas as lojas</Link>
+                        )}
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {companies.map((store) => (
+                            <StoreCard
+                                key={store.uuid}
+                                store={store}
+                                isFavorited={favorites.has(store.uuid)}
+                                onToggleFavorite={handleToggleFavorite}
+                            />
+                        ))}
+                    </div>
+                )}
             </div>
         </MarketplaceLayout>
     );
