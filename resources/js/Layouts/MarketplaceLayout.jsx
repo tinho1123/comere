@@ -124,7 +124,8 @@ export default function MarketplaceLayout({ children }) {
     }, []);
 
     useEffect(() => {
-        if (!isAuthenticated && !localStorage.getItem('comere_onboarding_seen')) {
+        const isAccountRecoveryRoute = url.startsWith('/redefinir-senha') || url.startsWith('/complete-profile');
+        if (!isAuthenticated && !isAccountRecoveryRoute && !localStorage.getItem('comere_onboarding_seen')) {
             setShowOnboarding(true);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
