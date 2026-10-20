@@ -1,8 +1,43 @@
 import { useState, useEffect, useRef } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, LogIn, X, Mail, LogOut, ShoppingCart, Search, Package, MapPin, ChevronDown, ChevronRight, Plus, Check, Trash2, Home, Heart } from 'lucide-react';
+import { User, LogIn, X, Mail, LogOut, ShoppingCart, Search, Package, MapPin, ChevronDown, ChevronRight, Plus, Check, Trash2, Home, Heart, Lock, ChevronLeft } from 'lucide-react';
 import axios from 'axios';
+import { useClerk, useUser } from '@clerk/react';
+
+const clerkEnabled = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
+function ClerkSSOButton({ onAuthenticated }) {
+    const { openSignIn } = useClerk();
+    const { isSignedIn, user } = useUser();
+    const syncedRef = useRef(false);
+
+    useEffect(() => {
+        if (isSignedIn && user && !syncedRef.current) {
+            syncedRef.current = true;
+            axios.post('/sso-callback', {
+                clerk_id: user.id,
+                email: user.primaryEmailAddress?.emailAddress,
+                name: user.fullName,
+            }).then((res) => {
+                if (res.data?.redirect_url) {
+                    onAuthenticated?.();
+                    router.visit(res.data.redirect_url);
+                }
+            });
+        }
+    }, [isSignedIn, user]);
+
+    return (
+        <button
+            type="button"
+            onClick={() => openSignIn()}
+            className="w-full bg-white text-gray-700 border border-gray-200 font-bold py-3.5 rounded-xl text-sm flex items-center justify-center gap-2 hover:bg-gray-50 transition-all"
+        >
+            <Lock size={15} /> Entrar com SSO (Clerk)
+        </button>
+    );
+}
 
 function initials(name) {
     if (!name) return '?';
@@ -15,13 +50,19 @@ function formatCurrency(value) {
 }
 
 export default function MarketplaceLayout({ children }) {
-    const { props: { auth, orders_count, default_address, favored_balance }, url } = usePage();
+    const { props: { auth, orders_count, default_address, favored_balance, errors }, url } = usePage();
     const [isAuthOpen, setIsAuthOpen] = useState(false);
     const [isAddressOpen, setIsAddressOpen] = useState(false);
     const [isProfileSheetOpen, setIsProfileSheetOpen] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+
+    // Auth drawer: login / register / forgot-password
+    const [authMode, setAuthMode] = useState('login');
+    const [registerForm, setRegisterForm] = useState({ name: '', email: '', password: '', password_confirmation: '', document_number: '' });
+    const [forgotEmail, setForgotEmail] = useState('');
+    const [forgotSent, setForgotSent] = useState(false);
 
     // Address state
     const [addresses, setAddresses] = useState([]);
@@ -90,12 +131,44 @@ export default function MarketplaceLayout({ children }) {
         loadAddresses();
     };
 
+    const resetAuthState = () => {
+        setAuthMode('login');
+        setEmail('');
+        setPassword('');
+        setRegisterForm({ name: '', email: '', password: '', password_confirmation: '', document_number: '' });
+        setForgotEmail('');
+        setForgotSent(false);
+    };
+
+    const closeAuthModal = () => {
+        setIsAuthOpen(false);
+        resetAuthState();
+    };
+
     const handleManualLogin = (e) => {
         e.preventDefault();
         setIsLoading(true);
         router.post('/marketplace/login', { email, password }, {
             onFinish: () => setIsLoading(false),
             onSuccess: () => { setIsAuthOpen(false); setEmail(''); setPassword(''); },
+        });
+    };
+
+    const handleRegister = (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        router.post('/cadastro', registerForm, {
+            onFinish: () => setIsLoading(false),
+            onSuccess: () => { setIsAuthOpen(false); resetAuthState(); },
+        });
+    };
+
+    const handleForgotPassword = (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        router.post('/esqueci-senha', { email: forgotEmail }, {
+            onFinish: () => setIsLoading(false),
+            onSuccess: () => setForgotSent(true),
         });
     };
 
@@ -509,33 +582,120 @@ export default function MarketplaceLayout({ children }) {
             <AnimatePresence>
                 {isAuthOpen && (
                     <>
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAuthOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50" />
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={closeAuthModal} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50" />
                         <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }} className="fixed top-0 right-0 h-full w-full sm:w-[420px] bg-white z-[60] shadow-2xl flex flex-col">
                             <div className="flex items-center justify-between p-6 border-b border-gray-100">
-                                <h2 className="text-xl font-bold text-gray-900">Acesse sua conta</h2>
-                                <button onClick={() => setIsAuthOpen(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500"><X size={24} /></button>
+                                <div className="flex items-center gap-2">
+                                    {authMode !== 'login' && (
+                                        <button onClick={() => setAuthMode('login')} className="p-1 -ml-1 text-gray-400 hover:text-gray-700 transition-colors"><ChevronLeft size={22} /></button>
+                                    )}
+                                    <h2 className="text-xl font-bold text-gray-900">
+                                        {authMode === 'register' ? 'Criar conta' : authMode === 'forgot' ? 'Recuperar senha' : 'Acesse sua conta'}
+                                    </h2>
+                                </div>
+                                <button onClick={closeAuthModal} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500"><X size={24} /></button>
                             </div>
                             <div className="flex-grow overflow-y-auto p-8 flex flex-col gap-8">
-                                <div className="text-center">
-                                    <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4"><User size={32} /></div>
-                                    <p className="text-gray-500 text-sm italic">Faça login para gerenciar seus pedidos e seu saldo fiado com os parceiros.</p>
-                                </div>
-                                <form onSubmit={handleManualLogin} className="flex flex-col gap-4">
-                                    <div className="flex flex-col gap-1.5">
-                                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider px-1">E-mail</label>
-                                        <div className="relative">
-                                            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="seu@email.com" className="w-full bg-gray-50 border-gray-200 rounded-xl py-3 pl-10 pr-4 focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all text-sm outline-none" />
-                                            <Mail className="absolute left-3 top-3.5 text-gray-300" size={18} />
+                                {authMode === 'login' && (
+                                    <>
+                                        <div className="text-center">
+                                            <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4"><User size={32} /></div>
+                                            <p className="text-gray-500 text-sm italic">Faça login para gerenciar seus pedidos e seu saldo fiado com os parceiros.</p>
                                         </div>
-                                    </div>
-                                    <div className="flex flex-col gap-1.5">
-                                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider px-1">Senha</label>
-                                        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" className="w-full bg-gray-50 border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all text-sm outline-none" />
-                                    </div>
-                                    <button type="submit" disabled={isLoading} className="mt-4 bg-red-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all active:scale-95 uppercase tracking-widest text-sm disabled:opacity-50">
-                                        {isLoading ? 'Entrando...' : 'Login'}
-                                    </button>
-                                </form>
+                                        <form onSubmit={handleManualLogin} className="flex flex-col gap-4">
+                                            <div className="flex flex-col gap-1.5">
+                                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider px-1">E-mail</label>
+                                                <div className="relative">
+                                                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="seu@email.com" className="w-full bg-gray-50 border-gray-200 rounded-xl py-3 pl-10 pr-4 focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all text-sm outline-none" />
+                                                    <Mail className="absolute left-3 top-3.5 text-gray-300" size={18} />
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col gap-1.5">
+                                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider px-1">Senha</label>
+                                                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" className="w-full bg-gray-50 border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all text-sm outline-none" />
+                                            </div>
+                                            {errors?.email && <span className="text-xs text-red-500 font-medium px-1 -mt-2">{errors.email}</span>}
+                                            <button type="button" onClick={() => setAuthMode('forgot')} className="text-xs font-bold text-red-500 self-end">Esqueci minha senha</button>
+                                            <button type="submit" disabled={isLoading} className="mt-2 bg-red-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all active:scale-95 uppercase tracking-widest text-sm disabled:opacity-50">
+                                                {isLoading ? 'Entrando...' : 'Login'}
+                                            </button>
+
+                                            {clerkEnabled && (
+                                                <>
+                                                    <div className="flex items-center gap-2.5 my-1">
+                                                        <div className="flex-1 h-px bg-gray-200" />
+                                                        <span className="text-[11px] text-gray-400">ou</span>
+                                                        <div className="flex-1 h-px bg-gray-200" />
+                                                    </div>
+                                                    <ClerkSSOButton onAuthenticated={closeAuthModal} />
+                                                </>
+                                            )}
+
+                                            <p className="text-xs text-gray-500 text-center mt-2">
+                                                Ainda não tem conta?{' '}
+                                                <button type="button" onClick={() => setAuthMode('register')} className="text-red-500 font-bold">Cadastre-se</button>
+                                            </p>
+                                        </form>
+                                    </>
+                                )}
+
+                                {authMode === 'register' && (
+                                    <form onSubmit={handleRegister} className="flex flex-col gap-4">
+                                        <div className="flex flex-col gap-1.5">
+                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider px-1">Nome</label>
+                                            <input type="text" value={registerForm.name} onChange={(e) => setRegisterForm((p) => ({ ...p, name: e.target.value }))} required placeholder="Seu nome completo" className="w-full bg-gray-50 border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all text-sm outline-none" />
+                                            {errors?.name && <span className="text-xs text-red-500 font-medium px-1">{errors.name}</span>}
+                                        </div>
+                                        <div className="flex flex-col gap-1.5">
+                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider px-1">E-mail</label>
+                                            <input type="email" value={registerForm.email} onChange={(e) => setRegisterForm((p) => ({ ...p, email: e.target.value }))} required placeholder="seu@email.com" className="w-full bg-gray-50 border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all text-sm outline-none" />
+                                            {errors?.email && <span className="text-xs text-red-500 font-medium px-1">{errors.email}</span>}
+                                        </div>
+                                        <div className="flex flex-col gap-1.5">
+                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider px-1">CPF</label>
+                                            <input type="text" value={registerForm.document_number} onChange={(e) => setRegisterForm((p) => ({ ...p, document_number: e.target.value.replace(/\D/g, '').slice(0, 11) }))} required placeholder="000.000.000-00" className="w-full bg-gray-50 border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all text-sm outline-none" />
+                                            {errors?.document_number && <span className="text-xs text-red-500 font-medium px-1">{errors.document_number}</span>}
+                                        </div>
+                                        <div className="flex flex-col gap-1.5">
+                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider px-1">Senha</label>
+                                            <input type="password" value={registerForm.password} onChange={(e) => setRegisterForm((p) => ({ ...p, password: e.target.value }))} required placeholder="••••••••" className="w-full bg-gray-50 border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all text-sm outline-none" />
+                                            {errors?.password && <span className="text-xs text-red-500 font-medium px-1">{errors.password}</span>}
+                                        </div>
+                                        <div className="flex flex-col gap-1.5">
+                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider px-1">Confirmar senha</label>
+                                            <input type="password" value={registerForm.password_confirmation} onChange={(e) => setRegisterForm((p) => ({ ...p, password_confirmation: e.target.value }))} required placeholder="••••••••" className="w-full bg-gray-50 border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all text-sm outline-none" />
+                                        </div>
+                                        <button type="submit" disabled={isLoading} className="mt-2 bg-red-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all active:scale-95 uppercase tracking-widest text-sm disabled:opacity-50">
+                                            {isLoading ? 'Criando conta...' : 'Criar conta'}
+                                        </button>
+                                        <p className="text-xs text-gray-500 text-center mt-1">
+                                            Já tem conta?{' '}
+                                            <button type="button" onClick={() => setAuthMode('login')} className="text-red-500 font-bold">Fazer login</button>
+                                        </p>
+                                    </form>
+                                )}
+
+                                {authMode === 'forgot' && (
+                                    forgotSent ? (
+                                        <div className="text-center flex flex-col gap-4">
+                                            <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto"><Mail size={32} /></div>
+                                            <p className="text-gray-600 text-sm">Se o e-mail <strong>{forgotEmail}</strong> estiver cadastrado, enviamos um link para redefinir sua senha.</p>
+                                            <button type="button" onClick={() => setAuthMode('login')} className="text-sm font-bold text-red-500">Voltar para o login</button>
+                                        </div>
+                                    ) : (
+                                        <form onSubmit={handleForgotPassword} className="flex flex-col gap-4">
+                                            <p className="text-gray-500 text-sm italic">Informe seu e-mail e enviaremos um link para você redefinir sua senha.</p>
+                                            <div className="flex flex-col gap-1.5">
+                                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider px-1">E-mail</label>
+                                                <input type="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required placeholder="seu@email.com" className="w-full bg-gray-50 border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all text-sm outline-none" />
+                                                {errors?.email && <span className="text-xs text-red-500 font-medium px-1">{errors.email}</span>}
+                                            </div>
+                                            <button type="submit" disabled={isLoading} className="mt-2 bg-red-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all active:scale-95 uppercase tracking-widest text-sm disabled:opacity-50">
+                                                {isLoading ? 'Enviando...' : 'Enviar link'}
+                                            </button>
+                                        </form>
+                                    )
+                                )}
                             </div>
                         </motion.div>
                     </>

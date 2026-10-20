@@ -2,19 +2,25 @@
 
 namespace App\Models;
 
+use App\Notifications\ClientResetPasswordNotification;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasTenants;
 use Filament\Panel;
+use Illuminate\Auth\Passwords\CanResetPassword;
+use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as AuthenticatableUser;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
 
-class Client extends AuthenticatableUser implements FilamentUser, HasTenants
+class Client extends AuthenticatableUser implements CanResetPasswordContract, FilamentUser, HasTenants
 {
+    use CanResetPassword;
     use HasFactory;
+    use Notifiable;
 
     protected $fillable = [
         'uuid',
@@ -51,6 +57,11 @@ class Client extends AuthenticatableUser implements FilamentUser, HasTenants
     public function getRouteKeyName(): string
     {
         return 'uuid';
+    }
+
+    public function sendPasswordResetNotification(string $token): void
+    {
+        $this->notify(new ClientResetPasswordNotification($token));
     }
 
     /**

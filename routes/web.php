@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Marketplace\ClientAddressController;
 use App\Http\Controllers\Marketplace\ClientFavoriteController;
+use App\Http\Controllers\Marketplace\ClientPasswordResetController;
 use App\Http\Controllers\Marketplace\CompanyRatingController;
 use App\Http\Controllers\Marketplace\DeliveryTrackingController;
 use App\Http\Controllers\Marketplace\DriverAuthController;
@@ -64,6 +65,11 @@ Route::get('/store/{company:uuid}', [MarketplaceController::class, 'show'])->nam
 
 Route::post('/marketplace/login', [MarketplaceLoginController::class, 'login'])->name('marketplace.login')->middleware('throttle:10,1');
 Route::post('/marketplace/logout', [MarketplaceLoginController::class, 'logout'])->name('marketplace.logout');
+Route::post('/cadastro', [MarketplaceLoginController::class, 'register'])->name('marketplace.register')->middleware('throttle:10,1');
+
+Route::post('/esqueci-senha', [ClientPasswordResetController::class, 'sendResetLink'])->name('marketplace.password.email')->middleware('throttle:5,1');
+Route::get('/redefinir-senha/{token}', [ClientPasswordResetController::class, 'showResetForm'])->name('marketplace.password.reset.form');
+Route::post('/redefinir-senha', [ClientPasswordResetController::class, 'reset'])->name('marketplace.password.reset')->middleware('throttle:10,1');
 
 // Fluxo SSO e Cadastro Completo
 Route::get('/sso-callback', function () {
