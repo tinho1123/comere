@@ -56,6 +56,7 @@ export default function MarketplaceLayout({ children }) {
     const [isProfileSheetOpen, setIsProfileSheetOpen] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [rememberMe, setRememberMe] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
     // Auth drawer: login / register / forgot-password
@@ -135,6 +136,7 @@ export default function MarketplaceLayout({ children }) {
         setAuthMode('login');
         setEmail('');
         setPassword('');
+        setRememberMe(false);
         setRegisterForm({ name: '', email: '', password: '', password_confirmation: '', document_number: '' });
         setForgotEmail('');
         setForgotSent(false);
@@ -148,9 +150,9 @@ export default function MarketplaceLayout({ children }) {
     const handleManualLogin = (e) => {
         e.preventDefault();
         setIsLoading(true);
-        router.post('/marketplace/login', { email, password }, {
+        router.post('/marketplace/login', { email, password, remember: rememberMe }, {
             onFinish: () => setIsLoading(false),
-            onSuccess: () => { setIsAuthOpen(false); setEmail(''); setPassword(''); },
+            onSuccess: () => { setIsAuthOpen(false); setEmail(''); setPassword(''); setRememberMe(false); },
         });
     };
 
@@ -615,7 +617,13 @@ export default function MarketplaceLayout({ children }) {
                                                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" className="w-full bg-gray-50 border-gray-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all text-sm outline-none" />
                                             </div>
                                             {errors?.email && <span className="text-xs text-red-500 font-medium px-1 -mt-2">{errors.email}</span>}
-                                            <button type="button" onClick={() => setAuthMode('forgot')} className="text-xs font-bold text-red-500 self-end">Esqueci minha senha</button>
+                                            <div className="flex items-center justify-between">
+                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                    <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="accent-red-500" />
+                                                    <span className="text-xs text-gray-500">Lembrar-me</span>
+                                                </label>
+                                                <button type="button" onClick={() => setAuthMode('forgot')} className="text-xs font-bold text-red-500">Esqueci minha senha</button>
+                                            </div>
                                             <button type="submit" disabled={isLoading} className="mt-2 bg-red-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all active:scale-95 uppercase tracking-widest text-sm disabled:opacity-50">
                                                 {isLoading ? 'Entrando...' : 'Login'}
                                             </button>
