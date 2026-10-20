@@ -16,6 +16,8 @@
     <link rel="dns-prefetch" href="//tile.openstreetmap.org">
     <link rel="dns-prefetch" href="//nominatim.openstreetmap.org">
 
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" href="/icons/icon-192x192.png">
     <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
 
     @if (request()->is('drivers*'))

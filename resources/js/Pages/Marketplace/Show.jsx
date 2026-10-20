@@ -86,7 +86,6 @@ function CartPanel({
     maxVisibleItems = Infinity,
 }) {
     const { auth } = usePage().props;
-    const [showAllItems, setShowAllItems] = useState(false);
 
     if (cartCount === 0) {
         return (
@@ -98,13 +97,15 @@ function CartPanel({
         );
     }
 
-    const isTruncated = !showAllItems && cartItems.length > maxVisibleItems;
-    const visibleItems = isTruncated ? cartItems.slice(0, maxVisibleItems) : cartItems;
+    const isScrollable = cartItems.length > maxVisibleItems;
 
     return (
         <div className="flex flex-col gap-4">
-            <div className={`flex flex-col gap-3 ${showAllItems && cartItems.length > maxVisibleItems ? 'max-h-80 overflow-y-auto pr-1' : ''}`}>
-                {visibleItems.map(({ product, quantity, notes }) => (
+            <div
+                className={`flex flex-col gap-3 ${isScrollable ? 'overflow-y-auto pr-1' : ''}`}
+                style={isScrollable ? { maxHeight: `${maxVisibleItems * 88 + (maxVisibleItems - 1) * 12}px` } : undefined}
+            >
+                {cartItems.map(({ product, quantity, notes }) => (
                     <div key={product.id} className="bg-white border border-gray-100 rounded-2xl p-3 flex gap-3 items-center">
                         <button
                             type="button"
@@ -133,15 +134,6 @@ function CartPanel({
                     </div>
                 ))}
             </div>
-
-            {isTruncated && (
-                <button
-                    onClick={() => setShowAllItems(true)}
-                    className="text-sm font-bold text-red-500 hover:underline text-center"
-                >
-                    Ver todos os itens ({cartItems.length})
-                </button>
-            )}
 
             {onAddMoreItems && (
                 <button
@@ -702,7 +694,7 @@ export default function MarketplaceShow({ company, productsByCategory }) {
                             <ShoppingCart size={18} className="text-red-500" />
                             Seu carrinho {cartCount > 0 && `(${cartCount})`}
                         </h3>
-                        <CartPanel {...cartPanelProps} maxVisibleItems={4} />
+                        <CartPanel {...cartPanelProps} maxVisibleItems={3} />
                     </div>
                 </div>
             </div>
