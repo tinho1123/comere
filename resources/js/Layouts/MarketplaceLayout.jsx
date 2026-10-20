@@ -78,6 +78,7 @@ export default function MarketplaceLayout({ children }) {
 
     const isAuthenticated = !!auth.user;
     const displayUser = auth.user;
+    const [showOnboarding, setShowOnboarding] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const userMenuRef = useRef(null);
     const searchRef = useRef(null);
@@ -121,6 +122,25 @@ export default function MarketplaceLayout({ children }) {
         window.addEventListener('open-auth-modal', handler);
         return () => window.removeEventListener('open-auth-modal', handler);
     }, []);
+
+    useEffect(() => {
+        const isAccountRecoveryRoute = url.startsWith('/redefinir-senha') || url.startsWith('/complete-profile');
+        if (!isAuthenticated && !isAccountRecoveryRoute && !localStorage.getItem('comere_onboarding_seen')) {
+            setShowOnboarding(true);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const dismissOnboarding = () => {
+        localStorage.setItem('comere_onboarding_seen', '1');
+        setShowOnboarding(false);
+    };
+
+    const onboardingLogin = () => {
+        dismissOnboarding();
+        setAuthMode('login');
+        setIsAuthOpen(true);
+    };
 
     const loadAddresses = async () => {
         const res = await axios.get('/addresses');
@@ -265,6 +285,46 @@ export default function MarketplaceLayout({ children }) {
                 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
             </Head>
 
+            <AnimatePresence>
+                {showOnboarding && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center sm:p-6 bg-gradient-to-b from-red-500 via-red-600 to-gray-900"
+                    >
+                        <div className="w-full h-full sm:h-auto sm:max-w-sm sm:rounded-3xl sm:overflow-hidden sm:shadow-2xl flex flex-col text-white sm:max-h-[90vh]">
+                            <div className="flex-grow flex flex-col items-center justify-center gap-4 px-9 py-10 text-center sm:min-h-[460px]">
+                                <span className="text-4xl font-bold italic">Comere</span>
+                                <p className="text-sm opacity-90 leading-relaxed max-w-[280px]">
+                                    Peça dos seus restaurantes favoritos, acompanhe a entrega e gerencie seus pedidos em um só lugar.
+                                </p>
+                                <div className="flex gap-1.5 mt-2">
+                                    <span className="w-[22px] h-1 rounded-full bg-white" />
+                                    <span className="w-2 h-1 rounded-full bg-white/40" />
+                                    <span className="w-2 h-1 rounded-full bg-white/40" />
+                                </div>
+                            </div>
+
+                            <div className="px-8 pt-4 pb-9 flex flex-col gap-3 flex-shrink-0">
+                                <button
+                                    onClick={dismissOnboarding}
+                                    className="w-full bg-white text-red-500 font-bold py-4 rounded-2xl text-sm hover:bg-gray-50 transition-all active:scale-95"
+                                >
+                                    Começar
+                                </button>
+                                <button
+                                    onClick={onboardingLogin}
+                                    className="text-center text-xs font-bold opacity-90 hover:opacity-100 transition-opacity py-1"
+                                >
+                                    Já tenho conta — Entrar
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Navbar */}
             <nav className="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-100">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -352,9 +412,11 @@ export default function MarketplaceLayout({ children }) {
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, y: -6 }}
                                             transition={{ duration: 0.15 }}
-                                            className="absolute top-full mt-2 left-0 right-0 bg-white rounded-2xl shadow-xl border border-gray-100 px-4 py-6 text-center z-50"
+                                            className="absolute top-full mt-2 left-0 right-0 bg-white rounded-2xl shadow-xl border border-gray-100 px-4 py-6 flex flex-col items-center text-center gap-1.5 z-50"
                                         >
-                                            <p className="text-sm text-gray-400">Nenhum resultado para "<span className="font-semibold text-gray-600">{searchQuery}</span>"</p>
+                                            <Search size={28} className="text-gray-300 mb-1" />
+                                            <p className="text-sm font-bold text-gray-900">Nenhum resultado para "{searchQuery}"</p>
+                                            <p className="text-xs text-gray-400">Tente buscar por outro termo ou categoria.</p>
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
