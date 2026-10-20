@@ -38,7 +38,7 @@ class MarketplaceLoginController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('marketplace.index'));
+        return redirect()->intended($this->safeRedirectTarget($request));
     }
 
     /**
@@ -64,7 +64,7 @@ class MarketplaceLoginController extends Controller
 
             $client?->resetLoginAttempts();
 
-            return redirect()->intended(route('marketplace.index'));
+            return redirect()->intended($this->safeRedirectTarget($request));
         }
 
         $client?->incrementLoginAttempts();
@@ -72,6 +72,22 @@ class MarketplaceLoginController extends Controller
         throw ValidationException::withMessages([
             'email' => __('auth.failed'),
         ]);
+    }
+
+    /**
+     * Resolve where to send the client after login: back to the page they were
+     * on (e.g. a store they had a cart open in), falling back to the marketplace
+     * home. Only a same-origin relative path is trusted, to avoid an open redirect.
+     */
+    private function safeRedirectTarget(Request $request): string
+    {
+        $redirectTo = $request->input('redirect_to');
+
+        if (is_string($redirectTo) && str_starts_with($redirectTo, '/') && ! str_starts_with($redirectTo, '//')) {
+            return $redirectTo;
+        }
+
+        return route('marketplace.index');
     }
 
     /**
