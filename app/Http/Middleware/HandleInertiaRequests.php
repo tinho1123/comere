@@ -64,8 +64,8 @@ class HandleInertiaRequests extends Middleware
             'favored_balance' => auth()->guard('client')->check()
                 ? FavoredTransaction::where('client_id', auth()->guard('client')->id())
                     ->where('active', true)
-                    ->get()
-                    ->sum(fn (FavoredTransaction $t) => $t->favored_total - $t->favored_paid_amount)
+                    ->selectRaw('COALESCE(SUM(favored_total - favored_paid_amount), 0) as balance')
+                    ->value('balance')
                 : 0,
             'default_address' => auth()->guard('client')->check()
                 ? auth()->guard('client')->user()->addresses()->where('is_default', true)->first()
