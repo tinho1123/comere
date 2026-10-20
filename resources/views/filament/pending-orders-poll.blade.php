@@ -6,8 +6,13 @@
     // mount() da página) porque mountTableAction() só pode ser chamado
     // depois que a tabela do Livewire já foi montada; chamá-lo direto no
     // mount() da página dá erro fatal ("$table must not be accessed
-    // before initialization"). Em vez disso, disparamos a ação via JS
-    // depois que o componente Livewire já carregou normalmente.
+    // before initialization"). Em vez disso, disparamos um evento do
+    // Livewire (Livewire.dispatch) depois que a página carrega — o
+    // listener #[On('comere-open-order')] em ManageOrders chama
+    // mountTableAction() dentro do próprio componente correto. Chamar
+    // Livewire.first() diretamente é frágil: pode resolver para outro
+    // componente Livewire presente na mesma página (ex.: widgets),
+    // que não tem esse método.
     $autoOpenOrderKey = null;
     if ($tenant && ($pedidoUuid = request()->query('pedido'))) {
         $autoOpenOrderKey = \App\Models\Order::where('company_id', $tenant->id)
@@ -19,7 +24,7 @@
     <script>
         document.addEventListener('livewire:init', () => {
             window.addEventListener('load', () => {
-                Livewire.first()?.call('mountTableAction', 'view', @js((string) $autoOpenOrderKey));
+                Livewire.dispatch('comere-open-order', { recordId: @js((string) $autoOpenOrderKey) });
             });
         });
     </script>
