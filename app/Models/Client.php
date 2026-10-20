@@ -59,7 +59,7 @@ class Client extends AuthenticatableUser implements CanResetPasswordContract, Fi
         return 'uuid';
     }
 
-    public function sendPasswordResetNotification(string $token): void
+    public function sendPasswordResetNotification($token)
     {
         $this->notify(new ClientResetPasswordNotification($token));
     }
