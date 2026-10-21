@@ -11,6 +11,8 @@ use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -55,14 +57,14 @@ class ProductResource extends Resource
                             ->prefix('R$')
                             ->required()
                             ->live(onBlur: true)
-                            ->afterStateUpdated(fn ($state, Forms\Set $set, Forms\Get $get) => $set('total_amount', (float) $state - (float) $get('discounts'))),
+                            ->afterStateUpdated(fn ($state, Set $set, Get $get) => $set('total_amount', (float) $state - (float) $get('discounts'))),
                         Forms\Components\TextInput::make('discounts')
                             ->label('Descontos')
                             ->numeric()
                             ->default(0)
                             ->prefix('R$')
                             ->live(onBlur: true)
-                            ->afterStateUpdated(fn ($state, Forms\Set $set, Forms\Get $get) => $set('total_amount', (float) $get('amount') - (float) $state)),
+                            ->afterStateUpdated(fn ($state, Set $set, Get $get) => $set('total_amount', (float) $get('amount') - (float) $state)),
                         Forms\Components\TextInput::make('total_amount')
                             ->label('Preço Final')
                             ->numeric()
@@ -112,7 +114,7 @@ class ProductResource extends Resource
                             ->label('Preço no Fiado')
                             ->numeric()
                             ->prefix('R$')
-                            ->visible(fn (Forms\Get $get): bool => $get('is_for_favored')),
+                            ->visible(fn (Get $get): bool => $get('is_for_favored')),
                     ]),
                 Schemas\Components\Section::make('Disponibilidade')
                     ->schema([
@@ -225,10 +227,10 @@ class ProductResource extends Resource
                                     ->relationship('category', 'name')
                                     ->required()
                                     ->live()
-                                    ->afterStateUpdated(fn (Forms\Set $set) => $set('subcategory_id', null)),
+                                    ->afterStateUpdated(fn (Set $set) => $set('subcategory_id', null)),
                                 Forms\Components\Select::make('subcategory_id')
                                     ->label('Subcategoria')
-                                    ->options(fn (Forms\Get $get): array => ProductSubcategory::where('company_id', Filament::getTenant()->id)
+                                    ->options(fn (Get $get): array => ProductSubcategory::where('company_id', Filament::getTenant()->id)
                                         ->where('active', true)
                                         ->pluck('name', 'id')
                                         ->toArray()
