@@ -185,6 +185,7 @@ class ProductResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('image')
                     ->label('Imagem')
+                    ->disk('public')
                     ->size(50)
                     ->circular(false)
                     ->defaultImageUrl(fn (): string => 'data:image/svg+xml;base64,'.base64_encode(
