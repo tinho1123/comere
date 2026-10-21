@@ -50,6 +50,13 @@ class Product extends Model
         'cost' => 'decimal:2',
     ];
 
+    /**
+     * Acquisition cost is admin-only (dashboard margin calculations) and must
+     * never reach the client marketplace or API, which serialize raw Product
+     * models.
+     */
+    protected $hidden = ['cost'];
+
     public function hasCost(): bool
     {
         return $this->cost !== null && (float) $this->cost > 0;
