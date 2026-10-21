@@ -39,6 +39,7 @@ class ProductResource extends Resource
     public static function form(Schema $form): Schema
     {
         return $form
+            ->columns(1)
             ->schema([
                 Forms\Components\TextInput::make('name')
                     ->label('Nome')
