@@ -2,6 +2,8 @@
 
 namespace App\Filament\Admin\Pages;
 
+use App\Filament\Admin\Widgets\FinancialSummaryWidget;
+use App\Filament\Admin\Widgets\ProductMarginWidget;
 use App\Filament\Admin\Widgets\RecentOrdersWidget;
 use App\Filament\Admin\Widgets\RecentTablesWidget;
 use App\Filament\Admin\Widgets\RecentTransactionsWidget;
@@ -20,6 +22,8 @@ class Dashboard extends BaseDashboard
     public function getWidgets(): array
     {
         return [
+            FinancialSummaryWidget::class,
+            ProductMarginWidget::class,
             TransactionChartWidget::class,
             RecentTransactionsWidget::class,
             RecentOrdersWidget::class,
