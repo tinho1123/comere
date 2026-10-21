@@ -71,6 +71,17 @@ class ProductResource extends Resource
                             ->disabled()
                             ->dehydrated(),
                     ]),
+                Schemas\Components\Section::make('Custo e Margem')
+                    ->description('Usado só para calcular o lucro no dashboard. Não aparece para o cliente em nenhuma tela do marketplace.')
+                    ->schema([
+                        Forms\Components\TextInput::make('cost')
+                            ->label('Custo de aquisição')
+                            ->numeric()
+                            ->prefix('R$')
+                            ->minValue(0)
+                            ->nullable()
+                            ->helperText('Opcional. Deixe em branco ou 0,00 se não quiser acompanhar o custo deste produto.'),
+                    ]),
                 Schemas\Components\Grid::make(3)
                     ->schema([
                         Forms\Components\TextInput::make('quantity')
@@ -184,6 +195,12 @@ class ProductResource extends Resource
                     ->label('Preço')
                     ->money('BRL')
                     ->sortable(),
+                Tables\Columns\TextColumn::make('cost')
+                    ->label('Custo')
+                    ->money('BRL')
+                    ->placeholder('Sem custo')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('quantity')
                     ->label('Quantidade')
                     ->numeric()

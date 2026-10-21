@@ -27,6 +27,7 @@ class Product extends Model
         'amount',
         'discounts',
         'total_amount',
+        'cost',
         'quantity',
         'image',
         'isCool',
@@ -46,7 +47,13 @@ class Product extends Model
         'is_for_favored' => 'boolean',
         'is_marketplace' => 'boolean',
         'payment_surcharges' => 'array',
+        'cost' => 'decimal:2',
     ];
+
+    public function hasCost(): bool
+    {
+        return $this->cost !== null && (float) $this->cost > 0;
+    }
 
     public function getSurchargeFor(string $paymentMethod, float $itemTotal, int $quantity = 1): float
     {
