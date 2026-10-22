@@ -94,6 +94,7 @@ class PendingOrdersController extends Controller
             ->whereHas('items', fn ($query) => $query->where('is_delivered', false))
             ->with([
                 'table',
+                'client',
                 'items' => fn ($query) => $query->where('is_delivered', false)->orderBy('id'),
             ])
             ->orderBy('id')
@@ -246,6 +247,10 @@ class PendingOrdersController extends Controller
                 'quantity' => $item->quantity,
             ])->all(),
             'items_count' => $session->items->sum('quantity'),
+            // Permite ao front detectar item novo numa mesa já com card
+            // aberto (outro item adicionado antes do item anterior ser
+            // entregue) e atualizar o card em vez de ignorar o pedido.
+            'latest_item_id' => $session->items->max('id'),
             'url' => TableSessionResource::getUrl('view', ['record' => $session->uuid]),
         ];
     }
