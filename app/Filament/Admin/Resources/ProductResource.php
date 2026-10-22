@@ -17,6 +17,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
@@ -367,7 +368,7 @@ class ProductResource extends Resource
         $set('margin_profit_preview', number_format($profit, 2, ',', '.'));
     }
 
-    protected static function marginStatusBadge(Get $get): string
+    protected static function marginStatusBadge(Get $get): HtmlString
     {
         $price = (float) ($get('total_amount') ?? 0);
         $cost = $get('cost');
@@ -386,6 +387,6 @@ class ProductResource extends Resource
             };
         }
 
-        return Blade::render('<x-filament::badge color="'.$color.'">'.$label.'</x-filament::badge>');
+        return new HtmlString(Blade::render('<x-filament::badge color="'.$color.'">'.$label.'</x-filament::badge>'));
     }
 }
