@@ -703,8 +703,16 @@
                     if (!matched || matched.getClientRects().length === 0) {
                         return;
                     }
-                    document.removeEventListener('click', handler, true);
-                    activeAdvanceHandler = null;
+                    // Encerra o polling de 300ms já aqui, antes de qualquer
+                    // setTimeout — senão, numa ação final rápida (ex.: o
+                    // fetch de "Aprovar" removendo o card antes dos 50ms do
+                    // clearTour), o intervalo ainda vivo pode medir o alvo
+                    // já removido ou, numa corrida, reexibir o balão vazio
+                    // (hideTooltip() já rodou, mas positionAround() do tick
+                    // seguinte volta a mostrar display:block sem conteúdo).
+                    stopTracking();
+                    hideSpotlight();
+                    hideTooltip();
                     if (isFinalStep(flow, state)) {
                         setTimeout(clearTour, 50);
                     } else {
