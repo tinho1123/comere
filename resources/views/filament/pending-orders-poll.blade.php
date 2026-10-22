@@ -340,6 +340,25 @@
             background: rgba(225, 29, 72, 0.18);
             color: #fb7185;
         }
+        /* Card de mesa: mesmo visual do card de marketplace, mas sem
+           aprovar/recusar — só um link pra tela da mesa — então usa uma
+           cor de destaque diferente (laranja, igual ao toast que
+           substitui) pra não parecer o mesmo tipo de alerta. */
+        .coa-card--mesa {
+            border-top-color: #f97316;
+        }
+        .coa-btn--mesa-open {
+            background: #f97316;
+            color: #fff;
+        }
+        .coa-mini-btn--mesa-open {
+            background: #f97316;
+            color: #fff;
+            width: auto;
+            padding: 0 0.625rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
     </style>
 
     <div id="comere-order-alerts"></div>
@@ -347,18 +366,23 @@
     <script>
         (function () {
             const companyUuid = @js($tenant->uuid);
-            const mesaEndpoint = @js(route('admin.pending-orders.count'));
+            const mesaEndpoint = @js(route('admin.pending-orders.mesa'));
             const marketplaceEndpoint = @js(route('admin.pending-orders.marketplace'));
             const ordersIndexUrl = @js(\App\Filament\Admin\Resources\OrderResource::getUrl('index'));
             const csrfToken = @js(csrf_token());
             const approveUrl = (uuid) => @js(url('/admin/pedidos-pendentes')) + '/' + uuid + '/aprovar';
             const rejectUrl = (uuid) => @js(url('/admin/pedidos-pendentes')) + '/' + uuid + '/recusar';
 
-            let lastItemId = null;
             let marketplaceInitialized = false;
+            let mesaInitialized = false;
             const renderedOrderIds = new Set();
+            const renderedMesaSessionIds = new Set();
             const POSITION_KEY = 'comere_order_alerts_position';
             let swRegistration = null;
+
+            function totalAlertCount() {
+                return renderedOrderIds.size + renderedMesaSessionIds.size;
+            }
 
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.ready.then((reg) => {
@@ -514,7 +538,7 @@
             // direto no card, sem esperar o próximo poll) — a alça de arrastar
             // não pode continuar visível sozinha, sem nenhum pedido pendente.
             function removeDragHandleIfEmpty() {
-                if (renderedOrderIds.size > 0) return;
+                if (totalAlertCount() > 0) return;
                 document.getElementById('comere-order-alerts')?.querySelector('.coa-drag-handle')?.remove();
             }
 
@@ -720,7 +744,7 @@
                     // A alça de arrastar só aparece quando há algo pra mover —
                     // a posição arrastada já foi salva e continua valendo para
                     // os próximos cards (ensureDragHandle não mexe na posição).
-                    if (renderedOrderIds.size > 0) {
+                    if (totalAlertCount() > 0) {
                         ensureDragHandle(container);
                         // Reconfere a cada atualização (não só na primeira vez) —
                         // uma posição salva num monitor maior pode cair fora da
@@ -734,29 +758,118 @@
                 } catch (e) {}
             }
 
-            async function checkMesaItems() {
+            function mesaMinimizedKey(sessionId) {
+                return `comere_mesa_alert_minimized_${sessionId}`;
+            }
+
+            function buildMesaCard(session) {
+                const card = document.createElement('div');
+                card.className = 'coa-card coa-card--mesa';
+                card.dataset.mesaSessionId = String(session.id);
+                card.dataset.createdAt = session.created_at;
+
+                const isMinimized = localStorage.getItem(mesaMinimizedKey(session.id)) === '1';
+                if (isMinimized) card.classList.add('coa-minimized');
+
+                const itemsHtml = session.items.map((item) => `
+                    <div class="coa-item-line">
+                        <span class="coa-item-qty">${item.quantity}x</span>
+                        <span>${escapeHtml(item.name)}</span>
+                    </div>
+                `).join('');
+
+                const guestLabel = session.guest_name
+                    ? `${escapeHtml(session.table_name)} · ${escapeHtml(session.guest_name)}`
+                    : escapeHtml(session.table_name);
+
+                card.innerHTML = `
+                    <div class="coa-header" data-action="toggle">
+                        <span class="coa-pulse"></span>
+                        <span class="coa-header-title">
+                            🍽️ Novo pedido na mesa
+                            <span class="coa-time">· ${timeAgoLabel(session.created_at)}</span>
+                        </span>
+                        <button type="button" class="coa-toggle" data-action="toggle" title="Minimizar">▾</button>
+                    </div>
+                    <div class="coa-body">
+                        <div class="coa-row">
+                            <p class="coa-client">${guestLabel} · ${session.items_count} ${session.items_count === 1 ? 'item' : 'itens'}</p>
+                        </div>
+                        <div class="coa-items">${itemsHtml}</div>
+                        <div class="coa-actions">
+                            <button type="button" class="coa-btn coa-btn--mesa-open" data-action="open-mesa">➔ Ir para a mesa</button>
+                        </div>
+                    </div>
+                    <div class="coa-mini-bar">
+                        <span class="coa-pulse"></span>
+                        <span class="coa-mini-label">${guestLabel}</span>
+                        <div class="coa-mini-actions">
+                            <button type="button" class="coa-mini-btn coa-mini-btn--mesa-open" data-action="open-mesa" title="Ir para a mesa">Ir</button>
+                            <button type="button" class="coa-mini-btn" data-action="toggle" title="Expandir">▴</button>
+                        </div>
+                    </div>
+                `;
+
+                card.addEventListener('click', (event) => {
+                    const action = event.target.closest('[data-action]')?.dataset.action;
+                    if (!action) return;
+
+                    if (action === 'toggle') {
+                        const minimized = card.classList.toggle('coa-minimized');
+                        localStorage.setItem(mesaMinimizedKey(session.id), minimized ? '1' : '0');
+                        return;
+                    }
+
+                    if (action === 'open-mesa') {
+                        window.location.href = session.url;
+                    }
+                });
+
+                return card;
+            }
+
+            async function checkMesaOrders() {
                 try {
                     const res = await fetch(mesaEndpoint + '?company=' + companyUuid, {
                         headers: { Accept: 'application/json' },
                     });
-
-                    if (!res.ok) {
-                        return;
-                    }
+                    if (!res.ok) return;
 
                     const data = await res.json();
+                    const sessions = data.sessions || [];
+                    const container = document.getElementById('comere-order-alerts');
+                    const currentIds = new Set(sessions.map((s) => s.id));
 
-                    // Compare by the highest item id ever seen (not the pending
-                    // count), so a new order isn't masked by another item being
-                    // delivered in the same polling interval.
-                    if (lastItemId !== null && data.latest_item_id !== null && data.latest_item_id > lastItemId) {
-                        beep();
-                        showToast('🔔 Novo pedido pendente na mesa!');
+                    // Remove cards for sessions that no longer have a pending item
+                    // (entregue ou mesa fechada).
+                    renderedMesaSessionIds.forEach((id) => {
+                        if (!currentIds.has(id)) {
+                            const el = container.querySelector(`[data-mesa-session-id="${id}"]`);
+                            if (el) el.remove();
+                            renderedMesaSessionIds.delete(id);
+                            localStorage.removeItem(mesaMinimizedKey(id));
+                        }
+                    });
+
+                    sessions.forEach((session) => {
+                        if (renderedMesaSessionIds.has(session.id)) return;
+
+                        renderedMesaSessionIds.add(session.id);
+                        container.appendChild(buildMesaCard(session));
+
+                        if (mesaInitialized) {
+                            beep();
+                        }
+                    });
+
+                    if (totalAlertCount() > 0) {
+                        ensureDragHandle(container);
+                        clampContainerToViewport();
+                    } else {
+                        container.querySelector('.coa-drag-handle')?.remove();
                     }
 
-                    if (data.latest_item_id !== null) {
-                        lastItemId = data.latest_item_id;
-                    }
+                    mesaInitialized = true;
                 } catch (e) {}
             }
 
@@ -771,9 +884,9 @@
 
             applySavedPosition();
             window.addEventListener('resize', clampContainerToViewport);
-            checkMesaItems();
+            checkMesaOrders();
             checkMarketplaceOrders();
-            setInterval(checkMesaItems, 8000);
+            setInterval(checkMesaOrders, 8000);
             setInterval(checkMarketplaceOrders, 8000);
             setInterval(updateCardTimes, 15000);
         })();
