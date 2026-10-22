@@ -16,6 +16,7 @@ use App\Services\DistanceService;
 use App\Services\PushNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -516,11 +517,23 @@ class MarketplaceController extends Controller
         try {
             $itemCount = $order->items()->count();
 
+            // URLs assinadas (expiram em 3 dias, cobrindo até um fim de
+            // semana sem resposta) pra aprovar/recusar direto pelo botão da
+            // notificação, sem precisar abrir a tela de Pedidos.
+            $expiry = now()->addDays(3);
+            $approveUrl = URL::temporarySignedRoute('admin.pending-orders.approve.signed', $expiry, ['order' => $order->uuid]);
+            $rejectUrl = URL::temporarySignedRoute('admin.pending-orders.reject.signed', $expiry, ['order' => $order->uuid]);
+
             app(PushNotificationService::class)->notifyCompany(
                 $company->id,
                 '🛒 Novo pedido recebido!',
                 ($client->name ?? 'Um cliente').' fez um pedido com '.$itemCount.' '.($itemCount === 1 ? 'item' : 'itens').'.',
-                "/admin/{$company->uuid}/orders"
+                "/admin/{$company->uuid}/orders",
+                [
+                    'tag' => "comere-order-{$order->id}",
+                    'approveUrl' => $approveUrl,
+                    'rejectUrl' => $rejectUrl,
+                ]
             );
         } catch (\Throwable) {
             // Nunca falhar a criação do pedido por causa de erro na notificação

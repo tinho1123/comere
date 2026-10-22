@@ -9,6 +9,7 @@ use App\Models\TableSessionItem;
 use App\Services\DistanceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL;
 
 class PendingOrdersController extends Controller
 {
@@ -72,15 +73,44 @@ class PendingOrdersController extends Controller
     {
         abort_unless(auth()->user()->canAccessTenant($order->company), 403);
 
-        $order->approve();
-
-        return response()->json(['success' => true, 'status' => $order->status]);
+        return $this->doApprove($order);
     }
 
     public function rejectOrder(Request $request, Order $order): JsonResponse
     {
         abort_unless(auth()->user()->canAccessTenant($order->company), 403);
 
+        return $this->doReject($order);
+    }
+
+    /**
+     * Same as approveOrder(), reached from a push notification's action
+     * button. The `signed` middleware (route has no `auth` middleware) is
+     * the only gate: the service worker can't reliably read the CSRF
+     * cookie to build the header Laravel's session-based CSRF check needs
+     * (cookieStore support is inconsistent across browsers, especially on
+     * mobile/background), so this route authenticates via a per-order
+     * signed URL generated server-side instead of a session.
+     */
+    public function approveOrderSigned(Request $request, Order $order): JsonResponse
+    {
+        return $this->doApprove($order);
+    }
+
+    public function rejectOrderSigned(Request $request, Order $order): JsonResponse
+    {
+        return $this->doReject($order);
+    }
+
+    private function doApprove(Order $order): JsonResponse
+    {
+        $order->approve();
+
+        return response()->json(['success' => true, 'status' => $order->status]);
+    }
+
+    private function doReject(Order $order): JsonResponse
+    {
         // O card pode estar com um estado defasado (até 8s de poll) — se o
         // pedido já saiu de "pending" (aprovado/despachado por outro admin),
         // recusar agora via Order::cancel() cancelaria uma etapa posterior
@@ -134,6 +164,14 @@ class PendingOrdersController extends Controller
             ? app(DistanceService::class)->calculate($storeLat, $storeLng, $lat, $lng)
             : null;
 
+        // Mesmas URLs assinadas usadas na notificação push (ver
+        // MarketplaceController::notifyCompanyOfNewOrder) — assim o botão
+        // Aprovar/Recusar da notificação do sistema (aba em segundo plano)
+        // usa a rota pública assinada em vez da rota autenticada, que exige
+        // um header CSRF que o service worker não consegue montar de forma
+        // confiável em todo navegador.
+        $expiry = now()->addDays(3);
+
         return [
             'id' => $order->id,
             'uuid' => $order->uuid,
@@ -150,6 +188,8 @@ class PendingOrdersController extends Controller
             'address' => $addressText,
             'neighborhood' => $neighborhood,
             'distance_km' => $distanceKm,
+            'approve_url' => URL::temporarySignedRoute('admin.pending-orders.approve.signed', $expiry, ['order' => $order->uuid]),
+            'reject_url' => URL::temporarySignedRoute('admin.pending-orders.reject.signed', $expiry, ['order' => $order->uuid]),
         ];
     }
 }

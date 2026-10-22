@@ -27,13 +27,16 @@ class PushNotificationService
         $this->webPush->setReuseVAPIDHeaders(true);
     }
 
-    public function notifyCompany(int $companyId, string $title, string $body, string $url = '/admin'): void
+    /**
+     * @param  array{tag?: string, actions?: array<int, array{action: string, title: string}>, approveUrl?: string, rejectUrl?: string}  $extra
+     */
+    public function notifyCompany(int $companyId, string $title, string $body, string $url = '/admin', array $extra = []): void
     {
         $subscriptions = PushSubscription::where('company_id', $companyId)->get();
 
         $this->send($subscriptions, $title, $body, $url, function (string $endpoint) {
             PushSubscription::where('endpoint', $endpoint)->delete();
-        }, ['company_id' => $companyId]);
+        }, ['company_id' => $companyId], $extra);
     }
 
     public function notifyDriver(int $driverId, string $title, string $body, string $url = '/drivers'): void
@@ -47,8 +50,9 @@ class PushNotificationService
 
     /**
      * @param  Collection<int, PushSubscription|DriverPushSubscription>  $subscriptions
+     * @param  array<string, mixed>  $extra
      */
-    private function send($subscriptions, string $title, string $body, string $url, callable $removeInvalid, array $logContext): void
+    private function send($subscriptions, string $title, string $body, string $url, callable $removeInvalid, array $logContext, array $extra = []): void
     {
         if ($subscriptions->isEmpty()) {
             return;
@@ -59,6 +63,7 @@ class PushNotificationService
             'body' => $body,
             'url' => $url,
             'icon' => '/icons/icon-192x192.png',
+            ...$extra,
         ]);
 
         foreach ($subscriptions as $sub) {

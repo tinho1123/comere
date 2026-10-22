@@ -397,8 +397,8 @@
                         type: 'comere-order-alert',
                         url: deepLink,
                         orderUuid: order.uuid,
-                        approveUrl: approveUrl(order.uuid),
-                        rejectUrl: rejectUrl(order.uuid),
+                        approveUrl: order.approve_url,
+                        rejectUrl: order.reject_url,
                     },
                     actions: [
                         { action: 'approve', title: '✓ Aprovar' },

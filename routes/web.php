@@ -116,6 +116,14 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/select-company', [SelectCompanyController::class, 'store'])->name('admin.select-company.store');
 });
 
+// Ações de Aprovar/Recusar a partir do botão de uma notificação push (sem
+// sessão/CSRF — autenticadas pela assinatura da própria URL, gerada só pro
+// servidor e enviada ao criar a notificação).
+Route::middleware('signed')->group(function () {
+    Route::post('/admin/pedidos-pendentes/{order:uuid}/aprovar-assinado', [PendingOrdersController::class, 'approveOrderSigned'])->name('admin.pending-orders.approve.signed');
+    Route::post('/admin/pedidos-pendentes/{order:uuid}/recusar-assinado', [PendingOrdersController::class, 'rejectOrderSigned'])->name('admin.pending-orders.reject.signed');
+});
+
 // Rotas do Admin (existente)
 Route::get('/login', [LoginController::class, 'index'])->middleware('guest');
 Route::post('/login', [LoginController::class, 'authenticate'])->middleware(['guest', 'throttle:10,1']);

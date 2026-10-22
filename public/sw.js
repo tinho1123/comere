@@ -30,14 +30,27 @@ self.addEventListener('push', (event) => {
     }
 
     const title = data.title || 'Comere';
+    const hasOrderActions = Boolean(data.approveUrl && data.rejectUrl);
+
     const options = {
         body: data.body || 'Você tem uma nova notificação.',
         icon: data.icon || '/icons/icon-192x192.png',
         badge: '/icons/icon-72x72.png',
-        data: { url: data.url || '/admin' },
+        data: {
+            url: data.url || '/admin',
+            type: hasOrderActions ? 'comere-order-alert' : undefined,
+            approveUrl: data.approveUrl,
+            rejectUrl: data.rejectUrl,
+        },
         vibrate: [200, 100, 200],
         requireInteraction: true,
         tag: data.tag || 'comere-notification',
+        actions: hasOrderActions
+            ? [
+                { action: 'approve', title: '✓ Aprovar' },
+                { action: 'reject', title: '✕ Recusar' },
+            ]
+            : undefined,
     };
 
     event.waitUntil(self.registration.showNotification(title, options));
@@ -84,31 +97,13 @@ async function handleOrderAlertAction(data, action) {
     const endpoint = action === 'approve' ? data.approveUrl : data.rejectUrl;
     if (!endpoint) return;
 
-    let csrfToken = null;
-    try {
-        if (self.cookieStore) {
-            const cookie = await self.cookieStore.get('XSRF-TOKEN');
-            csrfToken = cookie ? decodeURIComponent(cookie.value) : null;
-        }
-    } catch {
-        csrfToken = null;
-    }
-
-    if (!csrfToken) {
-        // Sem como montar o header CSRF a partir do service worker nesse
-        // navegador — abre/foca o pedido pra decidir por lá em vez de
-        // arriscar um POST sem token válido.
-        return openOrderDeepLink(data.url || '/admin');
-    }
-
+    // A URL já vem assinada (gerada pelo servidor pra esse pedido específico),
+    // então não depende de sessão nem de CSRF — funciona mesmo sem nenhuma
+    // aba aberta, em qualquer navegador, em primeiro ou segundo plano.
     try {
         await fetch(endpoint, {
             method: 'POST',
-            credentials: 'same-origin',
-            headers: {
-                Accept: 'application/json',
-                'X-XSRF-TOKEN': csrfToken,
-            },
+            headers: { Accept: 'application/json' },
         });
     } catch {
         // Falha de rede: não há card visível pra mostrar erro, então apenas
