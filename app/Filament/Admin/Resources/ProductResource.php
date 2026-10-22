@@ -109,6 +109,22 @@ class ProductResource extends Resource
                                     ->dehydrated(false)
                                     ->belowContent(fn (Get $get) => new HtmlString(static::marginStatusBadge($get))),
                             ]),
+                        Schemas\Components\Grid::make(2)
+                            ->schema([
+                                Forms\Components\TextInput::make('stock_cost_preview')
+                                    ->label('Custo total em estoque')
+                                    ->prefix('R$')
+                                    ->disabled()
+                                    ->dehydrated(false)
+                                    ->afterStateHydrated(fn (Set $set, Get $get) => static::updateMarginPreview($set, $get))
+                                    ->helperText('Custo de aquisição × quantidade em estoque.'),
+                                Forms\Components\TextInput::make('stock_profit_preview')
+                                    ->label('Lucro pretendido')
+                                    ->prefix('R$')
+                                    ->disabled()
+                                    ->dehydrated(false)
+                                    ->helperText('Lucro por unidade × quantidade em estoque, se vender tudo.'),
+                            ]),
                     ]),
                 Schemas\Components\Grid::make(3)
                     ->schema([
@@ -116,7 +132,9 @@ class ProductResource extends Resource
                             ->label('Quantidade')
                             ->numeric()
                             ->required()
-                            ->default(1),
+                            ->default(1)
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(fn (Set $set, Get $get) => static::updateMarginPreview($set, $get)),
                         Forms\Components\Select::make('category_id')
                             ->label('Categoria')
                             ->relationship('category', 'name')
@@ -357,15 +375,20 @@ class ProductResource extends Resource
         if ($cost === null || $cost <= 0 || $price <= 0) {
             $set('margin_percent_preview', null);
             $set('margin_profit_preview', null);
+            $set('stock_cost_preview', null);
+            $set('stock_profit_preview', null);
 
             return;
         }
 
         $profit = $price - $cost;
         $percent = ($profit / $price) * 100;
+        $quantity = (int) ($get('quantity') ?? 0);
 
         $set('margin_percent_preview', number_format($percent, 1, ',', '.').'%');
         $set('margin_profit_preview', number_format($profit, 2, ',', '.'));
+        $set('stock_cost_preview', number_format($cost * $quantity, 2, ',', '.'));
+        $set('stock_profit_preview', number_format($profit * $quantity, 2, ',', '.'));
     }
 
     protected static function marginStatusBadge(Get $get): string

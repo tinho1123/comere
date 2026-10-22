@@ -19,11 +19,11 @@ class FinancialSummaryWidget extends BaseWidget
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
             ->leftJoin('products', 'products.id', '=', 'order_items.product_id')
             ->where('orders.company_id', $company->id)
-            ->where('orders.status', '!=', Order::STATUS_CANCELLED)
+            ->where('orders.status', Order::STATUS_DELIVERED)
             ->where('order_items.created_at', '>=', now()->subDays(30))
             ->selectRaw('SUM(order_items.total_amount) as gross')
-            ->selectRaw('SUM(CASE WHEN products.cost IS NOT NULL AND products.cost > 0 THEN order_items.quantity * products.cost ELSE 0 END) as cost')
-            ->selectRaw('SUM(CASE WHEN products.cost IS NOT NULL AND products.cost > 0 THEN order_items.total_amount ELSE 0 END) as gross_with_cost')
+            ->selectRaw('SUM(CASE WHEN COALESCE(order_items.cost, products.cost) > 0 THEN order_items.quantity * COALESCE(order_items.cost, products.cost) ELSE 0 END) as cost')
+            ->selectRaw('SUM(CASE WHEN COALESCE(order_items.cost, products.cost) > 0 THEN order_items.total_amount ELSE 0 END) as gross_with_cost')
             ->first();
 
         $gross = (float) ($items->gross ?? 0);
@@ -34,7 +34,7 @@ class FinancialSummaryWidget extends BaseWidget
 
         return [
             Stat::make('Valor bruto', 'R$ '.number_format($gross, 2, ',', '.'))
-                ->description('Últimos 30 dias (pedidos + mesas)')
+                ->description('Vendas finalizadas nos últimos 30 dias (pedidos + mesas)')
                 ->color('primary'),
 
             Stat::make('Custo dos produtos', 'R$ '.number_format($cost, 2, ',', '.'))

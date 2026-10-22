@@ -18,6 +18,7 @@ class OrderItem extends Model
         'quantity',
         'notes',
         'unit_price',
+        'cost',
         'discount_percent',
         'discount_amount',
         'total_amount',
@@ -26,10 +27,17 @@ class OrderItem extends Model
     protected $casts = [
         'quantity' => 'integer',
         'unit_price' => 'decimal:2',
+        'cost' => 'decimal:2',
         'discount_percent' => 'decimal:2',
         'discount_amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
     ];
+
+    /**
+     * Custo é dado financeiro só do admin (dashboard/relatório de margem) —
+     * nunca deve aparecer em resposta de API pro cliente/marketplace.
+     */
+    protected $hidden = ['cost'];
 
     /**
      * Get the Order that owns this item.

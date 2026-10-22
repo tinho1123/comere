@@ -128,6 +128,7 @@ class OrderController extends Controller
                 'product_name' => $product->name,
                 'quantity' => $item['quantity'],
                 'unit_price' => $product->total_amount,
+                'cost' => $product->cost,
                 'discount_percent' => $discountPercent,
                 'discount_amount' => ($product->total_amount * $item['quantity']) * ($discountPercent / 100),
                 'total_amount' => $itemTotal,

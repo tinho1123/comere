@@ -223,6 +223,7 @@ class TableSession extends Model
                 'product_name' => $item->product_name,
                 'quantity' => $item->quantity,
                 'unit_price' => $item->unit_price,
+                'cost' => $item->product?->cost,
                 'discount_percent' => 0,
                 'discount_amount' => 0,
                 'total_amount' => $item->total_amount,
