@@ -566,12 +566,17 @@
 
             let trackInterval = null;
             let currentTargetEl = null;
+            let activeAdvanceHandler = null;
 
             function stopTracking() {
                 if (trackInterval) {
                     clearInterval(trackInterval);
                     trackInterval = null;
                 }
+                if (activeAdvanceHandler) {
+                    document.removeEventListener('click', activeAdvanceHandler, true);
+                }
+                activeAdvanceHandler = null;
                 currentTargetEl = null;
             }
 
@@ -611,10 +616,28 @@
                 }
             }
 
+            function findVisible(selector) {
+                // Alguns seletores (ex.: o botão "Aprovar" do card de pedido, que
+                // existe duas vezes — versão cheia e versão minimizada) casam com
+                // mais de um elemento ao mesmo tempo, um deles escondido via
+                // display:none. querySelector() pegaria o primeiro do DOM mesmo
+                // que escondido, e getBoundingClientRect() de um elemento
+                // escondido retorna tudo zero — jogando a seta pro canto superior
+                // esquerdo. Por isso sempre escolhe o primeiro que está
+                // realmente visível.
+                const candidates = document.querySelectorAll(selector);
+                for (let i = 0; i < candidates.length; i++) {
+                    if (candidates[i].getClientRects().length > 0) {
+                        return candidates[i];
+                    }
+                }
+                return null;
+            }
+
             function waitForSelector(selector, timeoutMs, onFound, onTimeout) {
                 const start = Date.now();
                 (function poll() {
-                    const el = document.querySelector(selector);
+                    const el = findVisible(selector);
                     if (el) {
                         onFound(el);
                         return;
@@ -658,28 +681,26 @@
                 waitForSelector(step.selector, 10000, function (el) {
                     renderTooltipBody(el, step, stepLabel, state);
                     positionAround(el);
-                    trackTarget(el);
-                    attachAdvance(el, flow, state);
+                    trackTarget(step.selector, flow, state);
                 }, function () {
                     renderTooltipBody(null, step, stepLabel, state, true);
                     centerTooltipNearFab();
                 });
             }
 
-            function trackTarget(el) {
-                currentTargetEl = el;
-                trackInterval = setInterval(function () {
-                    if (!currentTargetEl || !document.body.contains(currentTargetEl)) {
-                        stopTracking();
+            // Delegado no document (fase de captura) em vez de vinculado a um
+            // elemento específico: assim, quando o alvo visível troca (ex.:
+            // minimizar/maximizar o card de pedido troca qual dos dois botões
+            // "Aprovar" está na tela), o clique já é reconhecido na hora —
+            // sem depender do polling de 300ms já ter rebindado o handler.
+            function bindAdvance(selector, flow, state) {
+                const handler = function (e) {
+                    const matched = e.target.closest(selector);
+                    if (!matched || matched.getClientRects().length === 0) {
                         return;
                     }
-                    positionAround(currentTargetEl);
-                }, 300);
-            }
-
-            function attachAdvance(el, flow, state) {
-                const handler = function () {
-                    el.removeEventListener('click', handler, true);
+                    document.removeEventListener('click', handler, true);
+                    activeAdvanceHandler = null;
                     if (isFinalStep(flow, state)) {
                         setTimeout(clearTour, 50);
                     } else {
@@ -692,7 +713,32 @@
                         setTimeout(renderActiveStep, 150);
                     }
                 };
-                el.addEventListener('click', handler, true);
+                document.addEventListener('click', handler, true);
+                return handler;
+            }
+
+            // Reposiciona em volta do elemento real a cada 300ms (Livewire pode
+            // reposicionar/trocar o layout) e também acompanha quando a versão
+            // visível de um seletor muda — ex.: o card de pedido pendente tem um
+            // botão "Aprovar" para a versão cheia e outro para a minimizada.
+            function trackTarget(selector, flow, state) {
+                currentTargetEl = findVisible(selector) || document.querySelector(selector);
+                if (currentTargetEl) {
+                    positionAround(currentTargetEl);
+                }
+                activeAdvanceHandler = bindAdvance(selector, flow, state);
+
+                trackInterval = setInterval(function () {
+                    const el = findVisible(selector);
+                    if (!el || !document.body.contains(el)) {
+                        stopTracking();
+                        hideSpotlight();
+                        hideTooltip();
+                        return;
+                    }
+                    currentTargetEl = el;
+                    positionAround(el);
+                }, 300);
             }
 
             function isFinalStep(flow, state) {
