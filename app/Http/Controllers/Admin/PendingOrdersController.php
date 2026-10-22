@@ -101,7 +101,7 @@ class PendingOrdersController extends Controller
             ->get();
 
         return response()->json([
-            'sessions' => $sessions->map(fn (TableSession $session) => $this->formatMesaSession($session))->all(),
+            'sessions' => $sessions->map(fn (TableSession $session) => $this->formatMesaSession($session, $company))->all(),
         ]);
     }
 
@@ -229,7 +229,7 @@ class PendingOrdersController extends Controller
         ];
     }
 
-    private function formatMesaSession(TableSession $session): array
+    private function formatMesaSession(TableSession $session, Company $company): array
     {
         // Usa o item pendente mais antigo como horário do card (igual ao
         // pedido do marketplace usar created_at do Order) — reflete há
@@ -251,7 +251,7 @@ class PendingOrdersController extends Controller
             // aberto (outro item adicionado antes do item anterior ser
             // entregue) e atualizar o card em vez de ignorar o pedido.
             'latest_item_id' => $session->items->max('id'),
-            'url' => TableSessionResource::getUrl('view', ['record' => $session->uuid]),
+            'url' => TableSessionResource::getUrl('view', ['record' => $session->uuid, 'tenant' => $company]),
         ];
     }
 }
