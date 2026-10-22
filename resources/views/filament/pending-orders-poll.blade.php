@@ -377,6 +377,7 @@
             let mesaInitialized = false;
             const renderedOrderIds = new Set();
             const renderedMesaSessionIds = new Set();
+            const mesaLatestItemIds = new Map();
             const POSITION_KEY = 'comere_order_alerts_position';
             let swRegistration = null;
 
@@ -762,14 +763,8 @@
                 return `comere_mesa_alert_minimized_${sessionId}`;
             }
 
-            function buildMesaCard(session) {
-                const card = document.createElement('div');
-                card.className = 'coa-card coa-card--mesa';
-                card.dataset.mesaSessionId = String(session.id);
+            function renderMesaCardBody(card, session) {
                 card.dataset.createdAt = session.created_at;
-
-                const isMinimized = localStorage.getItem(mesaMinimizedKey(session.id)) === '1';
-                if (isMinimized) card.classList.add('coa-minimized');
 
                 const itemsHtml = session.items.map((item) => `
                     <div class="coa-item-line">
@@ -809,6 +804,17 @@
                         </div>
                     </div>
                 `;
+            }
+
+            function buildMesaCard(session) {
+                const card = document.createElement('div');
+                card.className = 'coa-card coa-card--mesa';
+                card.dataset.mesaSessionId = String(session.id);
+
+                const isMinimized = localStorage.getItem(mesaMinimizedKey(session.id)) === '1';
+                if (isMinimized) card.classList.add('coa-minimized');
+
+                renderMesaCardBody(card, session);
 
                 card.addEventListener('click', (event) => {
                     const action = event.target.closest('[data-action]')?.dataset.action;
@@ -847,14 +853,33 @@
                             const el = container.querySelector(`[data-mesa-session-id="${id}"]`);
                             if (el) el.remove();
                             renderedMesaSessionIds.delete(id);
+                            mesaLatestItemIds.delete(id);
                             localStorage.removeItem(mesaMinimizedKey(id));
                         }
                     });
 
                     sessions.forEach((session) => {
-                        if (renderedMesaSessionIds.has(session.id)) return;
+                        if (renderedMesaSessionIds.has(session.id)) {
+                            // Mesa já tem card aberto — atualiza o conteúdo (pode ter
+                            // chegado mais um item antes do anterior ser entregue) e
+                            // só bipa se o item mais recente realmente mudou.
+                            const previousLatestItemId = mesaLatestItemIds.get(session.id) ?? null;
+                            if (
+                                session.latest_item_id !== null
+                                && previousLatestItemId !== null
+                                && session.latest_item_id > previousLatestItemId
+                            ) {
+                                beep();
+                            }
+                            mesaLatestItemIds.set(session.id, session.latest_item_id);
+
+                            const card = container.querySelector(`[data-mesa-session-id="${session.id}"]`);
+                            if (card) renderMesaCardBody(card, session);
+                            return;
+                        }
 
                         renderedMesaSessionIds.add(session.id);
+                        mesaLatestItemIds.set(session.id, session.latest_item_id);
                         container.appendChild(buildMesaCard(session));
 
                         if (mesaInitialized) {
