@@ -566,13 +566,18 @@
 
             let trackInterval = null;
             let currentTargetEl = null;
+            let currentBoundHandler = null;
 
             function stopTracking() {
                 if (trackInterval) {
                     clearInterval(trackInterval);
                     trackInterval = null;
                 }
+                if (currentTargetEl && currentBoundHandler) {
+                    currentTargetEl.removeEventListener('click', currentBoundHandler, true);
+                }
                 currentTargetEl = null;
+                currentBoundHandler = null;
             }
 
             function positionAround(targetEl) {
@@ -611,10 +616,28 @@
                 }
             }
 
+            function findVisible(selector) {
+                // Alguns seletores (ex.: o botão "Aprovar" do card de pedido, que
+                // existe duas vezes — versão cheia e versão minimizada) casam com
+                // mais de um elemento ao mesmo tempo, um deles escondido via
+                // display:none. querySelector() pegaria o primeiro do DOM mesmo
+                // que escondido, e getBoundingClientRect() de um elemento
+                // escondido retorna tudo zero — jogando a seta pro canto superior
+                // esquerdo. Por isso sempre escolhe o primeiro que está
+                // realmente visível.
+                const candidates = document.querySelectorAll(selector);
+                for (let i = 0; i < candidates.length; i++) {
+                    if (candidates[i].getClientRects().length > 0) {
+                        return candidates[i];
+                    }
+                }
+                return null;
+            }
+
             function waitForSelector(selector, timeoutMs, onFound, onTimeout) {
                 const start = Date.now();
                 (function poll() {
-                    const el = document.querySelector(selector);
+                    const el = findVisible(selector);
                     if (el) {
                         onFound(el);
                         return;
@@ -658,26 +681,14 @@
                 waitForSelector(step.selector, 10000, function (el) {
                     renderTooltipBody(el, step, stepLabel, state);
                     positionAround(el);
-                    trackTarget(el);
-                    attachAdvance(el, flow, state);
+                    trackTarget(step.selector, flow, state);
                 }, function () {
                     renderTooltipBody(null, step, stepLabel, state, true);
                     centerTooltipNearFab();
                 });
             }
 
-            function trackTarget(el) {
-                currentTargetEl = el;
-                trackInterval = setInterval(function () {
-                    if (!currentTargetEl || !document.body.contains(currentTargetEl)) {
-                        stopTracking();
-                        return;
-                    }
-                    positionAround(currentTargetEl);
-                }, 300);
-            }
-
-            function attachAdvance(el, flow, state) {
+            function bindAdvance(el, flow, state) {
                 const handler = function () {
                     el.removeEventListener('click', handler, true);
                     if (isFinalStep(flow, state)) {
@@ -693,6 +704,42 @@
                     }
                 };
                 el.addEventListener('click', handler, true);
+                return handler;
+            }
+
+            // Reposiciona em volta do elemento real a cada 300ms (Livewire pode
+            // reposicionar/trocar o layout) e também troca de alvo quando a
+            // versão visível de um seletor muda — ex.: o card de pedido pendente
+            // tem um botão "Aprovar" para a versão cheia e outro para a
+            // minimizada; ao minimizar/maximizar o card, o alvo clicável real
+            // muda e o clique precisa seguir pra ele também.
+            function trackTarget(selector, flow, state) {
+                function rebind(el) {
+                    if (currentTargetEl && currentBoundHandler) {
+                        currentTargetEl.removeEventListener('click', currentBoundHandler, true);
+                    }
+                    currentTargetEl = el;
+                    currentBoundHandler = bindAdvance(el, flow, state);
+                }
+
+                rebind(findVisible(selector) || document.querySelector(selector));
+                if (currentTargetEl) {
+                    positionAround(currentTargetEl);
+                }
+
+                trackInterval = setInterval(function () {
+                    const el = findVisible(selector);
+                    if (!el || !document.body.contains(el)) {
+                        stopTracking();
+                        hideSpotlight();
+                        hideTooltip();
+                        return;
+                    }
+                    if (el !== currentTargetEl) {
+                        rebind(el);
+                    }
+                    positionAround(el);
+                }, 300);
             }
 
             function isFinalStep(flow, state) {
