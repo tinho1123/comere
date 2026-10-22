@@ -684,6 +684,12 @@
                         setTimeout(clearTour, 50);
                     } else {
                         saveState(state.flowId, state.step + 1);
+                        // Nem toda ação navega pra outra página (ex.: CreateAction que
+                        // abre um modal no lugar) — nesse caso não há livewire:navigated
+                        // nem DOMContentLoaded pra retomar o tour, então também
+                        // re-renderiza aqui. waitForSelector() já tolera o próximo
+                        // passo ainda não existir no DOM (modal abrindo via Livewire).
+                        setTimeout(renderActiveStep, 150);
                     }
                 };
                 el.addEventListener('click', handler, true);
