@@ -116,6 +116,17 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/select-company', [SelectCompanyController::class, 'store'])->name('admin.select-company.store');
 });
 
+// Ação de Aprovar/Recusar disparada pelo botão da notificação do sistema
+// (push). O service worker não tem acesso confiável ao cookie de sessão/CSRF
+// em todo navegador (ex.: Safari não implementa a Cookie Store API), então
+// essas rotas são autenticadas por URL assinada e de curta duração em vez de
+// sessão — por isso ficam fora do grupo `auth` e do CSRF (ver
+// VerifyCsrfToken::$except).
+Route::middleware('signed')->group(function () {
+    Route::post('/admin/pedidos-pendentes/{order:uuid}/aprovar-notificacao', [PendingOrdersController::class, 'approveFromNotification'])->name('admin.pending-orders.approve-signed');
+    Route::post('/admin/pedidos-pendentes/{order:uuid}/recusar-notificacao', [PendingOrdersController::class, 'rejectFromNotification'])->name('admin.pending-orders.reject-signed');
+});
+
 // Rotas do Admin (existente)
 Route::get('/login', [LoginController::class, 'index'])->middleware('guest');
 Route::post('/login', [LoginController::class, 'authenticate'])->middleware(['guest', 'throttle:10,1']);

@@ -9,6 +9,7 @@ use App\Models\TableSessionItem;
 use App\Services\DistanceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL;
 
 class PendingOrdersController extends Controller
 {
@@ -100,6 +101,40 @@ class PendingOrdersController extends Controller
         return response()->json(['success' => true, 'status' => $order->status]);
     }
 
+    /**
+     * Mesma ação de approveOrder(), mas chamada pelo botão "Aprovar" da
+     * notificação do sistema (push), onde não há sessão/CSRF disponível de
+     * forma confiável (o service worker não consegue ler o cookie em todo
+     * navegador). Autorizada pela assinatura da própria URL (rota com
+     * middleware `signed`), gerada só para quem já via o pedido como admin.
+     */
+    public function approveFromNotification(Order $order): JsonResponse
+    {
+        $order->approve();
+
+        return response()->json(['success' => true, 'status' => $order->status]);
+    }
+
+    /**
+     * Equivalente de rejectOrder() para o botão "Recusar" da notificação do
+     * sistema — ver approveFromNotification() sobre a autenticação por URL
+     * assinada.
+     */
+    public function rejectFromNotification(Order $order): JsonResponse
+    {
+        if ($order->status !== Order::STATUS_PENDING) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pedido não está mais pendente.',
+                'status' => $order->status,
+            ], 409);
+        }
+
+        $order->cancel();
+
+        return response()->json(['success' => true, 'status' => $order->status]);
+    }
+
     private function formatOrder(Order $order, Company $company): array
     {
         $hasOrderAddress = (bool) ($order->delivery_street || $order->delivery_neighborhood);
@@ -150,6 +185,10 @@ class PendingOrdersController extends Controller
             'address' => $addressText,
             'neighborhood' => $neighborhood,
             'distance_km' => $distanceKm,
+            // Usadas só pelos botões de ação da notificação do sistema
+            // (push) — ver approveFromNotification()/rejectFromNotification().
+            'approve_signed_url' => URL::temporarySignedRoute('admin.pending-orders.approve-signed', now()->addHours(2), ['order' => $order->uuid]),
+            'reject_signed_url' => URL::temporarySignedRoute('admin.pending-orders.reject-signed', now()->addHours(2), ['order' => $order->uuid]),
         ];
     }
 }

@@ -33,4 +33,25 @@ class VerifyCsrfTokenExceptionsTest extends TestCase
             $this->assertContains($uri, $except, "A rota \"{$uri}\" precisa estar isenta de CSRF (a view chama fetch() sem token).");
         }
     }
+
+    /**
+     * Regressão: o service worker (public/sw.js) aciona Aprovar/Recusar de um
+     * pedido direto do botão da notificação do sistema, usando URL assinada
+     * em vez de sessão/CSRF (o service worker não tem como ler o cookie de
+     * CSRF em todo navegador — Safari não implementa a Cookie Store API).
+     * Sem essa exceção, a rota responde 419 antes mesmo do middleware
+     * `signed` validar a assinatura.
+     */
+    #[Test]
+    public function it_excepts_the_notification_approve_reject_endpoints_from_csrf()
+    {
+        $except = app(VerifyCsrfToken::class)->getExcludedPaths();
+
+        foreach ([
+            'admin/pedidos-pendentes/*/aprovar-notificacao',
+            'admin/pedidos-pendentes/*/recusar-notificacao',
+        ] as $uri) {
+            $this->assertContains($uri, $except, "A rota \"{$uri}\" precisa estar isenta de CSRF (o service worker chama fetch() sem token, autenticado por URL assinada).");
+        }
+    }
 }

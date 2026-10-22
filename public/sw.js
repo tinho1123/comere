@@ -84,30 +84,18 @@ async function handleOrderAlertAction(data, action) {
     const endpoint = action === 'approve' ? data.approveUrl : data.rejectUrl;
     if (!endpoint) return;
 
-    let csrfToken = null;
-    try {
-        if (self.cookieStore) {
-            const cookie = await self.cookieStore.get('XSRF-TOKEN');
-            csrfToken = cookie ? decodeURIComponent(cookie.value) : null;
-        }
-    } catch {
-        csrfToken = null;
-    }
-
-    if (!csrfToken) {
-        // Sem como montar o header CSRF a partir do service worker nesse
-        // navegador — abre/foca o pedido pra decidir por lá em vez de
-        // arriscar um POST sem token válido.
-        return openOrderDeepLink(data.url || '/admin');
-    }
-
+    // Essas URLs já vêm assinadas (e com validade curta) do servidor —
+    // ver PendingOrdersController::approveFromNotification() — então não
+    // dependem do service worker conseguir ler o cookie de CSRF, algo que
+    // não é suportado em todo navegador (ex.: Safari não implementa a
+    // Cookie Store API), o que antes fazia essa ação sempre cair no
+    // fallback de abrir a tela de Pedidos em vez de aprovar/recusar direto.
     try {
         await fetch(endpoint, {
             method: 'POST',
             credentials: 'same-origin',
             headers: {
                 Accept: 'application/json',
-                'X-XSRF-TOKEN': csrfToken,
             },
         });
     } catch {

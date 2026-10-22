@@ -19,5 +19,7 @@ class VerifyCsrfToken extends Middleware
         'entrega/*/concluir',
         'entrega/*/problema',
         'entrega/*/avaliacao',
+        'admin/pedidos-pendentes/*/aprovar-notificacao',
+        'admin/pedidos-pendentes/*/recusar-notificacao',
     ];
 }

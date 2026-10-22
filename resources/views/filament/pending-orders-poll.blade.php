@@ -397,8 +397,12 @@
                         type: 'comere-order-alert',
                         url: deepLink,
                         orderUuid: order.uuid,
-                        approveUrl: approveUrl(order.uuid),
-                        rejectUrl: rejectUrl(order.uuid),
+                        // URLs assinadas (curta duração) vindas do servidor — o
+                        // service worker não precisa (e não deve depender) de
+                        // ler o cookie de CSRF pra acionar essas ações; ver
+                        // PendingOrdersController::approveFromNotification().
+                        approveUrl: order.approve_signed_url,
+                        rejectUrl: order.reject_signed_url,
                     },
                     actions: [
                         { action: 'approve', title: '✓ Aprovar' },
