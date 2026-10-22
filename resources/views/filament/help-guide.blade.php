@@ -375,6 +375,7 @@
 
             function clearTour() {
                 try { sessionStorage.removeItem(STORAGE_KEY); } catch (e) { /* ver readState() */ }
+                stopTracking();
                 hideSpotlight();
                 hideTooltip();
             }
