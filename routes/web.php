@@ -106,6 +106,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/table/{uuid}/qr-image', [TableQrController::class, 'image'])->name('table.qr-image');
     Route::get('/admin/pedidos-pendentes', [PendingOrdersController::class, 'count'])->name('admin.pending-orders.count');
     Route::get('/admin/pedidos-pendentes/marketplace', [PendingOrdersController::class, 'pendingMarketplaceOrders'])->name('admin.pending-orders.marketplace');
+    Route::get('/admin/pedidos-pendentes/mesa', [PendingOrdersController::class, 'pendingMesaOrders'])->name('admin.pending-orders.mesa');
     Route::post('/admin/pedidos-pendentes/{order:uuid}/aprovar', [PendingOrdersController::class, 'approveOrder'])->name('admin.pending-orders.approve');
     Route::post('/admin/pedidos-pendentes/{order:uuid}/recusar', [PendingOrdersController::class, 'rejectOrder'])->name('admin.pending-orders.reject');
     Route::get('/admin/pedidos/{order:uuid}/mensagens', [AdminOrderChatController::class, 'index'])->name('admin.order.chat.index');

@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Filament\Admin\Resources\TableSessionResource;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Order;
+use App\Models\TableSession;
 use App\Models\TableSessionItem;
 use App\Services\DistanceService;
 use Illuminate\Http\JsonResponse;
@@ -72,6 +74,33 @@ class PendingOrdersController extends Controller
 
         return response()->json([
             'orders' => $orders->map(fn (Order $order) => $this->formatOrder($order, $company))->all(),
+        ]);
+    }
+
+    /**
+     * List open table sessions that have at least one item still pending
+     * delivery, with enough detail to render a "novo pedido na mesa" alert
+     * card (same look as the marketplace card, no approve/reject — just a
+     * link to the session).
+     */
+    public function pendingMesaOrders(Request $request): JsonResponse
+    {
+        $company = Company::where('uuid', $request->query('company'))->firstOrFail();
+
+        abort_unless(auth()->user()->canAccessTenant($company), 403);
+
+        $sessions = TableSession::where('company_id', $company->id)
+            ->where('status', 'open')
+            ->whereHas('items', fn ($query) => $query->where('is_delivered', false))
+            ->with([
+                'table',
+                'items' => fn ($query) => $query->where('is_delivered', false)->orderBy('id'),
+            ])
+            ->orderBy('id')
+            ->get();
+
+        return response()->json([
+            'sessions' => $sessions->map(fn (TableSession $session) => $this->formatMesaSession($session))->all(),
         ]);
     }
 
@@ -196,6 +225,28 @@ class PendingOrdersController extends Controller
             'distance_km' => $distanceKm,
             'approve_url' => URL::temporarySignedRoute('admin.pending-orders.approve.signed', $expiry, ['order' => $order->uuid]),
             'reject_url' => URL::temporarySignedRoute('admin.pending-orders.reject.signed', $expiry, ['order' => $order->uuid]),
+        ];
+    }
+
+    private function formatMesaSession(TableSession $session): array
+    {
+        // Usa o item pendente mais antigo como horário do card (igual ao
+        // pedido do marketplace usar created_at do Order) — reflete há
+        // quanto tempo o item espera, não quando a mesa foi aberta.
+        $oldestPendingItem = $session->items->first();
+
+        return [
+            'id' => $session->id,
+            'uuid' => $session->uuid,
+            'created_at' => ($oldestPendingItem?->created_at ?? $session->opened_at)->toIso8601String(),
+            'table_name' => $session->table?->name ?? 'Mesa',
+            'guest_name' => $session->client_display_name !== '—' ? $session->client_display_name : null,
+            'items' => $session->items->map(fn ($item) => [
+                'name' => $item->product_name,
+                'quantity' => $item->quantity,
+            ])->all(),
+            'items_count' => $session->items->sum('quantity'),
+            'url' => TableSessionResource::getUrl('view', ['record' => $session->uuid]),
         ];
     }
 }
