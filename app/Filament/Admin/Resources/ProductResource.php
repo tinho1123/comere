@@ -17,6 +17,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
@@ -106,7 +107,7 @@ class ProductResource extends Resource
                                     ->prefix('R$')
                                     ->disabled()
                                     ->dehydrated(false)
-                                    ->belowContent(fn (Get $get) => static::marginStatusBadge($get)),
+                                    ->belowContent(fn (Get $get) => new HtmlString(static::marginStatusBadge($get))),
                             ]),
                     ]),
                 Schemas\Components\Grid::make(3)

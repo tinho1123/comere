@@ -2,8 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Admin\Resources\ProductResource;
 use App\Filament\Admin\Resources\ProductResource\Pages\CreateProduct;
 use App\Models\Company;
+use App\Models\Product;
+use App\Models\ProductsCategories;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -39,6 +42,37 @@ class ProductResourceMarginPreviewTest extends TestCase
                 'margin_percent_preview' => '58,5%',
                 'margin_profit_preview' => '20,40',
             ]);
+    }
+
+    #[Test]
+    public function it_renders_the_margin_status_as_a_real_badge_not_escaped_markup()
+    {
+        $user = User::factory()->create();
+        $company = Company::factory()->create();
+        $user->companies()->attach($company->id);
+        $this->actingAs($user);
+        Filament::setTenant($company);
+
+        $category = ProductsCategories::create(['name' => 'Categoria Teste', 'active' => true]);
+
+        $product = new Product([
+            'name' => 'Produto Teste',
+            'description' => 'Descrição',
+            'amount' => 34.90,
+            'discounts' => 0,
+            'total_amount' => 34.90,
+            'quantity' => 1,
+            'category_id' => $category->id,
+            'cost' => 14.50,
+        ]);
+        $product->company_id = $company->id;
+        $product->save();
+
+        $response = $this->get(ProductResource::getUrl('edit', ['record' => $product]));
+
+        $response->assertOk();
+        $response->assertSee('<span class="fi-badge-label">', escape: false);
+        $response->assertDontSee('&lt;x-filament::badge', escape: false);
     }
 
     #[Test]
