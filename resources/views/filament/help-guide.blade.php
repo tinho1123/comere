@@ -7,7 +7,7 @@
            o CSS compilado do Filament não inclui utilitários não usados pelo próprio pacote. */
         #comere-help-fab {
             position: fixed;
-            left: 24px;
+            right: 24px;
             bottom: 24px;
             width: 56px;
             height: 56px;
@@ -28,7 +28,7 @@
 
         #comere-help-panel {
             position: fixed;
-            left: 24px;
+            right: 24px;
             bottom: 92px;
             width: 340px;
             max-height: 70vh;
@@ -673,7 +673,7 @@
             }
 
             function centerTooltipNearFab() {
-                tooltip.style.left = '24px';
+                tooltip.style.left = (window.innerWidth - 24 - 300) + 'px';
                 tooltip.style.top = (window.innerHeight - tooltip.offsetHeight - 92) + 'px';
                 const tail = tooltip.querySelector('.chg-tooltip-tail');
                 if (tail) {
