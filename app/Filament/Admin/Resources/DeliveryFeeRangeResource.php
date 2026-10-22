@@ -53,7 +53,8 @@ class DeliveryFeeRangeResource extends Resource
                         ->label('Faixa (km)')
                         ->options(collect(DeliveryFeeRange::KM_RANGES)->mapWithKeys(fn ($km) => [$km => "Até {$km} km"]))
                         ->required()
-                        ->live(),
+                        ->live()
+                        ->extraAttributes(['data-tour' => 'taxa-faixa']),
 
                     TextInput::make('fee')
                         ->label('Taxa (R$)')

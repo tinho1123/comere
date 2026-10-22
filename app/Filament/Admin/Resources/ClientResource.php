@@ -41,7 +41,8 @@ class ClientResource extends Resource
                         Forms\Components\TextInput::make('name')
                             ->label('Nome')
                             ->required()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->extraAttributes(['data-tour' => 'cliente-nome']),
                         Forms\Components\TextInput::make('email')
                             ->label('E-mail')
                             ->email()

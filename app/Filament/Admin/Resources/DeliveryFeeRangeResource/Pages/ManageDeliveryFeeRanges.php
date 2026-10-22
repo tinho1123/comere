@@ -15,6 +15,7 @@ class ManageDeliveryFeeRanges extends ManageRecords
     {
         return [
             CreateAction::make()
+                ->extraAttributes(['data-tour' => 'taxa-criar'])
                 ->mutateFormDataUsing(function (array $data): array {
                     $data['company_id'] = Filament::getTenant()->id;
 

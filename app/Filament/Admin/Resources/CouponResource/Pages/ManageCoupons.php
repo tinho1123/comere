@@ -16,6 +16,7 @@ class ManageCoupons extends ManageRecords
     {
         return [
             CreateAction::make()
+                ->extraAttributes(['data-tour' => 'cupom-criar'])
                 ->mutateFormDataUsing(function (array $data): array {
                     $data['company_id'] = Filament::getTenant()->id;
                     $data['uuid'] = (string) Str::uuid();

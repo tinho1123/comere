@@ -291,6 +291,12 @@
             const tablesCreateUrl = @js(\App\Filament\Admin\Resources\TableResource::getUrl('create'));
             const driversIndexUrl = @js(\App\Filament\Admin\Resources\DriverResource::getUrl('index'));
             const sessionViewUrlTemplate = @js(\App\Filament\Admin\Resources\TableSessionResource::getUrl('view', ['record' => '__UUID__']));
+            const clientsCreateUrl = @js(\App\Filament\Admin\Resources\ClientResource::getUrl('create'));
+            const favoredCreateUrl = @js(\App\Filament\Admin\Resources\FavoredTransactionResource::getUrl('create'));
+            const couponsIndexUrl = @js(\App\Filament\Admin\Resources\CouponResource::getUrl('index'));
+            const deliveryFeeRangesIndexUrl = @js(\App\Filament\Admin\Resources\DeliveryFeeRangeResource::getUrl('index'));
+            const usersCreateUrl = @js(\App\Filament\Admin\Resources\UserResource::getUrl('create'));
+            const tableSessionsIndexUrl = @js(\App\Filament\Admin\Resources\TableSessionResource::getUrl('index'));
 
             const FLOWS = {
                 'produto-criar': {
@@ -326,6 +332,59 @@
                     startUrl: driversIndexUrl,
                     steps: [
                         { title: 'Cadastrar motorista', text: 'Clique em "Convidar motorista" e informe o telefone dele (ele precisa já ter uma conta criada em /drivers/cadastro).', selector: '[data-tour="motorista-convidar"]', final: true },
+                    ],
+                },
+                'cliente-criar': {
+                    icon: '👤',
+                    label: 'Cadastrar um cliente',
+                    startUrl: clientsCreateUrl,
+                    steps: [
+                        { title: 'Cadastrar cliente', text: 'Preencha o nome e os demais dados do cliente.', selector: '[data-tour="cliente-nome"]' },
+                        { title: 'Cadastrar cliente', text: 'Quando terminar, role até o final da página e clique em "Criar" para salvar.', selector: null, final: true },
+                    ],
+                },
+                'fiado-lancar': {
+                    icon: '💳',
+                    label: 'Lançar um fiado',
+                    startUrl: favoredCreateUrl,
+                    steps: [
+                        { title: 'Lançar fiado', text: 'Informe o nome de quem está devendo (não precisa ser um cliente cadastrado).', selector: '[data-tour="fiado-devedor"]' },
+                        { title: 'Lançar fiado', text: 'Escolha os produtos e o vencimento e clique em "Criar" no rodapé da página.', selector: null, final: true },
+                    ],
+                },
+                'cupom-criar': {
+                    icon: '🏷️',
+                    label: 'Cadastrar um cupom de desconto',
+                    startUrl: couponsIndexUrl,
+                    steps: [
+                        { title: 'Cadastrar cupom', text: 'Clique em "Novo" para abrir o cadastro de cupom.', selector: '[data-tour="cupom-criar"]' },
+                        { title: 'Cadastrar cupom', text: 'Defina o código e o valor do desconto e clique em "Criar".', selector: '[data-tour="cupom-codigo"]', final: true },
+                    ],
+                },
+                'taxa-entrega-criar': {
+                    icon: '🛵',
+                    label: 'Configurar taxa de entrega',
+                    startUrl: deliveryFeeRangesIndexUrl,
+                    steps: [
+                        { title: 'Taxa de entrega', text: 'Clique em "Novo" para cadastrar uma faixa de distância e sua taxa.', selector: '[data-tour="taxa-criar"]' },
+                        { title: 'Taxa de entrega', text: 'Escolha a faixa (km) e o valor da taxa e clique em "Criar".', selector: '[data-tour="taxa-faixa"]', final: true },
+                    ],
+                },
+                'usuario-criar': {
+                    icon: '🔑',
+                    label: 'Cadastrar um usuário administrador',
+                    startUrl: usersCreateUrl,
+                    steps: [
+                        { title: 'Cadastrar usuário', text: 'Informe o e-mail do novo usuário administrador.', selector: '[data-tour="usuario-email"]' },
+                        { title: 'Cadastrar usuário', text: 'Preencha o nome e a senha e clique em "Criar" no rodapé da página.', selector: null, final: true },
+                    ],
+                },
+                'mesa-fechar': {
+                    icon: '🧾',
+                    label: 'Fechar uma mesa e registrar pagamento',
+                    startUrl: tableSessionsIndexUrl,
+                    steps: [
+                        { title: 'Fechar mesa', text: 'Clique em "Fechar Mesa" na linha de uma mesa aberta para registrar a forma de pagamento.', selector: '[data-tour="mesa-fechar"]', final: true },
                     ],
                 },
                 'pedido-aprovar': {
@@ -625,6 +684,12 @@
                         setTimeout(clearTour, 50);
                     } else {
                         saveState(state.flowId, state.step + 1);
+                        // Nem toda ação navega pra outra página (ex.: CreateAction que
+                        // abre um modal no lugar) — nesse caso não há livewire:navigated
+                        // nem DOMContentLoaded pra retomar o tour, então também
+                        // re-renderiza aqui. waitForSelector() já tolera o próximo
+                        // passo ainda não existir no DOM (modal abrindo via Livewire).
+                        setTimeout(renderActiveStep, 150);
                     }
                 };
                 el.addEventListener('click', handler, true);
