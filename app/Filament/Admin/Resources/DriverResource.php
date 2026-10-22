@@ -122,6 +122,7 @@ class DriverResource extends Resource
                 Actions\Action::make('invite')
                     ->label('Convidar motorista')
                     ->icon('heroicon-o-user-plus')
+                    ->extraAttributes(['data-tour' => 'motorista-convidar'])
                     ->form([
                         Forms\Components\TextInput::make('phone')
                             ->label('Telefone do motorista')

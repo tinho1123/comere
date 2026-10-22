@@ -22,7 +22,8 @@ class ListProducts extends ListRecords
                 ->color('gray')
                 ->url(fn () => route('admin.products.menu', Filament::getTenant()->uuid))
                 ->openUrlInNewTab(),
-            Actions\CreateAction::make(),
+            Actions\CreateAction::make()
+                ->extraAttributes(['data-tour' => 'produto-criar']),
         ];
     }
 }

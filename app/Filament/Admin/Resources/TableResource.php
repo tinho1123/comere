@@ -91,7 +91,8 @@ class TableResource extends Resource
                         ->label('Nome da Mesa')
                         ->placeholder('ex: Mesa 1, Mesa VIP, Balcão...')
                         ->required()
-                        ->maxLength(100),
+                        ->maxLength(100)
+                        ->extraAttributes(['data-tour' => 'mesa-nome']),
 
                     TextInput::make('seats')
                         ->label('Capacidade (lugares)')
@@ -240,7 +241,8 @@ class TableResource extends Resource
                 Action::make('create')
                     ->label('Nova Mesa')
                     ->icon('heroicon-o-plus')
-                    ->url(static::getUrl('create')),
+                    ->url(static::getUrl('create'))
+                    ->extraAttributes(['data-tour' => 'mesa-criar']),
             ])
             ->emptyStateHeading('Nenhuma mesa cadastrada')
             ->emptyStateDescription('Cadastre uma mesa para começar a receber pedidos via QR Code.')

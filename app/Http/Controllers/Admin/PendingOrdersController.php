@@ -25,6 +25,11 @@ class PendingOrdersController extends Controller
 
         $count = (clone $openSessionItems)->where('is_delivered', false)->count();
 
+        // Used by the help-guide tour (resources/views/filament/help-guide.blade.php)
+        // to jump straight to a table session that actually has a pending item,
+        // instead of guessing which row in the Mesas list to point at.
+        $pendingItem = (clone $openSessionItems)->where('is_delivered', false)->with('session')->first();
+
         // latest_item_id tracks every item ever added (delivered or not), so the
         // frontend can detect a new order even if another item was delivered in
         // the same polling interval and the pending count itself didn't rise.
@@ -43,6 +48,7 @@ class PendingOrdersController extends Controller
             'latest_item_id' => $latestItemId,
             'pending_orders_count' => $pendingOrdersCount,
             'latest_order_id' => $latestOrderId,
+            'pending_session_uuid' => $pendingItem?->session?->uuid,
         ]);
     }
 
