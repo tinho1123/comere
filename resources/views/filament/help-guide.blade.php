@@ -147,10 +147,14 @@
             color: #86efac;
         }
 
-        /* Spotlight: escurece tudo ao redor do elemento-alvo, sem bloquear cliques. */
+        /* Spotlight: escurece tudo ao redor do elemento-alvo, sem bloquear cliques.
+           z-index precisa ficar acima do card de alerta de pedido (#comere-order-alerts,
+           z-index 9999 em pending-orders-poll.blade.php) — senão o card (opaco) é
+           pintado por cima do anel amarelo e só a borda que escapa por fora do card
+           fica visível, deixando a "linha amarela" aparentemente flutuando abaixo dele. */
         #comere-help-spotlight {
             position: fixed;
-            z-index: 9991;
+            z-index: 10000;
             border-radius: 10px;
             box-shadow: 0 0 0 4px #fbbf24, 0 0 0 9999px rgba(0, 0, 0, 0.55);
             pointer-events: none;
@@ -160,7 +164,7 @@
 
         #comere-help-tooltip {
             position: fixed;
-            z-index: 9992;
+            z-index: 10001;
             width: 300px;
             background: #1a1823;
             border: 1px solid #332e41;
