@@ -286,7 +286,9 @@
             const companyUuid = @js($tenant->uuid);
             const countEndpoint = @js(route('admin.pending-orders.count'));
             const productsIndexUrl = @js(\App\Filament\Admin\Resources\ProductResource::getUrl('index'));
+            const productsCreateUrl = @js(\App\Filament\Admin\Resources\ProductResource::getUrl('create'));
             const tablesIndexUrl = @js(\App\Filament\Admin\Resources\TableResource::getUrl('index'));
+            const tablesCreateUrl = @js(\App\Filament\Admin\Resources\TableResource::getUrl('create'));
             const driversIndexUrl = @js(\App\Filament\Admin\Resources\DriverResource::getUrl('index'));
             const sessionViewUrlTemplate = @js(\App\Filament\Admin\Resources\TableSessionResource::getUrl('view', ['record' => '__UUID__']));
 
@@ -294,8 +296,8 @@
                 'produto-criar': {
                     icon: '📦',
                     label: 'Criar um produto',
+                    startUrl: productsCreateUrl,
                     steps: [
-                        { title: 'Criar produto', text: 'Clique em "+ Novo produto" para abrir o cadastro.', selector: '[data-tour="produto-criar"]', gotoUrl: productsIndexUrl, gotoLabel: 'Ir para Produtos' },
                         { title: 'Criar produto', text: 'Preencha o nome do produto e os demais campos do formulário.', selector: '[data-tour="produto-nome"]' },
                         { title: 'Criar produto', text: 'Quando terminar, role até o final da página e clique em "Criar" para salvar.', selector: null, final: true },
                     ],
@@ -303,16 +305,17 @@
                 'produto-editar': {
                     icon: '✏️',
                     label: 'Editar um produto',
+                    startUrl: productsIndexUrl,
                     steps: [
-                        { title: 'Editar produto', text: 'Clique em "Editar" na linha do produto que deseja alterar.', selector: '[data-tour="produto-editar"]', gotoUrl: productsIndexUrl, gotoLabel: 'Ir para Produtos' },
+                        { title: 'Editar produto', text: 'Clique em "Editar" na linha do produto que deseja alterar.', selector: '[data-tour="produto-editar"]' },
                         { title: 'Editar produto', text: 'Altere os campos desejados e clique em "Salvar" no rodapé da página.', selector: null, final: true },
                     ],
                 },
                 'mesa-criar-qr': {
                     icon: '🍽️',
                     label: 'Criar uma mesa e gerar QR Code',
+                    startUrl: tablesCreateUrl,
                     steps: [
-                        { title: 'Criar mesa', text: 'Clique em "Nova Mesa" para cadastrar.', selector: '[data-tour="mesa-criar"]', gotoUrl: tablesIndexUrl, gotoLabel: 'Ir para Mesas' },
                         { title: 'Criar mesa', text: 'Dê um nome à mesa e clique em "Criar" no rodapé da página.', selector: '[data-tour="mesa-nome"]' },
                         { title: 'Gerar QR Code', text: 'De volta à lista, clique no menu "⋮" da mesa criada e escolha "QR Code" para gerar e baixar o código.', selector: null, final: true },
                     ],
@@ -320,8 +323,9 @@
                 'motorista-convidar': {
                     icon: '🚚',
                     label: 'Cadastrar motorista',
+                    startUrl: driversIndexUrl,
                     steps: [
-                        { title: 'Cadastrar motorista', text: 'Clique em "Convidar motorista" e informe o telefone dele (ele precisa já ter uma conta criada em /drivers/cadastro).', selector: '[data-tour="motorista-convidar"]', gotoUrl: driversIndexUrl, gotoLabel: 'Ir para Motoristas', final: true },
+                        { title: 'Cadastrar motorista', text: 'Clique em "Convidar motorista" e informe o telefone dele (ele precisa já ter uma conta criada em /drivers/cadastro).', selector: '[data-tour="motorista-convidar"]', final: true },
                     ],
                 },
                 'pedido-aprovar': {
@@ -478,6 +482,13 @@
                     }
                     if (result === false) {
                         return; // pré-condição não satisfeita (ex.: item deixou de estar pendente)
+                    }
+                } else if (flow.startUrl) {
+                    const target = new URL(flow.startUrl, window.location.origin);
+                    if (window.location.pathname !== target.pathname) {
+                        saveState(flowId, 0);
+                        window.location.href = flow.startUrl;
+                        return;
                     }
                 }
                 saveState(flowId, 0);
