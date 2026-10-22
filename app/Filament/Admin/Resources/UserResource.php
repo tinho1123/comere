@@ -47,6 +47,7 @@ class UserResource extends Resource
                         ->email()
                         ->required()
                         ->maxLength(255)
+                        ->extraAttributes(['data-tour' => 'usuario-email'])
                         ->live(onBlur: true)
                         ->afterStateUpdated(function (string $context, ?string $state, Set $set) {
                             if ($context !== 'create' || blank($state)) {

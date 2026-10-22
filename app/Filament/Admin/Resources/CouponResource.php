@@ -59,7 +59,8 @@ class CouponResource extends Resource
                         ->formatStateUsing(fn (?string $state): ?string => $state ? Str::upper($state) : $state)
                         ->dehydrateStateUsing(fn (?string $state): ?string => $state ? Str::upper(str_replace(' ', '', $state)) : $state)
                         ->unique(ignoreRecord: true, modifyRuleUsing: fn ($rule) => $rule->where('company_id', Filament::getTenant()->id))
-                        ->placeholder('Ex: BEMVINDO10'),
+                        ->placeholder('Ex: BEMVINDO10')
+                        ->extraAttributes(['data-tour' => 'cupom-codigo']),
 
                     Grid::make(2)
                         ->schema([

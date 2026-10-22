@@ -37,7 +37,8 @@ class FavoredTransactionResource extends Resource
                         ->required()
                         ->maxLength(255)
                         ->placeholder('Ex: João da Padaria')
-                        ->helperText('Digite o nome livremente — não precisa ser um cliente cadastrado.'),
+                        ->helperText('Digite o nome livremente — não precisa ser um cliente cadastrado.')
+                        ->extraAttributes(['data-tour' => 'fiado-devedor']),
 
                     Forms\Components\Select::make('client_id')
                         ->label('Vincular a cliente cadastrado (opcional)')

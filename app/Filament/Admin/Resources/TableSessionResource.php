@@ -296,6 +296,7 @@ class TableSessionResource extends Resource
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->modalHeading('Fechar Mesa')
+                    ->extraAttributes(['data-tour' => 'mesa-fechar'])
                     ->visible(fn (TableSession $record): bool => $record->isOpen())
                     ->form(function (TableSession $record): array {
                         return [
