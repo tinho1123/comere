@@ -46,7 +46,8 @@ class ProductResource extends Resource
                 Forms\Components\TextInput::make('name')
                     ->label('Nome')
                     ->required()
-                    ->maxLength(255),
+                    ->maxLength(255)
+                    ->extraAttributes(['data-tour' => 'produto-nome']),
                 Forms\Components\Textarea::make('description')
                     ->label('Descrição')
                     ->required()
@@ -338,7 +339,8 @@ class ProductResource extends Resource
                 //
             ])
             ->actions([
-                Actions\EditAction::make(),
+                Actions\EditAction::make()
+                    ->extraAttributes(['data-tour' => 'produto-editar']),
             ])
             ->bulkActions([
                 Actions\BulkActionGroup::make([

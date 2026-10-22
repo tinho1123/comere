@@ -134,6 +134,7 @@ class ItemsRelationManager extends RelationManager
                     ->label('Entregar')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
+                    ->extraAttributes(['data-tour' => 'mesa-entregar'])
                     ->visible(fn (TableSessionItem $record): bool => ! $record->is_delivered && $this->getOwnerRecord()->isOpen())
                     ->action(function (TableSessionItem $record): void {
                         $record->update([

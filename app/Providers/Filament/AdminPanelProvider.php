@@ -36,6 +36,11 @@ class AdminPanelProvider extends PanelProvider
             'panels::body.end',
             fn (): string => Blade::render('@include(\'filament.pending-orders-poll\')')
         );
+
+        FilamentView::registerRenderHook(
+            'panels::body.end',
+            fn (): string => Blade::render('@include(\'filament.help-guide\')')
+        );
     }
 
     public function panel(Panel $panel): Panel
