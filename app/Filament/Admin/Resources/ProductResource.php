@@ -16,6 +16,7 @@ use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
@@ -58,14 +59,20 @@ class ProductResource extends Resource
                             ->prefix('R$')
                             ->required()
                             ->live(onBlur: true)
-                            ->afterStateUpdated(fn ($state, Set $set, Get $get) => $set('total_amount', (float) $state - (float) $get('discounts'))),
+                            ->afterStateUpdated(function ($state, Set $set, Get $get) {
+                                $set('total_amount', (float) $state - (float) $get('discounts'));
+                                static::updateMarginPreview($set, $get);
+                            }),
                         Forms\Components\TextInput::make('discounts')
                             ->label('Descontos')
                             ->numeric()
                             ->default(0)
                             ->prefix('R$')
                             ->live(onBlur: true)
-                            ->afterStateUpdated(fn ($state, Set $set, Get $get) => $set('total_amount', (float) $get('amount') - (float) $state)),
+                            ->afterStateUpdated(function ($state, Set $set, Get $get) {
+                                $set('total_amount', (float) $get('amount') - (float) $state);
+                                static::updateMarginPreview($set, $get);
+                            }),
                         Forms\Components\TextInput::make('total_amount')
                             ->label('Preço Final')
                             ->numeric()
@@ -77,13 +84,30 @@ class ProductResource extends Resource
                 Schemas\Components\Section::make('Custo e Margem')
                     ->description('Usado só para calcular o lucro no dashboard. Não aparece para o cliente em nenhuma tela do marketplace.')
                     ->schema([
-                        Forms\Components\TextInput::make('cost')
-                            ->label('Custo de aquisição')
-                            ->numeric()
-                            ->prefix('R$')
-                            ->minValue(0)
-                            ->nullable()
-                            ->helperText('Opcional. Deixe em branco ou 0,00 se não quiser acompanhar o custo deste produto.'),
+                        Schemas\Components\Grid::make(3)
+                            ->schema([
+                                Forms\Components\TextInput::make('cost')
+                                    ->label('Custo de aquisição')
+                                    ->numeric()
+                                    ->prefix('R$')
+                                    ->minValue(0)
+                                    ->nullable()
+                                    ->live(onBlur: true)
+                                    ->afterStateUpdated(fn (Set $set, Get $get) => static::updateMarginPreview($set, $get))
+                                    ->helperText('Opcional. Deixe em branco ou 0,00 se não quiser acompanhar o custo deste produto.'),
+                                Forms\Components\TextInput::make('margin_percent_preview')
+                                    ->label('Margem bruta')
+                                    ->disabled()
+                                    ->dehydrated(false)
+                                    ->afterStateHydrated(fn (Set $set, Get $get) => static::updateMarginPreview($set, $get))
+                                    ->helperText('Calculada: (Preço Final − Custo) ÷ Preço Final'),
+                                Forms\Components\TextInput::make('margin_profit_preview')
+                                    ->label('Lucro por unidade')
+                                    ->prefix('R$')
+                                    ->disabled()
+                                    ->dehydrated(false)
+                                    ->belowContent(fn (Get $get) => static::marginStatusBadge($get)),
+                            ]),
                     ]),
                 Schemas\Components\Grid::make(3)
                     ->schema([
@@ -321,5 +345,47 @@ class ProductResource extends Resource
             'create' => Pages\CreateProduct::route('/create'),
             'edit' => Pages\EditProduct::route('/{record}/edit'),
         ];
+    }
+
+    protected static function updateMarginPreview(Set $set, Get $get): void
+    {
+        $price = (float) ($get('total_amount') ?? 0);
+        $cost = $get('cost');
+        $cost = ($cost === null || $cost === '') ? null : (float) $cost;
+
+        if ($cost === null || $cost <= 0 || $price <= 0) {
+            $set('margin_percent_preview', null);
+            $set('margin_profit_preview', null);
+
+            return;
+        }
+
+        $profit = $price - $cost;
+        $percent = ($profit / $price) * 100;
+
+        $set('margin_percent_preview', number_format($percent, 1, ',', '.').'%');
+        $set('margin_profit_preview', number_format($profit, 2, ',', '.'));
+    }
+
+    protected static function marginStatusBadge(Get $get): string
+    {
+        $price = (float) ($get('total_amount') ?? 0);
+        $cost = $get('cost');
+        $cost = ($cost === null || $cost === '') ? null : (float) $cost;
+
+        if ($cost === null || $cost <= 0 || $price <= 0) {
+            $label = 'Sem custo informado';
+            $color = 'gray';
+        } else {
+            $percent = (($price - $cost) / $price) * 100;
+
+            [$label, $color] = match (true) {
+                $percent >= 45 => ['Margem saudável', 'success'],
+                $percent >= 20 => ['Margem apertada', 'warning'],
+                default => ['Margem baixa', 'danger'],
+            };
+        }
+
+        return Blade::render('<x-filament::badge color="'.$color.'">'.$label.'</x-filament::badge>');
     }
 }
