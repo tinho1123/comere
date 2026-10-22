@@ -50,7 +50,7 @@ class SaleItemResource extends Resource
                 $company = filament()->getTenant();
 
                 return $query
-                    ->with(['order.client'])
+                    ->with(['order.client', 'product'])
                     ->whereHas('order', fn (Builder $q) => $q->where('company_id', $company->id));
             })
             ->defaultSort('created_at', 'desc')
@@ -79,6 +79,25 @@ class SaleItemResource extends Resource
                     ->summarize(
                         Sum::make()->money('BRL')->label('Total Geral')
                     ),
+
+                TextColumn::make('cost')
+                    ->label('Custo')
+                    ->state(fn (OrderItem $record): ?float => static::itemCost($record))
+                    ->money('BRL')
+                    ->placeholder('—')
+                    ->toggleable(),
+
+                TextColumn::make('profit')
+                    ->label('Lucro')
+                    ->state(function (OrderItem $record): ?float {
+                        $cost = static::itemCost($record);
+
+                        return $cost === null ? null : (float) $record->total_amount - $cost;
+                    })
+                    ->money('BRL')
+                    ->placeholder('Sem custo')
+                    ->color(fn (?float $state): string => $state !== null && $state < 0 ? 'danger' : 'success')
+                    ->weight(FontWeight::Bold),
 
                 TextColumn::make('order.client.name')
                     ->label('Cliente')
@@ -165,6 +184,22 @@ class SaleItemResource extends Resource
             ->emptyStateHeading('Nenhuma transação encontrada')
             ->emptyStateDescription('As vendas realizadas aparecerão aqui.')
             ->emptyStateIcon('heroicon-o-receipt-percent');
+    }
+
+    /**
+     * Custo no momento da venda (snapshot em order_items.cost). Itens criados
+     * antes desse campo existir caem no custo atual do produto, mesmo que
+     * ele já tenha mudado desde a venda.
+     */
+    private static function itemCost(OrderItem $record): ?float
+    {
+        $cost = $record->cost ?? $record->product?->cost;
+
+        if ($cost === null || (float) $cost <= 0) {
+            return null;
+        }
+
+        return (float) $cost * $record->quantity;
     }
 
     public static function getPages(): array

@@ -55,6 +55,8 @@ class CreateOrder extends CreateRecord
             'delivery_longitude' => $data['delivery_longitude'] ?? null,
         ]);
 
+        $costsByProductId = Product::whereIn('id', collect($items)->pluck('product_id'))->pluck('cost', 'id');
+
         foreach ($items as $item) {
             $unitPrice = $item['unit_price'] ?? 0;
             $quantity = $item['quantity'] ?? 1;
@@ -67,6 +69,7 @@ class CreateOrder extends CreateRecord
                 'product_name' => $item['product_name'],
                 'quantity' => $quantity,
                 'unit_price' => $unitPrice,
+                'cost' => $costsByProductId->get($item['product_id']),
                 'discount_percent' => 0,
                 'discount_amount' => 0,
                 'total_amount' => $itemTotal,

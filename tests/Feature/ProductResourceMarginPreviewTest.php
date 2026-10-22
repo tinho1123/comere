@@ -76,6 +76,28 @@ class ProductResourceMarginPreviewTest extends TestCase
     }
 
     #[Test]
+    public function it_computes_stock_cost_and_projected_profit_from_quantity()
+    {
+        $user = User::factory()->create();
+        $company = Company::factory()->create();
+        $user->companies()->attach($company->id);
+        $this->actingAs($user);
+        Filament::setTenant($company);
+
+        Livewire::test(CreateProduct::class)
+            ->fillForm([
+                'amount' => 34.90,
+                'discounts' => 0,
+                'cost' => 14.50,
+                'quantity' => 10,
+            ])
+            ->assertFormSet([
+                'stock_cost_preview' => '145,00',
+                'stock_profit_preview' => '204,00',
+            ]);
+    }
+
+    #[Test]
     public function it_shows_no_preview_when_cost_is_blank()
     {
         $user = User::factory()->create();
