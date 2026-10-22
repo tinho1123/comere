@@ -871,7 +871,14 @@
                             ) {
                                 beep();
                             }
-                            mesaLatestItemIds.set(session.id, session.latest_item_id);
+                            // Uma corrida entre a query de sessões e o eager load dos
+                            // itens pode entregar o único item pendente bem nesse meio
+                            // tempo, zerando latest_item_id nessa resposta — nunca
+                            // sobrescreve um id já visto por null, ou o próximo item
+                            // de verdade deixaria de bipar.
+                            if (session.latest_item_id !== null) {
+                                mesaLatestItemIds.set(session.id, session.latest_item_id);
+                            }
 
                             const card = container.querySelector(`[data-mesa-session-id="${session.id}"]`);
                             if (card) renderMesaCardBody(card, session);
@@ -879,7 +886,9 @@
                         }
 
                         renderedMesaSessionIds.add(session.id);
-                        mesaLatestItemIds.set(session.id, session.latest_item_id);
+                        if (session.latest_item_id !== null) {
+                            mesaLatestItemIds.set(session.id, session.latest_item_id);
+                        }
                         container.appendChild(buildMesaCard(session));
 
                         if (mesaInitialized) {
