@@ -566,18 +566,18 @@
 
             let trackInterval = null;
             let currentTargetEl = null;
-            let currentBoundHandler = null;
+            let activeAdvanceHandler = null;
 
             function stopTracking() {
                 if (trackInterval) {
                     clearInterval(trackInterval);
                     trackInterval = null;
                 }
-                if (currentTargetEl && currentBoundHandler) {
-                    currentTargetEl.removeEventListener('click', currentBoundHandler, true);
+                if (activeAdvanceHandler) {
+                    document.removeEventListener('click', activeAdvanceHandler, true);
                 }
+                activeAdvanceHandler = null;
                 currentTargetEl = null;
-                currentBoundHandler = null;
             }
 
             function positionAround(targetEl) {
@@ -688,9 +688,19 @@
                 });
             }
 
-            function bindAdvance(el, flow, state) {
-                const handler = function () {
-                    el.removeEventListener('click', handler, true);
+            // Delegado no document (fase de captura) em vez de vinculado a um
+            // elemento específico: assim, quando o alvo visível troca (ex.:
+            // minimizar/maximizar o card de pedido troca qual dos dois botões
+            // "Aprovar" está na tela), o clique já é reconhecido na hora —
+            // sem depender do polling de 300ms já ter rebindado o handler.
+            function bindAdvance(selector, flow, state) {
+                const handler = function (e) {
+                    const matched = e.target.closest(selector);
+                    if (!matched || matched.getClientRects().length === 0) {
+                        return;
+                    }
+                    document.removeEventListener('click', handler, true);
+                    activeAdvanceHandler = null;
                     if (isFinalStep(flow, state)) {
                         setTimeout(clearTour, 50);
                     } else {
@@ -703,29 +713,20 @@
                         setTimeout(renderActiveStep, 150);
                     }
                 };
-                el.addEventListener('click', handler, true);
+                document.addEventListener('click', handler, true);
                 return handler;
             }
 
             // Reposiciona em volta do elemento real a cada 300ms (Livewire pode
-            // reposicionar/trocar o layout) e também troca de alvo quando a
-            // versão visível de um seletor muda — ex.: o card de pedido pendente
-            // tem um botão "Aprovar" para a versão cheia e outro para a
-            // minimizada; ao minimizar/maximizar o card, o alvo clicável real
-            // muda e o clique precisa seguir pra ele também.
+            // reposicionar/trocar o layout) e também acompanha quando a versão
+            // visível de um seletor muda — ex.: o card de pedido pendente tem um
+            // botão "Aprovar" para a versão cheia e outro para a minimizada.
             function trackTarget(selector, flow, state) {
-                function rebind(el) {
-                    if (currentTargetEl && currentBoundHandler) {
-                        currentTargetEl.removeEventListener('click', currentBoundHandler, true);
-                    }
-                    currentTargetEl = el;
-                    currentBoundHandler = bindAdvance(el, flow, state);
-                }
-
-                rebind(findVisible(selector) || document.querySelector(selector));
+                currentTargetEl = findVisible(selector) || document.querySelector(selector);
                 if (currentTargetEl) {
                     positionAround(currentTargetEl);
                 }
+                activeAdvanceHandler = bindAdvance(selector, flow, state);
 
                 trackInterval = setInterval(function () {
                     const el = findVisible(selector);
@@ -735,9 +736,7 @@
                         hideTooltip();
                         return;
                     }
-                    if (el !== currentTargetEl) {
-                        rebind(el);
-                    }
+                    currentTargetEl = el;
                     positionAround(el);
                 }, 300);
             }
