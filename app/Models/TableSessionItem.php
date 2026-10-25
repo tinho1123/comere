@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 
 class TableSessionItem extends Model
 {
@@ -50,18 +51,19 @@ class TableSessionItem extends Model
                 return;
             }
 
-            $product = Product::find($item->product_id);
+            // Decremento condicional numa única query atômica (UPDATE ...
+            // WHERE quantity >= n): evita a corrida em que duas reservas
+            // simultâneas leem o mesmo saldo e as duas passam.
+            $reserved = Product::whereKey($item->product_id)
+                ->where('quantity', '>=', $item->quantity)
+                ->update(['quantity' => DB::raw("quantity - {$item->quantity}")]);
 
-            if ($product && ! $product->hasSufficientStock($item->quantity)) {
+            if (! $reserved) {
+                $product = Product::find($item->product_id);
+
                 throw new \RuntimeException(
-                    "Estoque insuficiente para \"{$product->name}\". Disponível: {$product->quantity}."
+                    "Estoque insuficiente para \"{$product?->name}\". Disponível: {$product?->quantity}."
                 );
-            }
-        });
-
-        static::created(function (TableSessionItem $item) {
-            if ($item->product_id) {
-                Product::decrementStockSafely($item->product_id, $item->quantity);
             }
         });
 

@@ -160,4 +160,52 @@ class StockReservationTest extends TestCase
 
         $this->assertEquals(0, $product->fresh()->quantity);
     }
+
+    #[Test]
+    public function insufficient_stock_message_sums_quantity_across_rows_of_the_same_product()
+    {
+        $company = $this->company();
+        $product = $this->product($company, quantity: 5);
+
+        // Duas linhas de 3 unidades cada: nenhuma sozinha excede o estoque
+        // (5), mas juntas pedem 6 — tem que ser bloqueado.
+        $message = Product::findInsufficientStockMessage([
+            ['product_id' => $product->id, 'quantity' => 3],
+            ['product_id' => $product->id, 'quantity' => 3],
+        ]);
+
+        $this->assertNotNull($message);
+        $this->assertStringContainsString('Estoque insuficiente', $message);
+    }
+
+    #[Test]
+    public function insufficient_stock_message_is_null_when_combined_quantity_fits()
+    {
+        $company = $this->company();
+        $product = $this->product($company, quantity: 10);
+
+        $message = Product::findInsufficientStockMessage([
+            ['product_id' => $product->id, 'quantity' => 3],
+            ['product_id' => $product->id, 'quantity' => 3],
+        ]);
+
+        $this->assertNull($message);
+    }
+
+    #[Test]
+    public function insufficient_stock_message_ignores_a_product_from_another_company()
+    {
+        $companyA = $this->company();
+        $companyB = $this->company();
+        $otherCompanysProduct = $this->product($companyB, quantity: 1);
+
+        // Pedido de uma empresa citando o produto de outra: a checagem
+        // escopada por company_id não deve devolver nome/estoque de um
+        // produto que não pertence a essa empresa.
+        $message = Product::findInsufficientStockMessage([
+            ['product_id' => $otherCompanysProduct->id, 'quantity' => 5],
+        ], $companyA->id);
+
+        $this->assertNull($message);
+    }
 }
