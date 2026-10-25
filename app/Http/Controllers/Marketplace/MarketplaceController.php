@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class MarketplaceController extends Controller
@@ -305,7 +306,7 @@ class MarketplaceController extends Controller
         ]);
 
         if ($message = Product::findInsufficientStockMessage($request->items, $company->id)) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['items' => $message]);
+            throw ValidationException::withMessages(['items' => $message]);
         }
 
         $defaultAddress = $client->addresses()->where('is_default', true)->first();

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\TableSession;
 
+use App\Models\Client;
 use App\Models\Company;
 use App\Models\Product;
 use App\Models\ProductsCategories;
@@ -57,6 +58,12 @@ class StockReservationTest extends TestCase
             'uuid' => (string) str()->uuid(),
             'company_id' => $company->id,
             'table_id' => $table->id,
+            // TableSession::close() creates an Order, and orders.client_id
+            // is still NOT NULL on the sqlite test schema (the migration
+            // that makes it nullable in MySQL skips sqlite) — give the
+            // session a client so this helper matches a schema both DBs
+            // agree on. Unrelated to stock reservation itself.
+            'client_id' => Client::factory()->create()->id,
             'status' => 'open',
             'opened_at' => now(),
             'total_amount' => 0,
