@@ -21,7 +21,8 @@ class ProductController extends Controller
 
         $query = Product::where('company_id', $company->id)
             ->where('active', true)
-            ->where('is_marketplace', true);
+            ->where('is_marketplace', true)
+            ->where('quantity', '>', 0);
 
         // Filter by category
         if ($request->has('category')) {

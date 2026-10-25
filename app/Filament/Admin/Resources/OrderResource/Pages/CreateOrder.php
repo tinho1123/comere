@@ -76,7 +76,7 @@ class CreateOrder extends CreateRecord
             ]);
 
             if ($isPresential) {
-                Product::where('id', $item['product_id'])->decrement('quantity', $quantity);
+                Product::decrementStockSafely($item['product_id'], $quantity);
             }
         }
 

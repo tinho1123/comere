@@ -140,14 +140,23 @@ class TableController extends Controller
 
         $qty = (int) $request->quantity;
 
-        TableSessionItem::create([
-            'table_session_id' => $session->id,
-            'product_id' => $product->id,
-            'product_name' => $product->name,
-            'quantity' => $qty,
-            'unit_price' => $product->amount,
-            'total_amount' => $product->amount * $qty,
-        ]);
+        if (! $product->hasSufficientStock($qty)) {
+            return redirect()->route('table.show', $uuid)
+                ->with('error', "Estoque insuficiente para \"{$product->name}\". Disponível: {$product->quantity}.");
+        }
+
+        try {
+            TableSessionItem::create([
+                'table_session_id' => $session->id,
+                'product_id' => $product->id,
+                'product_name' => $product->name,
+                'quantity' => $qty,
+                'unit_price' => $product->amount,
+                'total_amount' => $product->amount * $qty,
+            ]);
+        } catch (\RuntimeException $e) {
+            return redirect()->route('table.show', $uuid)->with('error', $e->getMessage());
+        }
 
         try {
             app(PushNotificationService::class)->notifyCompany(

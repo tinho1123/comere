@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class Product extends Model
@@ -60,6 +61,27 @@ class Product extends Model
     public function hasCost(): bool
     {
         return $this->cost !== null && (float) $this->cost > 0;
+    }
+
+    public function hasSufficientStock(int $quantity): bool
+    {
+        return (int) $this->quantity >= $quantity;
+    }
+
+    /**
+     * Decrements stock atomically and never lets it go below zero, even
+     * under a race between two simultaneous sales of the same product.
+     */
+    public static function decrementStockSafely(int $productId, int $quantity): void
+    {
+        static::whereKey($productId)->update([
+            'quantity' => DB::raw('GREATEST(quantity - '.$quantity.', 0)'),
+        ]);
+    }
+
+    public static function restoreStock(int $productId, int $quantity): void
+    {
+        static::whereKey($productId)->increment('quantity', $quantity);
     }
 
     public function getSurchargeFor(string $paymentMethod, float $itemTotal, int $quantity = 1): float

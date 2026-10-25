@@ -70,6 +70,7 @@ class MarketplaceController extends Controller
             ->where('active', true)
             ->where('is_marketplace', true)
             ->where('discounts', '>', 0)
+            ->where('quantity', '>', 0)
             ->limit(8)
             ->get();
 
@@ -113,7 +114,7 @@ class MarketplaceController extends Controller
         session()->put('last_visited_stores', $lastVisited);
 
         $company->load([
-            'products' => fn ($q) => $q->where('active', true)->where('is_marketplace', true)->with('category'),
+            'products' => fn ($q) => $q->where('active', true)->where('is_marketplace', true)->where('quantity', '>', 0)->with('category'),
             'deliveryFeeRanges',
             'hours',
         ]);
@@ -291,7 +292,14 @@ class MarketplaceController extends Controller
         $request->validate([
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.quantity' => ['required', 'integer', 'min:1', function (string $attribute, $value, \Closure $fail) use ($request) {
+                preg_match('/^items\.(\d+)\.quantity$/', $attribute, $matches);
+                $product = Product::find($request->input("items.{$matches[1]}.product_id"));
+
+                if ($product && ! $product->hasSufficientStock((int) $value)) {
+                    $fail("Estoque insuficiente para \"{$product->name}\". Disponível: {$product->quantity}.");
+                }
+            }],
             'items.*.notes' => 'nullable|string|max:300',
             'notes' => 'nullable|string|max:1000',
             'coupon_code' => 'nullable|string|max:50',
@@ -445,7 +453,10 @@ class MarketplaceController extends Controller
         $previousItems = $order->items()->with('product')->get();
 
         $availableItems = $previousItems->filter(
-            fn ($item) => $item->product && $item->product->company_id === $company->id && $item->product->active
+            fn ($item) => $item->product
+                && $item->product->company_id === $company->id
+                && $item->product->active
+                && $item->product->hasSufficientStock($item->quantity)
         );
 
         if ($availableItems->isEmpty()) {

@@ -88,13 +88,10 @@ class TableSession extends Model
 
     public function close(?string $paymentMethod = null): void
     {
+        // Estoque já foi reservado (debitado) quando cada item foi
+        // adicionado à mesa — ver TableSessionItem::booted(). Fechar a
+        // mesa não deve descontar de novo.
         $items = $this->items()->with('product')->get();
-
-        foreach ($items as $item) {
-            if ($item->product) {
-                $item->product->decrement('quantity', $item->quantity);
-            }
-        }
 
         $subtotal = (float) $items->sum('total_amount');
         $surchargeAmount = $this->calculateSurcharge($subtotal, $paymentMethod, $items);
@@ -132,13 +129,10 @@ class TableSession extends Model
 
     public function closeAsFavored(string $pricingMode): void
     {
+        // Estoque já foi reservado (debitado) quando cada item foi
+        // adicionado à mesa — ver TableSessionItem::booted(). Fechar a
+        // mesa não deve descontar de novo.
         $items = $this->items()->with('product')->get();
-
-        foreach ($items as $item) {
-            if ($item->product) {
-                $item->product->decrement('quantity', $item->quantity);
-            }
-        }
 
         $subtotal = (float) $items->sum(function ($item) use ($pricingMode) {
             if ($pricingMode === 'favored' && $item->product && $item->product->favored_price) {

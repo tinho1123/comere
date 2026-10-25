@@ -215,7 +215,7 @@ class Order extends Model
 
             foreach ($this->items()->with('product')->get() as $item) {
                 if ($item->product) {
-                    $item->product->decrement('quantity', $item->quantity);
+                    Product::decrementStockSafely($item->product_id, $item->quantity);
                 }
             }
         }

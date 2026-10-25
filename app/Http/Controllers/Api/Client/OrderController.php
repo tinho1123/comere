@@ -82,7 +82,14 @@ class OrderController extends Controller
         $request->validate([
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.quantity' => ['required', 'integer', 'min:1', function (string $attribute, $value, \Closure $fail) use ($request) {
+                preg_match('/^items\.(\d+)\.quantity$/', $attribute, $matches);
+                $product = Product::find($request->input("items.{$matches[1]}.product_id"));
+
+                if ($product && ! $product->hasSufficientStock((int) $value)) {
+                    $fail("Estoque insuficiente para \"{$product->name}\". Disponível: {$product->quantity}.");
+                }
+            }],
             'items.*.discount_percent' => 'nullable|numeric|min:0|max:100',
             'notes' => 'nullable|string|max:1000',
             'channel' => 'nullable|in:'.Order::CHANNEL_ONLINE.','.Order::CHANNEL_PRESENTIAL,

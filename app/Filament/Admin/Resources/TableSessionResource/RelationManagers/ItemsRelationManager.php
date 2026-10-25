@@ -11,6 +11,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
@@ -34,13 +35,14 @@ class ItemsRelationManager extends RelationManager
                     $products = Product::with('subcategory')
                         ->where('company_id', $companyId)
                         ->where('active', true)
+                        ->where('quantity', '>', 0)
                         ->orderBy('name')
                         ->get();
 
                     $grouped = [];
                     foreach ($products as $p) {
                         $group = $p->subcategory?->name ?? 'Outros';
-                        $grouped[$group][$p->id] = $p->name.' — R$ '.number_format($p->amount, 2, ',', '.');
+                        $grouped[$group][$p->id] = $p->name.' — R$ '.number_format($p->amount, 2, ',', '.').' (estoque: '.$p->quantity.')';
                     }
                     ksort($grouped);
 
@@ -64,6 +66,15 @@ class ItemsRelationManager extends RelationManager
                 ->default(1)
                 ->minValue(1)
                 ->required()
+                ->rule(function (Get $get): \Closure {
+                    return function (string $attribute, $value, \Closure $fail) use ($get) {
+                        $product = Product::find($get('product_id'));
+
+                        if ($product && ! $product->hasSufficientStock((int) $value)) {
+                            $fail("Estoque insuficiente. Disponível: {$product->quantity}.");
+                        }
+                    };
+                })
                 ->columnSpan(1),
 
             TextInput::make('unit_price')
@@ -120,13 +131,23 @@ class ItemsRelationManager extends RelationManager
                 CreateAction::make()
                     ->label('Adicionar Item')
                     ->visible(fn (): bool => $this->getOwnerRecord()->isOpen())
-                    ->using(function (array $data): TableSessionItem {
+                    ->using(function (array $data, Action $action): TableSessionItem {
                         $data['table_session_id'] = $this->getOwnerRecord()->id;
                         $data['total_amount'] = $data['quantity'] * $data['unit_price'];
                         $data['is_delivered'] = true;
                         $data['delivered_at'] = now();
 
-                        return TableSessionItem::create($data);
+                        try {
+                            return TableSessionItem::create($data);
+                        } catch (\RuntimeException $e) {
+                            Notification::make()
+                                ->title('Não foi possível adicionar o item')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+
+                            $action->halt();
+                        }
                     }),
             ])
             ->actions([
