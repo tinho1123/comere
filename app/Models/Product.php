@@ -74,8 +74,10 @@ class Product extends Model
      */
     public static function decrementStockSafely(int $productId, int $quantity): void
     {
+        // CASE WHEN instead of GREATEST() — the latter doesn't exist on
+        // SQLite, which the test suite runs against.
         static::whereKey($productId)->update([
-            'quantity' => DB::raw('GREATEST(quantity - '.$quantity.', 0)'),
+            'quantity' => DB::raw("CASE WHEN quantity >= {$quantity} THEN quantity - {$quantity} ELSE 0 END"),
         ]);
     }
 
