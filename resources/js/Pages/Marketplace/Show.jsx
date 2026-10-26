@@ -10,7 +10,8 @@ const CHECKOUT_DISTANCE_WARNING_KM = 3;
 
 const PAYMENT_METHODS = [
     { value: 'cash', label: 'Dinheiro', icon: Banknote },
-    { value: 'credit', label: 'Cartão (maquininha)', icon: CreditCard },
+    { value: 'debit', label: 'Débito (maquininha)', icon: CreditCard },
+    { value: 'credit', label: 'Crédito (maquininha)', icon: CreditCard },
     { value: 'pix', label: 'Pix', icon: QrCode },
 ];
 
@@ -224,7 +225,7 @@ function CartPanel({
                 <>
                     <div>
                         <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Pagamento na entrega</p>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 gap-2">
                             {PAYMENT_METHODS.map(({ value, label, icon: Icon }) => (
                                 <button
                                     key={value}

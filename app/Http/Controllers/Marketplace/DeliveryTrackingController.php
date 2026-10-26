@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Marketplace;
 use App\Http\Controllers\Controller;
 use App\Models\Delivery;
 use App\Models\DeliveryFeedback;
+use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -105,7 +106,7 @@ class DeliveryTrackingController extends Controller
             return response()->json(['success' => false, 'message' => 'Confirme a retirada na loja antes.'], 409);
         }
 
-        $requiresPayment = $delivery->order->payment_method && $delivery->order->payment_method !== 'credit';
+        $requiresPayment = Order::requiresDeliveryPaymentConfirmation($delivery->order->payment_method);
 
         if ($requiresPayment && ! $delivery->payment_collected) {
             return response()->json(['success' => false, 'message' => 'Confirme o recebimento do pagamento antes.'], 409);

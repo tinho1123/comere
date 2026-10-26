@@ -181,7 +181,7 @@
             </p>
         </div>
 
-        @if ($delivery->order->payment_method && $delivery->order->payment_method !== 'credit')
+        @if (\App\Models\Order::requiresDeliveryPaymentConfirmation($delivery->order->payment_method))
             <div id="payment-card" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-4">
                 <p class="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-1">Forma de pagamento</p>
                 <p class="text-lg font-bold text-gray-900 mb-4">
@@ -293,7 +293,7 @@
     let state = {
         status: @json($delivery->status),
         pickedUp: @json($delivery->isPickedUp()),
-        paymentRequired: @json((bool) ($delivery->order->payment_method && $delivery->order->payment_method !== 'credit')),
+        paymentRequired: @json(\App\Models\Order::requiresDeliveryPaymentConfirmation($delivery->order->payment_method)),
         paymentCollected: @json($delivery->payment_collected),
         arrived: false,
     };

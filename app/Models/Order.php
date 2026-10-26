@@ -34,6 +34,8 @@ class Order extends Model
 
     const PAYMENT_PIX = 'pix';
 
+    public const CARD_PAYMENT_METHODS = [self::PAYMENT_DEBIT, self::PAYMENT_CREDIT];
+
     public static function paymentOptions(): array
     {
         return [
@@ -43,6 +45,15 @@ class Order extends Model
             self::PAYMENT_PIX => 'Pix',
             'favored' => 'Fiado',
         ];
+    }
+
+    /**
+     * Cash, pix and (legacy) favored need the driver to confirm receiving
+     * payment with a code; card payments are settled on the machine itself.
+     */
+    public static function requiresDeliveryPaymentConfirmation(?string $paymentMethod): bool
+    {
+        return $paymentMethod !== null && ! in_array($paymentMethod, self::CARD_PAYMENT_METHODS, true);
     }
 
     protected $fillable = [

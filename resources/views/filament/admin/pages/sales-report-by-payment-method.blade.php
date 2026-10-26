@@ -8,6 +8,10 @@
         'credit' => '#e11d48',
     ];
     $grandTotal = $data['grandTotal'];
+    $channelLabels = [
+        \App\Models\Order::CHANNEL_ONLINE => 'Marketplace (online)',
+        \App\Models\Order::CHANNEL_PRESENTIAL => 'Mesas (presencial)',
+    ];
 @endphp
 
 <x-filament-panels::page>
@@ -113,6 +117,72 @@
             color: #9ca3af;
         }
         .svr-root .svr-tile--total .svr-tile-sub { color: rgba(255,255,255,0.75); }
+        .svr-root .svr-tile-extra {
+            margin-top: 0.375rem;
+            font-size: 0.6875rem;
+            color: #9ca3af;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+        .svr-root .svr-tile--total .svr-tile-extra { color: rgba(255,255,255,0.75); }
+        .svr-root .svr-variation {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.1875rem;
+            font-weight: 700;
+        }
+        .svr-root .svr-variation--up { color: #16a34a; }
+        .svr-root .svr-variation--down { color: #dc2626; }
+        html.dark .svr-root .svr-variation--up { color: #4ade80; }
+        html.dark .svr-root .svr-variation--down { color: #f87171; }
+        .svr-root .svr-tile--total .svr-variation--up { color: #bbf7d0; }
+        .svr-root .svr-tile--total .svr-variation--down { color: #fecaca; }
+        .svr-root .svr-grid-2 {
+            display: grid;
+            grid-template-columns: 1.3fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+            align-items: start;
+        }
+        @media (max-width: 900px) {
+            .svr-root .svr-grid-2 { grid-template-columns: 1fr; }
+        }
+        .svr-root .svr-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 0.875rem;
+        }
+        .svr-root .svr-bar-row {
+            display: grid;
+            grid-template-columns: 6.5rem 1fr 3.5rem;
+            align-items: center;
+            gap: 0.625rem;
+        }
+        .svr-root .svr-bar-row .svr-bar-label {
+            font-size: 0.8125rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.4375rem;
+        }
+        .svr-root .svr-bar-track {
+            height: 0.625rem;
+            border-radius: 999px;
+            background: #f3f4f6;
+            overflow: hidden;
+        }
+        html.dark .svr-root .svr-bar-track { background: #374151; }
+        .svr-root .svr-bar-track > i {
+            display: block;
+            height: 100%;
+            border-radius: 999px;
+        }
+        .svr-root .svr-bar-row .svr-bar-value {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 0.75rem;
+            text-align: right;
+            color: #6b7280;
+        }
+        html.dark .svr-root .svr-bar-row .svr-bar-value { color: #9ca3af; }
         .svr-root .svr-table-wrap { overflow-x: auto; }
         .svr-root table {
             width: 100%;
@@ -185,32 +255,49 @@
         </div>
 
         <div class="svr-note">
-            <x-heroicon-o-exclamation-triangle style="width: 1.125rem; height: 1.125rem; flex-shrink: 0; margin-top: 1px;" />
+            <x-heroicon-o-information-circle style="width: 1.125rem; height: 1.125rem; flex-shrink: 0; margin-top: 1px;" />
             <span>
-                <strong>Débito e crédito ainda não se separam no pedido online.</strong>
-                No checkout do cliente final hoje só existe o botão "Cartão", que grava como crédito.
-                Pedidos criados pelo admin e fechamentos de mesa já distinguem os dois — por isso o
-                débito abaixo vem só dessas origens. Fiado não entra neste relatório, pois ainda não
-                foi recebido.
+                Fiado não entra neste relatório, pois ainda não foi recebido. Pedidos feitos antes da
+                separação entre débito e crédito no checkout do cliente final continuam contados como
+                crédito — a distinção vale a partir de agora.
             </span>
         </div>
 
         <div class="svr-tiles">
             @foreach (\App\Filament\Admin\Pages\SalesReportByPaymentMethod::METHODS as $method)
+                @php $variation = $data['variationByMethod'][$method]; @endphp
                 <div class="svr-tile">
                     <div class="svr-tile-label">
                         <span class="svr-dot" style="background: {{ $methodColors[$method] }}"></span>
                         {{ $labels[$method] }}
                     </div>
                     <div class="svr-tile-value">R$ {{ number_format($data['totals'][$method], 2, ',', '.') }}</div>
-                    <div class="svr-tile-sub">{{ $data['counts'][$method] }} {{ $data['counts'][$method] === 1 ? 'venda' : 'vendas' }}</div>
+                    <div class="svr-tile-sub">
+                        {{ $data['counts'][$method] }} {{ $data['counts'][$method] === 1 ? 'venda' : 'vendas' }}
+                        @if ($variation !== null)
+                            · <span class="svr-variation {{ $variation >= 0 ? 'svr-variation--up' : 'svr-variation--down' }}">{{ $variation >= 0 ? '▲' : '▼' }} {{ number_format(abs($variation), 1, ',', '.') }}%</span>
+                        @endif
+                    </div>
+                    <div class="svr-tile-extra">Ticket médio: R$ {{ number_format($data['averageTicket'][$method], 2, ',', '.') }}</div>
                 </div>
             @endforeach
 
             <div class="svr-tile svr-tile--total">
                 <div class="svr-tile-label">Total do período</div>
                 <div class="svr-tile-value">R$ {{ number_format($grandTotal, 2, ',', '.') }}</div>
-                <div class="svr-tile-sub">{{ $data['grandCount'] }} {{ $data['grandCount'] === 1 ? 'venda finalizada' : 'vendas finalizadas' }}</div>
+                <div class="svr-tile-sub">
+                    {{ $data['grandCount'] }} {{ $data['grandCount'] === 1 ? 'venda finalizada' : 'vendas finalizadas' }}
+                    @if ($data['grandTotalVariation'] !== null)
+                        · <span class="svr-variation {{ $data['grandTotalVariation'] >= 0 ? 'svr-variation--up' : 'svr-variation--down' }}">{{ $data['grandTotalVariation'] >= 0 ? '▲' : '▼' }} {{ number_format(abs($data['grandTotalVariation']), 1, ',', '.') }}%</span>
+                    @endif
+                </div>
+                <div class="svr-tile-extra">
+                    @if ($data['previousGrandTotal'] > 0)
+                        Período anterior: R$ {{ number_format($data['previousGrandTotal'], 2, ',', '.') }}
+                    @else
+                        Sem venda no período anterior pra comparar
+                    @endif
+                </div>
             </div>
         </div>
 
@@ -255,5 +342,58 @@
                 </div>
             @endif
         </x-filament::section>
+
+        <div class="svr-grid-2">
+            <x-filament::section heading="Participação por forma de pagamento">
+                @if ($grandTotal <= 0)
+                    <div class="svr-empty">Nenhuma venda finalizada neste período.</div>
+                @else
+                    <div class="svr-bars">
+                        @foreach (collect(\App\Filament\Admin\Pages\SalesReportByPaymentMethod::METHODS)->sortByDesc(fn ($method) => $data['totals'][$method]) as $method)
+                            @php $share = $grandTotal > 0 ? ($data['totals'][$method] / $grandTotal) * 100 : 0; @endphp
+                            <div class="svr-bar-row">
+                                <div class="svr-bar-label">
+                                    <span class="svr-dot" style="background: {{ $methodColors[$method] }}"></span>
+                                    {{ $labels[$method] }}
+                                </div>
+                                <div class="svr-bar-track"><i style="width: {{ number_format($share, 2, '.', '') }}%; background: {{ $methodColors[$method] }}"></i></div>
+                                <div class="svr-bar-value">{{ number_format($share, 1, ',', '.') }}%</div>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            </x-filament::section>
+
+            <x-filament::section heading="Por canal">
+                @if ($grandTotal <= 0)
+                    <div class="svr-empty">Nenhuma venda finalizada neste período.</div>
+                @else
+                    <div class="svr-table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="text-align: left;">Canal</th>
+                                    <th>Total</th>
+                                    <th>%</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($channelLabels as $channel => $channelLabel)
+                                    @php
+                                        $channelTotal = array_sum($data['channelTotals'][$channel]);
+                                        $channelShare = $grandTotal > 0 ? ($channelTotal / $grandTotal) * 100 : 0;
+                                    @endphp
+                                    <tr>
+                                        <td style="text-align: left; font-family: inherit; font-weight: 600; color: inherit;">{{ $channelLabel }}</td>
+                                        <td>R$ {{ number_format($channelTotal, 2, ',', '.') }}</td>
+                                        <td>{{ number_format($channelShare, 1, ',', '.') }}%</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </x-filament::section>
+        </div>
     </div>
 </x-filament-panels::page>

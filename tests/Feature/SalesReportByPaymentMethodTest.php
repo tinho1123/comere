@@ -212,4 +212,92 @@ class SalesReportByPaymentMethodTest extends TestCase
             Carbon::setTestNow();
         }
     }
+
+    #[Test]
+    public function it_shows_the_average_ticket_per_payment_method()
+    {
+        $reference = Carbon::create(2026, 5, 15);
+
+        $this->createOrder(['total_amount' => 100, 'payment_method' => Order::PAYMENT_CASH, 'delivered_at' => $reference]);
+        $this->createOrder(['total_amount' => 300, 'payment_method' => Order::PAYMENT_CASH, 'delivered_at' => $reference]);
+
+        Livewire::test(SalesReportByPaymentMethod::class)
+            ->set('periodType', 'month')
+            ->set('month', $reference->month)
+            ->set('year', $reference->year)
+            ->assertOk()
+            ->assertSee('Ticket médio: R$ 200,00');
+    }
+
+    #[Test]
+    public function it_splits_totals_by_channel()
+    {
+        $reference = Carbon::create(2026, 5, 15);
+
+        $this->createOrder(['total_amount' => 100, 'channel' => Order::CHANNEL_ONLINE, 'delivered_at' => $reference]);
+        $this->createOrder(['total_amount' => 50, 'channel' => Order::CHANNEL_PRESENTIAL, 'delivered_at' => $reference]);
+
+        Livewire::test(SalesReportByPaymentMethod::class)
+            ->set('periodType', 'month')
+            ->set('month', $reference->month)
+            ->set('year', $reference->year)
+            ->assertOk()
+            ->assertSee('Marketplace (online)')
+            ->assertSee('Mesas (presencial)')
+            ->assertSeeInOrder(['Marketplace (online)', '100,00'])
+            ->assertSeeInOrder(['Mesas (presencial)', '50,00']);
+    }
+
+    #[Test]
+    public function it_shows_the_variation_against_the_previous_period()
+    {
+        $reference = Carbon::create(2026, 5, 15);
+        $previousMonth = Carbon::create(2026, 4, 10);
+
+        $this->createOrder(['total_amount' => 150, 'payment_method' => Order::PAYMENT_CASH, 'delivered_at' => $reference]);
+        $this->createOrder(['total_amount' => 100, 'payment_method' => Order::PAYMENT_CASH, 'delivered_at' => $previousMonth]);
+
+        Livewire::test(SalesReportByPaymentMethod::class)
+            ->set('periodType', 'month')
+            ->set('month', $reference->month)
+            ->set('year', $reference->year)
+            ->assertOk()
+            ->assertSee('▲ 50,0%')
+            ->assertSee('Período anterior: R$ 100,00');
+    }
+
+    #[Test]
+    public function it_has_no_variation_to_show_without_a_previous_period_total()
+    {
+        $reference = Carbon::create(2026, 5, 15);
+
+        $this->createOrder(['total_amount' => 150, 'payment_method' => Order::PAYMENT_CASH, 'delivered_at' => $reference]);
+
+        Livewire::test(SalesReportByPaymentMethod::class)
+            ->set('periodType', 'month')
+            ->set('month', $reference->month)
+            ->set('year', $reference->year)
+            ->assertOk()
+            ->assertSee('Sem venda no período anterior pra comparar')
+            ->assertDontSee('▲')
+            ->assertDontSee('▼');
+    }
+
+    #[Test]
+    public function the_export_csv_button_links_to_the_export_route_with_current_filters()
+    {
+        $reference = Carbon::create(2026, 5, 15);
+
+        Livewire::test(SalesReportByPaymentMethod::class)
+            ->set('periodType', 'month')
+            ->set('month', $reference->month)
+            ->set('year', $reference->year)
+            ->assertOk()
+            ->assertSeeHtml(htmlspecialchars(route('admin.sales-report.export', [
+                'company' => $this->company,
+                'period_type' => 'month',
+                'month' => $reference->month,
+                'year' => $reference->year,
+            ])));
+    }
 }

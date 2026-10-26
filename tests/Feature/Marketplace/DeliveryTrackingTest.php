@@ -359,6 +359,25 @@ class DeliveryTrackingTest extends TestCase
     }
 
     #[Test]
+    public function it_does_not_require_payment_confirmation_for_debit_card_orders()
+    {
+        // Regressão: a checagem usava `payment_method !== 'credit'`, de uma
+        // época em que o checkout só tinha um botão genérico de cartão. Com
+        // débito e crédito separados, débito (também pago na maquininha)
+        // caía por engano no grupo que exige confirmação de pagamento.
+        $company = Company::factory()->create();
+        $client = Client::factory()->create(['company_id' => $company->id]);
+        $delivery = $this->makeDispatchedDelivery($company, $client);
+        $delivery->order()->update(['payment_method' => 'debit']);
+        $delivery->update(['picked_up_at' => now()]);
+
+        $response = $this->postJson(route('delivery.tracking.confirm-delivery', $delivery->tracking_token));
+
+        $response->assertOk();
+        $this->assertEquals(Delivery::STATUS_DELIVERED, $delivery->fresh()->status);
+    }
+
+    #[Test]
     public function it_reports_a_delivery_problem()
     {
         $company = Company::factory()->create();

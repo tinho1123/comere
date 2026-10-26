@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Pages;
 
 use App\Filament\Admin\Widgets\FinancialSummaryWidget;
+use App\Filament\Admin\Widgets\PaymentMethodSummaryWidget;
 use App\Filament\Admin\Widgets\ProductMarginWidget;
 use App\Filament\Admin\Widgets\RecentOrdersWidget;
 use App\Filament\Admin\Widgets\RecentTablesWidget;
@@ -23,6 +24,7 @@ class Dashboard extends BaseDashboard
     {
         return [
             FinancialSummaryWidget::class,
+            PaymentMethodSummaryWidget::class,
             ProductMarginWidget::class,
             TransactionChartWidget::class,
             RecentTransactionsWidget::class,
