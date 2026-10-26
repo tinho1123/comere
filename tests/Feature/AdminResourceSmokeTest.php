@@ -13,6 +13,7 @@ use App\Filament\Admin\Resources\OrderResource;
 use App\Filament\Admin\Resources\ProductResource;
 use App\Filament\Admin\Resources\ProductSubcategoryResource;
 use App\Filament\Admin\Resources\SaleItemResource;
+use App\Filament\Admin\Resources\SupplierExchangeResource;
 use App\Filament\Admin\Resources\TableResource;
 use App\Filament\Admin\Resources\TableSessionResource;
 use App\Filament\Admin\Resources\UserResource;
@@ -69,6 +70,7 @@ class AdminResourceSmokeTest extends TestCase
             'products' => [ProductResource::class],
             'product subcategories' => [ProductSubcategoryResource::class],
             'sale items' => [SaleItemResource::class],
+            'supplier exchanges' => [SupplierExchangeResource::class],
             'tables' => [TableResource::class],
             'table sessions' => [TableSessionResource::class],
             'users' => [UserResource::class],
