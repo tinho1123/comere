@@ -486,7 +486,7 @@ function OrderCard({ order, index }) {
                             className="overflow-hidden"
                         >
                             <div className="bg-gray-50 rounded-2xl p-4 mt-4 mb-5">
-                                {order.status === 'shipped' && order.payment_method !== 'credit' && order.delivery?.payment_confirmation_code && (
+                                {order.status === 'shipped' && !['credit', 'debit'].includes(order.payment_method) && order.delivery?.payment_confirmation_code && (
                                     <DeliveryCodeReveal code={order.delivery.payment_confirmation_code} />
                                 )}
                                 {order.status === 'delivered' && order.delivery?.payment_collected && order.delivery?.payment_confirmation_code && (

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\MenuExportController;
 use App\Http\Controllers\Admin\OrderChatController as AdminOrderChatController;
 use App\Http\Controllers\Admin\PendingOrdersController;
+use App\Http\Controllers\Admin\SalesReportExportController;
 use App\Http\Controllers\Admin\SelectCompanyController;
 use App\Http\Controllers\Admin\TableQrController;
 use App\Http\Controllers\Auth\LoginController;
@@ -113,6 +114,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/pedidos/{order:uuid}/mensagens', [AdminOrderChatController::class, 'store'])->name('admin.order.chat.store');
     Route::get('/admin/pedidos-mensagens/nao-lidas', [AdminOrderChatController::class, 'unreadCount'])->name('admin.order.chat.unread-count');
     Route::get('/admin/produtos/{company:uuid}/cardapio', [MenuExportController::class, 'show'])->name('admin.products.menu');
+    Route::get('/admin/relatorio-vendas/{company:uuid}/export', [SalesReportExportController::class, 'export'])->name('admin.sales-report.export');
     Route::get('/admin/select-company', [SelectCompanyController::class, 'show'])->name('admin.select-company');
     Route::post('/admin/select-company', [SelectCompanyController::class, 'store'])->name('admin.select-company.store');
 });
