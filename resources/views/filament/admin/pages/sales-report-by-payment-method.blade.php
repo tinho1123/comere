@@ -234,7 +234,7 @@
                                 <tr>
                                     <td>
                                         {{ $periodType === 'year'
-                                            ? \Illuminate\Support\Carbon::createFromFormat('Y-m', $periodKey)->translatedFormat('M/Y')
+                                            ? \Illuminate\Support\Carbon::createFromFormat('Y-m-d', $periodKey.'-01')->translatedFormat('M/Y')
                                             : \Illuminate\Support\Carbon::createFromFormat('Y-m-d', $periodKey)->translatedFormat('D, d') }}
                                     </td>
                                     @foreach (\App\Filament\Admin\Pages\SalesReportByPaymentMethod::METHODS as $method)

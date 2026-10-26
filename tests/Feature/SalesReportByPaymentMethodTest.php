@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
@@ -180,5 +181,35 @@ class SalesReportByPaymentMethodTest extends TestCase
             ->set('year', $yearStart->year)
             ->assertOk()
             ->assertSee('100,00');
+    }
+
+    #[Test]
+    public function it_labels_february_correctly_in_the_yearly_breakdown_when_today_is_a_31st()
+    {
+        // Regressão: Carbon::createFromFormat('Y-m', '2026-02') herda o dia
+        // do "now" real. Se hoje for dia 31 (ou outro dia que fevereiro não
+        // tem), o parse passa a transbordar para março, etiquetando a linha
+        // errada no fechamento mensal do "Ano completo".
+        Carbon::setTestNow(Carbon::create(2026, 1, 31));
+
+        try {
+            $this->createOrder([
+                'total_amount' => 70,
+                'payment_method' => Order::PAYMENT_PIX,
+                'delivered_at' => Carbon::create(2026, 2, 15),
+            ]);
+
+            $expectedLabel = Carbon::create(2026, 2, 1)->translatedFormat('M/Y');
+            $wrongLabel = Carbon::create(2026, 3, 3)->translatedFormat('M/Y');
+
+            Livewire::test(SalesReportByPaymentMethod::class)
+                ->set('periodType', 'year')
+                ->set('year', 2026)
+                ->assertOk()
+                ->assertSee($expectedLabel)
+                ->assertDontSee($wrongLabel);
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 }
