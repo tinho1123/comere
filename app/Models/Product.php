@@ -56,11 +56,10 @@ class Product extends Model
     ];
 
     /**
-     * Acquisition cost is admin-only (dashboard margin calculations) and must
-     * never reach the client marketplace or API, which serialize raw Product
-     * models.
+     * Admin-only replenishment/cost data must never reach the client
+     * marketplace or API, which serialize raw Product models.
      */
-    protected $hidden = ['cost'];
+    protected $hidden = ['cost', 'supplier_id', 'purchase_unit_size', 'min_stock'];
 
     public function hasCost(): bool
     {

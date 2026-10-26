@@ -51,6 +51,20 @@ class SupplierNextVisitTest extends TestCase
     }
 
     #[Test]
+    public function monthly_supplier_visited_on_the_31st_lands_on_the_last_day_of_a_shorter_next_month()
+    {
+        $supplier = Supplier::create([
+            'company_id' => $this->company->id,
+            'name' => 'Distribuidora Forte',
+            'visit_frequency' => Supplier::FREQUENCY_MONTHLY,
+            'lead_time_days' => 2,
+            'last_visit_at' => '2027-01-31',
+        ]);
+
+        $this->assertSame('2027-02-28', $supplier->next_visit_at->format('Y-m-d'));
+    }
+
+    #[Test]
     public function marking_visited_recalculates_next_visit_and_clears_override()
     {
         $supplier = Supplier::create([

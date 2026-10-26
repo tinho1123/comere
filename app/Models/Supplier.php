@@ -74,7 +74,7 @@ class Supplier extends Model
         }
 
         return $this->visit_frequency === self::FREQUENCY_MONTHLY
-            ? $this->last_visit_at->copy()->addMonth()
+            ? $this->last_visit_at->copy()->addMonthNoOverflow()
             : $this->last_visit_at->copy()->addWeek();
     }
 
