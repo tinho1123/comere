@@ -28,6 +28,13 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Pickup/payment confirmation codes are only 4 digits; key the limit
+        // by the tracking token (not just IP) so brute-forcing a single
+        // delivery's code can't be spread across many IPs.
+        RateLimiter::for('delivery-code', function (Request $request) {
+            return Limit::perMinutes(10, 10)->by($request->route('token').'|'.$request->ip());
+        });
+
         $this->routes(function () {
             Route::middleware('api')
                 ->prefix('api')

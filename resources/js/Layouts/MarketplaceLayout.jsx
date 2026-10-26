@@ -3,30 +3,34 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, LogIn, X, Mail, LogOut, ShoppingCart, Search, Package, MapPin, ChevronDown, ChevronRight, Plus, Check, Trash2, Home, Heart, Lock, ChevronLeft } from 'lucide-react';
 import axios from 'axios';
-import { useClerk, useUser } from '@clerk/react';
+import { useClerk, useUser, useAuth } from '@clerk/react';
 
 const clerkEnabled = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 function ClerkSSOButton({ onAuthenticated }) {
     const { openSignIn } = useClerk();
     const { isSignedIn, user } = useUser();
+    const { sessionId } = useAuth();
     const syncedRef = useRef(false);
 
     useEffect(() => {
-        if (isSignedIn && user && !syncedRef.current) {
+        if (isSignedIn && user && sessionId && !syncedRef.current) {
             syncedRef.current = true;
+            // Only the session id is sent — the backend re-verifies it against
+            // Clerk's API and derives the identity from there, never from
+            // fields in this request body.
             axios.post('/sso-callback', {
-                clerk_id: user.id,
-                email: user.primaryEmailAddress?.emailAddress,
-                name: user.fullName,
+                session_id: sessionId,
             }).then((res) => {
                 if (res.data?.redirect_url) {
                     onAuthenticated?.();
                     router.visit(res.data.redirect_url);
                 }
+            }).catch(() => {
+                syncedRef.current = false;
             });
         }
-    }, [isSignedIn, user]);
+    }, [isSignedIn, user, sessionId]);
 
     return (
         <button

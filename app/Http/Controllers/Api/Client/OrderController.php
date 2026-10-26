@@ -84,7 +84,6 @@ class OrderController extends Controller
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
-            'items.*.discount_percent' => 'nullable|numeric|min:0|max:100',
             'notes' => 'nullable|string|max:1000',
             'channel' => 'nullable|in:'.Order::CHANNEL_ONLINE.','.Order::CHANNEL_PRESENTIAL,
         ]);
@@ -119,11 +118,14 @@ class OrderController extends Controller
                 abort(403, 'Product does not belong to this company');
             }
 
-            $discountPercent = $item['discount_percent'] ?? 0;
+            // Discounts are never client-set: there is no coupon/promotion
+            // system yet, so accepting a client-supplied discount_percent
+            // would let any authenticated client give themselves a free
+            // order. Items from this endpoint are always full price.
             $itemTotal = $this->calculateItemTotal(
                 $product->total_amount,
                 $item['quantity'],
-                $discountPercent
+                0
             );
 
             OrderItem::create([
@@ -134,8 +136,8 @@ class OrderController extends Controller
                 'quantity' => $item['quantity'],
                 'unit_price' => $product->total_amount,
                 'cost' => $product->cost,
-                'discount_percent' => $discountPercent,
-                'discount_amount' => ($product->total_amount * $item['quantity']) * ($discountPercent / 100),
+                'discount_percent' => 0,
+                'discount_amount' => 0,
                 'total_amount' => $itemTotal,
             ]);
 
