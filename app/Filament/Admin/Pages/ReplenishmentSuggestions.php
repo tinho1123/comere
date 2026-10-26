@@ -86,6 +86,7 @@ class ReplenishmentSuggestions extends Page implements HasTable
                     ->icon('heroicon-o-clipboard-document-check')
                     ->color('danger')
                     ->visible(fn (Product $record): bool => ($this->suggestionFor($record)['suggested_quantity'] ?? 0) > 0)
+                    ->extraAttributes(['data-tour' => 'pedido-fornecedor-gerar'])
                     ->fillForm(fn (Product $record): array => [
                         'quantity_ordered' => $this->suggestionFor($record)['suggested_quantity'],
                     ])
