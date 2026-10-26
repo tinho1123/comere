@@ -98,4 +98,21 @@ class SupplierExchangeStockTest extends TestCase
         ]);
         $this->assertSame(SupplierExchange::STATUS_REFUSED, $exchange->fresh()->status);
     }
+
+    #[Test]
+    public function deleting_a_pending_exchange_returns_stock()
+    {
+        $exchange = $this->createExchange(5);
+
+        $exchange->product()->increment('quantity', $exchange->quantity);
+        $exchange->delete();
+
+        $this->assertDatabaseHas('products', [
+            'id' => $this->product->id,
+            'quantity' => 20,
+        ]);
+        $this->assertDatabaseMissing('supplier_exchanges', [
+            'id' => $exchange->id,
+        ]);
+    }
 }

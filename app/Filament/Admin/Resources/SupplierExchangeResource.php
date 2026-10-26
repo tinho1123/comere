@@ -62,7 +62,9 @@ class SupplierExchangeResource extends Resource
                         ->helperText('Não pode ser maior que o estoque atual do produto.')
                         ->numeric()
                         ->minValue(1)
-                        ->maxValue(fn (Get $get): int => Product::find($get('product_id'))?->quantity ?? 1)
+                        ->maxValue(fn (Get $get, ?SupplierExchange $record): int => $record !== null
+                            ? PHP_INT_MAX
+                            : (Product::find($get('product_id'))?->quantity ?? 1))
                         ->required()
                         ->disabled(fn (?SupplierExchange $record): bool => $record !== null)
                         ->dehydrated(),
@@ -200,7 +202,11 @@ class SupplierExchangeResource extends Resource
                     }),
 
                 Actions\DeleteAction::make()
-                    ->visible(fn (SupplierExchange $record): bool => $record->status === SupplierExchange::STATUS_PENDING),
+                    ->visible(fn (SupplierExchange $record): bool => $record->status === SupplierExchange::STATUS_PENDING)
+                    ->using(function (SupplierExchange $record): void {
+                        $record->product()->increment('quantity', $record->quantity);
+                        $record->delete();
+                    }),
             ])
             ->emptyStateHeading('Nenhuma troca registrada')
             ->emptyStateDescription('Registre aqui produtos com defeito de fabricação para troca com o fornecedor.')
