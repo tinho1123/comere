@@ -6,6 +6,7 @@ use App\Filament\Admin\Resources\ProductResource\Pages\EditProduct;
 use App\Models\Company;
 use App\Models\Product;
 use App\Models\ProductsCategories;
+use App\Models\Supplier;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -56,6 +57,55 @@ class ProductResourceCostFormTest extends TestCase
         $this->assertDatabaseHas('products', [
             'id' => $product->id,
             'cost' => 14.50,
+        ]);
+    }
+
+    #[Test]
+    public function editing_a_product_preserves_its_replenishment_fields()
+    {
+        $user = User::factory()->create();
+        $company = Company::factory()->create();
+        $user->companies()->attach($company->id);
+        $this->actingAs($user);
+        Filament::setTenant($company);
+
+        $category = ProductsCategories::create(['name' => 'Categoria Teste', 'active' => true]);
+        $supplier = Supplier::create([
+            'company_id' => $company->id,
+            'name' => 'Ambev',
+            'visit_frequency' => Supplier::FREQUENCY_WEEKLY,
+            'lead_time_days' => 1,
+        ]);
+
+        $product = new Product([
+            'name' => 'Produto Teste',
+            'description' => 'Descrição',
+            'amount' => 34.90,
+            'discounts' => 0,
+            'total_amount' => 34.90,
+            'quantity' => 1,
+            'category_id' => $category->id,
+            'supplier_id' => $supplier->id,
+            'purchase_unit_size' => 12,
+            'min_stock' => 5,
+        ]);
+        $product->company_id = $company->id;
+        $product->save();
+
+        Livewire::test(EditProduct::class, ['record' => $product->getRouteKey()])
+            ->assertFormSet([
+                'supplier_id' => $supplier->id,
+                'purchase_unit_size' => 12,
+                'min_stock' => 5,
+            ])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertDatabaseHas('products', [
+            'id' => $product->id,
+            'supplier_id' => $supplier->id,
+            'purchase_unit_size' => 12,
+            'min_stock' => 5,
         ]);
     }
 }

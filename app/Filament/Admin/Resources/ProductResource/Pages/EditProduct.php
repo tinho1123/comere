@@ -26,14 +26,21 @@ class EditProduct extends EditRecord
 
     /**
      * `attributesToArray()` (used by EditRecord to fill the form) respects
-     * `Product::$hidden`, which deliberately hides `cost` from client-facing
-     * serialization — but that also strips it here, silently blanking the
-     * field on every edit and wiping the stored cost on save. Re-add it from
-     * the record directly, since `$hidden` never affects attribute access.
+     * `Product::$hidden`, which deliberately hides `cost` and the
+     * replenishment fields from client-facing serialization — but that also
+     * strips them here, silently blanking them on every edit and wiping the
+     * stored values on save (e.g. `purchase_unit_size` is NOT NULL, so this
+     * previously made every edit fail). Re-add them from the record
+     * directly, since `$hidden` never affects attribute access.
      */
     protected function mutateFormDataBeforeFill(array $data): array
     {
-        $data['cost'] = $this->getRecord()->cost;
+        $record = $this->getRecord();
+
+        $data['cost'] = $record->cost;
+        $data['supplier_id'] = $record->supplier_id;
+        $data['purchase_unit_size'] = $record->purchase_unit_size;
+        $data['min_stock'] = $record->min_stock;
 
         return $data;
     }

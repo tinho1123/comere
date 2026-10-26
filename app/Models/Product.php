@@ -37,6 +37,9 @@ class Product extends Model
         'payment_surcharges',
         'category_id',
         'subcategory_id',
+        'supplier_id',
+        'purchase_unit_size',
+        'min_stock',
         'active',
         'uuid',
     ];
@@ -48,14 +51,15 @@ class Product extends Model
         'is_marketplace' => 'boolean',
         'payment_surcharges' => 'array',
         'cost' => 'decimal:2',
+        'purchase_unit_size' => 'integer',
+        'min_stock' => 'integer',
     ];
 
     /**
-     * Acquisition cost is admin-only (dashboard margin calculations) and must
-     * never reach the client marketplace or API, which serialize raw Product
-     * models.
+     * Admin-only replenishment/cost data must never reach the client
+     * marketplace or API, which serialize raw Product models.
      */
-    protected $hidden = ['cost'];
+    protected $hidden = ['cost', 'supplier_id', 'purchase_unit_size', 'min_stock'];
 
     public function hasCost(): bool
     {
@@ -91,6 +95,11 @@ class Product extends Model
     public function subcategory()
     {
         return $this->belongsTo(ProductSubcategory::class, 'subcategory_id');
+    }
+
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class);
     }
 
     public function transactions(): HasMany
