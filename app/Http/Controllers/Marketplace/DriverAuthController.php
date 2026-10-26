@@ -24,7 +24,7 @@ class DriverAuthController extends Controller
             'phone' => 'required|string|max:20|unique:drivers,phone',
             'cpf' => 'nullable|string|max:14',
             'vehicle_type' => 'required|in:'.Driver::VEHICLE_MOTOBOY.','.Driver::VEHICLE_CAR,
-            'password' => 'required|string|min:6|confirmed',
+            'password' => 'required|string|min:8|confirmed',
         ]);
 
         $driver = Driver::create([
@@ -55,11 +55,22 @@ class DriverAuthController extends Controller
             'password' => ['required'],
         ]);
 
+        $driver = Driver::where('phone', $credentials['phone'])->first();
+
+        if ($driver && ! $driver->validateLoginAttempts()) {
+            throw ValidationException::withMessages([
+                'phone' => __('auth.failed'),
+            ]);
+        }
+
         if (Auth::guard('driver')->attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
+            $driver->resetLoginAttempts();
 
             return redirect()->intended(route('drivers.dashboard'));
         }
+
+        $driver?->incrementLoginAttempts();
 
         throw ValidationException::withMessages([
             'phone' => __('auth.failed'),

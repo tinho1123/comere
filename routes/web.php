@@ -32,8 +32,8 @@ Route::post('/table/{uuid}/item', [TableController::class, 'addItem'])->name('ta
 
 Route::get('/entrega/{token}', [DeliveryTrackingController::class, 'show'])->name('delivery.tracking.show');
 Route::post('/entrega/{token}/localizacao', [DeliveryTrackingController::class, 'updateLocation'])->name('delivery.tracking.update-location');
-Route::post('/entrega/{token}/retirada', [DeliveryTrackingController::class, 'confirmPickup'])->name('delivery.tracking.confirm-pickup');
-Route::post('/entrega/{token}/pagamento', [DeliveryTrackingController::class, 'confirmPayment'])->name('delivery.tracking.confirm-payment');
+Route::post('/entrega/{token}/retirada', [DeliveryTrackingController::class, 'confirmPickup'])->name('delivery.tracking.confirm-pickup')->middleware('throttle:delivery-code');
+Route::post('/entrega/{token}/pagamento', [DeliveryTrackingController::class, 'confirmPayment'])->name('delivery.tracking.confirm-payment')->middleware('throttle:delivery-code');
 Route::post('/entrega/{token}/concluir', [DeliveryTrackingController::class, 'confirmDelivery'])->name('delivery.tracking.confirm-delivery');
 Route::post('/entrega/{token}/problema', [DeliveryTrackingController::class, 'reportProblem'])->name('delivery.tracking.report-problem');
 Route::post('/entrega/{token}/avaliacao', [DeliveryTrackingController::class, 'submitFeedback'])->name('delivery.tracking.feedback');

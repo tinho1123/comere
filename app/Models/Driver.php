@@ -34,6 +34,8 @@ class Driver extends AuthenticatableUser
         'last_latitude',
         'last_longitude',
         'last_location_at',
+        'login_attempts',
+        'locked_until',
     ];
 
     protected $hidden = [
@@ -47,6 +49,7 @@ class Driver extends AuthenticatableUser
         'last_latitude' => 'float',
         'last_longitude' => 'float',
         'last_location_at' => 'datetime',
+        'locked_until' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -107,5 +110,40 @@ class Driver extends AuthenticatableUser
     {
         return $this->last_location_at !== null
             && $this->last_location_at->gt(now()->subMinutes($maxMinutes));
+    }
+
+    /**
+     * Mirrors Client::validateLoginAttempts() — same lockout policy
+     * (5 failed attempts locks the account for 30 minutes).
+     */
+    public function validateLoginAttempts(): bool
+    {
+        if ($this->locked_until && now()->lt($this->locked_until)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public function incrementLoginAttempts(): void
+    {
+        $attempts = ($this->login_attempts ?? 0) + 1;
+
+        if ($attempts >= 5) {
+            $this->update([
+                'login_attempts' => 0,
+                'locked_until' => now()->addMinutes(30),
+            ]);
+        } else {
+            $this->update(['login_attempts' => $attempts]);
+        }
+    }
+
+    public function resetLoginAttempts(): void
+    {
+        $this->update([
+            'login_attempts' => 0,
+            'locked_until' => null,
+        ]);
     }
 }

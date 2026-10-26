@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Marketplace;
 
 use App\Http\Controllers\Controller;
 use App\Models\Client;
+use App\Services\ClerkService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -11,20 +12,33 @@ use Inertia\Inertia;
 
 class SSOCallbackController extends Controller
 {
+    public function __construct(private ClerkService $clerkService) {}
+
     /**
      * Handle the response from Clerk and sync with local database.
+     *
+     * The frontend sends only the Clerk session id. The identity (clerk_id,
+     * verified email, name) is always re-fetched from Clerk's backend API
+     * here, never trusted from request input, otherwise anyone could POST
+     * an arbitrary email and log in as that client.
      */
     public function __invoke(Request $request)
     {
-        // Esta rota será acessada pelo React após o Clerk autenticar
-        // O frontend enviará os dados do usuário do Clerk
-        $clerkId = $request->input('clerk_id');
-        $email = $request->input('email');
-        $name = $request->input('name');
+        $sessionId = $request->input('session_id');
 
-        if (! $clerkId) {
-            return redirect()->route('marketplace.index');
+        if (! is_string($sessionId) || $sessionId === '') {
+            return response()->json(['status' => 'error', 'message' => 'Missing session.'], 422);
         }
+
+        $identity = $this->clerkService->verifySession($sessionId);
+
+        if (! $identity) {
+            return response()->json(['status' => 'error', 'message' => 'Invalid or expired session.'], 401);
+        }
+
+        $clerkId = $identity['clerk_id'];
+        $email = $identity['email'];
+        $name = $identity['name'];
 
         // 1. Verificar se o cliente já existe pelo clerk_id
         $client = Client::where('clerk_id', $clerkId)->first();
