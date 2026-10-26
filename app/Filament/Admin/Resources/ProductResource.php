@@ -35,7 +35,7 @@ class ProductResource extends Resource
 
     public static function getNavigationGroup(): ?string
     {
-        return 'Gestão';
+        return 'Estoque';
     }
 
     public static function form(Schema $form): Schema
@@ -150,6 +150,32 @@ class ProductResource extends Resource
                             ->nullable()
                             ->placeholder('Nenhuma'),
                     ]),
+                Schemas\Components\Section::make('Reposição')
+                    ->description('Usado na sugestão de reposição por fornecedor.')
+                    ->schema([
+                        Schemas\Components\Grid::make(3)
+                            ->schema([
+                                Forms\Components\Select::make('supplier_id')
+                                    ->label('Fornecedor')
+                                    ->relationship('supplier', 'name', fn ($query) => $query->where('company_id', Filament::getTenant()->id))
+                                    ->searchable()
+                                    ->preload()
+                                    ->nullable()
+                                    ->placeholder('Nenhum'),
+                                Forms\Components\TextInput::make('purchase_unit_size')
+                                    ->label('Unidade de compra')
+                                    ->numeric()
+                                    ->minValue(1)
+                                    ->default(1)
+                                    ->helperText('Ex: 12 se o fornecedor só vende em fardo de 12.'),
+                                Forms\Components\TextInput::make('min_stock')
+                                    ->label('Estoque mínimo')
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->nullable()
+                                    ->helperText('Opcional. Margem de segurança além da venda projetada.'),
+                            ]),
+                    ]),
                 Schemas\Components\Section::make('Configurações de Fiado')
                     ->schema([
                         Forms\Components\Toggle::make('is_for_favored')
@@ -253,6 +279,11 @@ class ProductResource extends Resource
                     ->label('Quantidade')
                     ->numeric()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('supplier.name')
+                    ->label('Fornecedor')
+                    ->placeholder('Nenhum')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('category.name')
                     ->label('Categoria')
                     ->sortable()
