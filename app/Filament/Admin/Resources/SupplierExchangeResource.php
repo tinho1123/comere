@@ -55,8 +55,7 @@ class SupplierExchangeResource extends Resource
                         ->required()
                         ->live()
                         ->disabled(fn (?SupplierExchange $record): bool => $record !== null)
-                        ->dehydrated()
-                        ->extraAttributes(['data-tour' => 'troca-fornecedor-produto']),
+                        ->dehydrated(),
 
                     Forms\Components\TextInput::make('quantity')
                         ->label('Quantidade')

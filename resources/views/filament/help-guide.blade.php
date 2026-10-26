@@ -410,7 +410,7 @@
                     startUrl: suppliersIndexUrl,
                     steps: [
                         { title: 'Cadastrar fornecedor', text: 'Clique em "Novo" para abrir o cadastro de fornecedor.', selector: '[data-tour="fornecedor-criar"]' },
-                        { title: 'Cadastrar fornecedor', text: 'Informe o nome, a frequência de visita e o prazo de entrega, depois clique em "Criar".', selector: '[data-tour="fornecedor-nome"]', final: true },
+                        { title: 'Cadastrar fornecedor', text: 'Informe o nome, a frequência de visita e o prazo de entrega, depois clique em "Criar".', selector: null, final: true },
                     ],
                 },
                 'troca-fornecedor-criar': {
@@ -419,7 +419,7 @@
                     startUrl: supplierExchangesIndexUrl,
                     steps: [
                         { title: 'Troca com fornecedor', text: 'Clique em "Novo" para registrar um produto com defeito de fabricação para troca.', selector: '[data-tour="troca-fornecedor-criar"]' },
-                        { title: 'Troca com fornecedor', text: 'Escolha o produto, a quantidade e o motivo, depois clique em "Criar".', selector: '[data-tour="troca-fornecedor-produto"]', final: true },
+                        { title: 'Troca com fornecedor', text: 'Escolha o produto, a quantidade e o motivo, depois clique em "Criar".', selector: null, final: true },
                     ],
                 },
                 'reposicao-ver': {

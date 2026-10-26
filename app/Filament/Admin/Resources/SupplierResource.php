@@ -44,8 +44,7 @@ class SupplierResource extends Resource
             Forms\Components\TextInput::make('name')
                 ->label('Nome')
                 ->required()
-                ->maxLength(255)
-                ->extraAttributes(['data-tour' => 'fornecedor-nome']),
+                ->maxLength(255),
 
             Forms\Components\Select::make('visit_frequency')
                 ->label('Frequência de visita')
