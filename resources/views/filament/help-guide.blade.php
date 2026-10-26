@@ -436,7 +436,8 @@
                     label: 'Gerar pedido ao fornecedor',
                     startUrl: replenishmentSuggestionsUrl,
                     steps: [
-                        { title: 'Gerar pedido', text: 'Em um produto com sugestão de pedido, clique em "Gerar pedido" para criar um pedido pendente já com a quantidade sugerida (editável). Ele aparece em Estoque → Pedidos ao Fornecedor.', selector: '[data-tour="pedido-fornecedor-gerar"]', final: true },
+                        { title: 'Gerar pedido', text: 'Em um produto com sugestão de pedido, clique em "Gerar pedido".', selector: '[data-tour="pedido-fornecedor-gerar"]' },
+                        { title: 'Gerar pedido', text: 'Confira a quantidade (já vem preenchida com a sugestão, mas pode ajustar) e clique em "Gerar pedido" dentro da janela para confirmar. O pedido aparece em Estoque → Pedidos ao Fornecedor.', selector: null, final: true },
                     ],
                 },
                 'perda-registrar': {
