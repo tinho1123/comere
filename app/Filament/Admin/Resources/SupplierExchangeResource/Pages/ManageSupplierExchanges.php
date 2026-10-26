@@ -28,7 +28,8 @@ class ManageSupplierExchanges extends ManageRecords
 
                         return $exchange;
                     });
-                }),
+                })
+                ->extraAttributes(['data-tour' => 'troca-fornecedor-criar']),
         ];
     }
 }

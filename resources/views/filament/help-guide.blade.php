@@ -301,6 +301,10 @@
             const deliveryFeeRangesIndexUrl = @js(\App\Filament\Admin\Resources\DeliveryFeeRangeResource::getUrl('index'));
             const usersCreateUrl = @js(\App\Filament\Admin\Resources\UserResource::getUrl('create'));
             const tableSessionsIndexUrl = @js(\App\Filament\Admin\Resources\TableSessionResource::getUrl('index'));
+            const salesReportUrl = @js(\App\Filament\Admin\Pages\SalesReportByPaymentMethod::getUrl());
+            const suppliersIndexUrl = @js(\App\Filament\Admin\Resources\SupplierResource::getUrl('index'));
+            const supplierExchangesIndexUrl = @js(\App\Filament\Admin\Resources\SupplierExchangeResource::getUrl('index'));
+            const replenishmentSuggestionsUrl = @js(\App\Filament\Admin\Pages\ReplenishmentSuggestions::getUrl());
 
             const FLOWS = {
                 'produto-criar': {
@@ -389,6 +393,41 @@
                     startUrl: tableSessionsIndexUrl,
                     steps: [
                         { title: 'Fechar mesa', text: 'Clique em "Fechar Mesa" na linha de uma mesa aberta para registrar a forma de pagamento.', selector: '[data-tour="mesa-fechar"]', final: true },
+                    ],
+                },
+                'relatorio-vendas-ver': {
+                    icon: '📊',
+                    label: 'Ver relatório de vendas',
+                    startUrl: salesReportUrl,
+                    steps: [
+                        { title: 'Relatório de vendas', text: 'Escolha aqui se quer ver um mês específico ou o ano completo.', selector: '[data-tour="relatorio-periodo"]' },
+                        { title: 'Relatório de vendas', text: 'Clique em "Exportar CSV" para baixar os totais do período em uma planilha.', selector: '[data-tour="relatorio-export"]', final: true },
+                    ],
+                },
+                'fornecedor-criar': {
+                    icon: '🚚',
+                    label: 'Cadastrar um fornecedor',
+                    startUrl: suppliersIndexUrl,
+                    steps: [
+                        { title: 'Cadastrar fornecedor', text: 'Clique em "Novo" para abrir o cadastro de fornecedor.', selector: '[data-tour="fornecedor-criar"]' },
+                        { title: 'Cadastrar fornecedor', text: 'Informe o nome, a frequência de visita e o prazo de entrega, depois clique em "Criar".', selector: '[data-tour="fornecedor-nome"]', final: true },
+                    ],
+                },
+                'troca-fornecedor-criar': {
+                    icon: '🔁',
+                    label: 'Registrar troca com fornecedor',
+                    startUrl: supplierExchangesIndexUrl,
+                    steps: [
+                        { title: 'Troca com fornecedor', text: 'Clique em "Novo" para registrar um produto com defeito de fabricação para troca.', selector: '[data-tour="troca-fornecedor-criar"]' },
+                        { title: 'Troca com fornecedor', text: 'Escolha o produto, a quantidade e o motivo, depois clique em "Criar".', selector: '[data-tour="troca-fornecedor-produto"]', final: true },
+                    ],
+                },
+                'reposicao-ver': {
+                    icon: '📋',
+                    label: 'Ver sugestão de reposição',
+                    startUrl: replenishmentSuggestionsUrl,
+                    steps: [
+                        { title: 'Sugestão de reposição', text: 'Aqui você vê, por fornecedor, quanto pedir de cada produto com base na venda média e na data da próxima visita. Associe um fornecedor aos produtos em Estoque → Produtos para aparecerem aqui.', selector: null, final: true },
                     ],
                 },
                 'pedido-aprovar': {

@@ -234,7 +234,7 @@
 
     <div class="svr-root">
         <div class="svr-filterbar">
-            <select wire:model.live="periodType">
+            <select wire:model.live="periodType" data-tour="relatorio-periodo">
                 <option value="month">Mês</option>
                 <option value="year">Ano completo</option>
             </select>

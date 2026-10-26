@@ -20,7 +20,8 @@ class ManageSuppliers extends ManageRecords
                     $data['company_id'] = Filament::getTenant()->id;
 
                     return Supplier::create($data);
-                }),
+                })
+                ->extraAttributes(['data-tour' => 'fornecedor-criar']),
         ];
     }
 }
