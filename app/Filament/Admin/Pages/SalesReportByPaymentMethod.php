@@ -53,7 +53,8 @@ class SalesReportByPaymentMethod extends Page
                     'month' => $this->month,
                     'year' => $this->year,
                 ]))
-                ->openUrlInNewTab(),
+                ->openUrlInNewTab()
+                ->extraAttributes(['data-tour' => 'relatorio-export']),
         ];
     }
 
