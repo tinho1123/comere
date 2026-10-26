@@ -305,6 +305,7 @@
             const suppliersIndexUrl = @js(\App\Filament\Admin\Resources\SupplierResource::getUrl('index'));
             const supplierExchangesIndexUrl = @js(\App\Filament\Admin\Resources\SupplierExchangeResource::getUrl('index'));
             const replenishmentSuggestionsUrl = @js(\App\Filament\Admin\Pages\ReplenishmentSuggestions::getUrl());
+            const stockLossesIndexUrl = @js(\App\Filament\Admin\Resources\StockLossResource::getUrl('index'));
 
             const FLOWS = {
                 'produto-criar': {
@@ -428,6 +429,23 @@
                     startUrl: replenishmentSuggestionsUrl,
                     steps: [
                         { title: 'Sugestão de reposição', text: 'Aqui você vê, por fornecedor, quanto pedir de cada produto com base na venda média e na data da próxima visita. Associe um fornecedor aos produtos em Estoque → Produtos para aparecerem aqui.', selector: null, final: true },
+                    ],
+                },
+                'pedido-fornecedor-gerar': {
+                    icon: '📦',
+                    label: 'Gerar pedido ao fornecedor',
+                    startUrl: replenishmentSuggestionsUrl,
+                    steps: [
+                        { title: 'Gerar pedido', text: 'Em um produto com sugestão de pedido, clique em "Gerar pedido" para criar um pedido pendente já com a quantidade sugerida (editável). Ele aparece em Estoque → Pedidos ao Fornecedor.', selector: '[data-tour="pedido-fornecedor-gerar"]', final: true },
+                    ],
+                },
+                'perda-registrar': {
+                    icon: '⚠️',
+                    label: 'Registrar perda ou quebra',
+                    startUrl: stockLossesIndexUrl,
+                    steps: [
+                        { title: 'Perdas e quebras', text: 'Clique em "Novo" para registrar um produto perdido, vencido ou quebrado.', selector: '[data-tour="perda-criar"]' },
+                        { title: 'Perdas e quebras', text: 'Escolha o produto, a quantidade e o motivo, depois clique em "Criar". Isso dá baixa no estoque sem contar como venda.', selector: null, final: true },
                     ],
                 },
                 'pedido-aprovar': {
