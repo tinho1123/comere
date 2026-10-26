@@ -6,7 +6,9 @@ use App\Filament\Admin\Resources\OrderResource;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
+use Filament\Support\Exceptions\Halt;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
@@ -21,13 +23,23 @@ class CreateOrder extends CreateRecord
         $items = $data['items'] ?? [];
         $channel = $data['channel'] ?? Order::CHANNEL_PRESENTIAL;
 
-        $subtotal = collect($items)->sum(fn ($item) => ($item['unit_price'] ?? 0) * ($item['quantity'] ?? 1));
-        $discountAmount = $data['discount_amount'] ?? 0;
-        $total = $subtotal - $discountAmount;
-
         // Pedido presencial já foi vendido e entregue no balcão, então nasce finalizado
         // sem passar pelas etapas de aprovação/despacho usadas nos pedidos online.
         $isPresential = $channel === Order::CHANNEL_PRESENTIAL;
+
+        if ($isPresential && ($message = Product::findInsufficientStockMessage($items, $company->id))) {
+            Notification::make()
+                ->title('Não foi possível criar o pedido')
+                ->body($message)
+                ->danger()
+                ->send();
+
+            throw new Halt;
+        }
+
+        $subtotal = collect($items)->sum(fn ($item) => ($item['unit_price'] ?? 0) * ($item['quantity'] ?? 1));
+        $discountAmount = $data['discount_amount'] ?? 0;
+        $total = $subtotal - $discountAmount;
 
         $order = Order::create([
             'uuid' => Str::uuid(),
@@ -76,7 +88,7 @@ class CreateOrder extends CreateRecord
             ]);
 
             if ($isPresential) {
-                Product::where('id', $item['product_id'])->decrement('quantity', $quantity);
+                Product::decrementStockSafely($item['product_id'], $quantity);
             }
         }
 

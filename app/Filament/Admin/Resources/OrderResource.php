@@ -321,6 +321,15 @@ class OrderResource extends Resource
                                 ->minValue(1)
                                 ->required()
                                 ->live()
+                                ->rule(function (Get $get): \Closure {
+                                    return function (string $attribute, $value, \Closure $fail) use ($get) {
+                                        $product = Product::find($get('product_id'));
+
+                                        if ($product && ! $product->hasSufficientStock((int) $value)) {
+                                            $fail("Estoque insuficiente. Disponível: {$product->quantity}.");
+                                        }
+                                    };
+                                })
                                 ->columnSpan(1),
 
                             Forms\Components\TextInput::make('unit_price')

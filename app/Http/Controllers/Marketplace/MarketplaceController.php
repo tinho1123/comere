@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class MarketplaceController extends Controller
@@ -70,6 +71,7 @@ class MarketplaceController extends Controller
             ->where('active', true)
             ->where('is_marketplace', true)
             ->where('discounts', '>', 0)
+            ->where('quantity', '>', 0)
             ->limit(8)
             ->get();
 
@@ -113,7 +115,7 @@ class MarketplaceController extends Controller
         session()->put('last_visited_stores', $lastVisited);
 
         $company->load([
-            'products' => fn ($q) => $q->where('active', true)->where('is_marketplace', true)->with('category'),
+            'products' => fn ($q) => $q->where('active', true)->where('is_marketplace', true)->where('quantity', '>', 0)->with('category'),
             'deliveryFeeRanges',
             'hours',
         ]);
@@ -303,6 +305,10 @@ class MarketplaceController extends Controller
             ]),
         ]);
 
+        if ($message = Product::findInsufficientStockMessage($request->items, $company->id)) {
+            throw ValidationException::withMessages(['items' => $message]);
+        }
+
         $defaultAddress = $client->addresses()->where('is_default', true)->first();
 
         $feeAmount = 0;
@@ -445,7 +451,10 @@ class MarketplaceController extends Controller
         $previousItems = $order->items()->with('product')->get();
 
         $availableItems = $previousItems->filter(
-            fn ($item) => $item->product && $item->product->company_id === $company->id && $item->product->active
+            fn ($item) => $item->product
+                && $item->product->company_id === $company->id
+                && $item->product->active
+                && $item->product->hasSufficientStock($item->quantity)
         );
 
         if ($availableItems->isEmpty()) {

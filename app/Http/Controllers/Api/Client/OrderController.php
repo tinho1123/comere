@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Services\PushNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
 {
@@ -87,6 +88,10 @@ class OrderController extends Controller
             'notes' => 'nullable|string|max:1000',
             'channel' => 'nullable|in:'.Order::CHANNEL_ONLINE.','.Order::CHANNEL_PRESENTIAL,
         ]);
+
+        if ($message = Product::findInsufficientStockMessage($request->items, $company->id)) {
+            throw ValidationException::withMessages(['items' => $message]);
+        }
 
         $channel = $request->get('channel', Order::CHANNEL_ONLINE);
 

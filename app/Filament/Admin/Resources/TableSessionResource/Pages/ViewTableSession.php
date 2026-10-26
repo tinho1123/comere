@@ -37,9 +37,10 @@ class ViewTableSession extends ViewRecord
                         ->options(function (): array {
                             return Product::where('company_id', $this->record->company_id)
                                 ->where('active', true)
+                                ->where('quantity', '>', 0)
                                 ->orderBy('name')
                                 ->get()
-                                ->mapWithKeys(fn ($p) => [$p->id => $p->name.' — R$ '.number_format($p->amount, 2, ',', '.')])
+                                ->mapWithKeys(fn ($p) => [$p->id => $p->name.' — R$ '.number_format($p->amount, 2, ',', '.').' (estoque: '.$p->quantity.')'])
                                 ->toArray();
                         })
                         ->searchable()
@@ -59,7 +60,16 @@ class ViewTableSession extends ViewRecord
                         ->numeric()
                         ->default(1)
                         ->minValue(1)
-                        ->required(),
+                        ->required()
+                        ->rule(function (Get $get): \Closure {
+                            return function (string $attribute, $value, \Closure $fail) use ($get) {
+                                $product = Product::find($get('product_id'));
+
+                                if ($product && ! $product->hasSufficientStock((int) $value)) {
+                                    $fail("Estoque insuficiente. Disponível: {$product->quantity}.");
+                                }
+                            };
+                        }),
 
                     TextInput::make('unit_price')
                         ->label('Preço unitário')
@@ -77,14 +87,24 @@ class ViewTableSession extends ViewRecord
                 ->action(function (array $data): void {
                     $qty = (int) $data['quantity'];
 
-                    TableSessionItem::create([
-                        'table_session_id' => $this->record->id,
-                        'product_id' => $data['product_id'],
-                        'product_name' => $data['product_name'],
-                        'quantity' => $qty,
-                        'unit_price' => $data['unit_price'],
-                        'total_amount' => $data['unit_price'] * $qty,
-                    ]);
+                    try {
+                        TableSessionItem::create([
+                            'table_session_id' => $this->record->id,
+                            'product_id' => $data['product_id'],
+                            'product_name' => $data['product_name'],
+                            'quantity' => $qty,
+                            'unit_price' => $data['unit_price'],
+                            'total_amount' => $data['unit_price'] * $qty,
+                        ]);
+                    } catch (\RuntimeException $e) {
+                        Notification::make()
+                            ->title('Não foi possível adicionar o item')
+                            ->body($e->getMessage())
+                            ->danger()
+                            ->send();
+
+                        return;
+                    }
 
                     Notification::make()
                         ->title($qty.'x '.$data['product_name'].' adicionado!')
