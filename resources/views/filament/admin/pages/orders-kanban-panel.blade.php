@@ -195,6 +195,15 @@
                 return 'R$ ' + Number(value || 0).toFixed(2).replace('.', ',');
             }
 
+            // Nome do cliente/convidado, mesa, motorista etc. vêm do banco mas
+            // têm origem em texto digitado por clientes/visitantes — nunca
+            // confiar neles ao montar HTML via innerHTML.
+            function esc(value) {
+                return String(value ?? '').replace(/[&<>"']/g, function (ch) {
+                    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+                });
+            }
+
             function timeAgo(iso) {
                 const diffMin = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
                 if (diffMin < 1) return 'agora';
@@ -212,22 +221,22 @@
                 if (card.unread_messages > 0) {
                     html += '<span class="okp-alert-message-dot">💬</span>';
                 }
-                html += '<div class="okp-card-title">Pedido ' + card.label + '</div>';
-                html += '<div class="okp-card-sub">' + card.customer + ' &middot; ' + card.items_count + ' itens &middot; ' + timeAgo(card.created_at) + '</div>';
+                html += '<div class="okp-card-title">Pedido ' + esc(card.label) + '</div>';
+                html += '<div class="okp-card-sub">' + esc(card.customer) + ' &middot; ' + esc(card.items_count) + ' itens &middot; ' + timeAgo(card.created_at) + '</div>';
                 if (card.needs_approval) {
                     html += '<span class="okp-tag" style="color:#fda4af; background:rgba(244,63,94,0.14); font-weight:700;">🔔 Precisa de aprovação</span>';
                 }
                 if (card.unread_messages > 0) {
-                    html += '<span class="okp-tag" style="color:#93c5fd; background:rgba(59,130,246,0.12);">💬 ' + card.unread_messages + ' mensagem(ns) nova(s)</span>';
+                    html += '<span class="okp-tag" style="color:#93c5fd; background:rgba(59,130,246,0.12);">💬 ' + esc(card.unread_messages) + ' mensagem(ns) nova(s)</span>';
                 }
                 if (card.driver_name) {
-                    html += '<span class="okp-tag" style="color:#a5b4fc; background:rgba(99,102,241,0.1);">🏍 Em rota &middot; ' + card.driver_name + '</span>';
+                    html += '<span class="okp-tag" style="color:#a5b4fc; background:rgba(99,102,241,0.1);">🏍 Em rota &middot; ' + esc(card.driver_name) + '</span>';
                 }
                 if (card.delivery_failed) {
                     html += '<span class="okp-tag" style="color:#fca5a5; background:rgba(244,63,94,0.12);">⚠️ Entrega falhou</span>';
                 }
                 html += '<div class="okp-card-row"><span class="okp-total">' + money(card.total) + '</span>'
-                    + '<span style="font-size:11px; color:#a1a1aa; border:1px solid #2a2a30; border-radius:6px; padding:2px 6px;">' + (card.payment_method || '—') + '</span></div>';
+                    + '<span style="font-size:11px; color:#a1a1aa; border:1px solid #2a2a30; border-radius:6px; padding:2px 6px;">' + esc(card.payment_method || '—') + '</span></div>';
 
                 el.innerHTML = html;
                 el.addEventListener('click', function () { window.location.href = card.url; });
@@ -239,8 +248,8 @@
                 el.className = 'okp-card';
                 el.style.borderLeftColor = columnColor;
 
-                let html = '<span class="okp-badge" style="color:#a5b4fc; background:rgba(99,102,241,0.14);">🍽 ' + card.label.toUpperCase() + '</span>';
-                html += '<div class="okp-card-title">' + card.customer + '</div>';
+                let html = '<span class="okp-badge" style="color:#a5b4fc; background:rgba(99,102,241,0.14);">🍽 ' + esc(card.label).toUpperCase() + '</span>';
+                html += '<div class="okp-card-title">' + esc(card.customer) + '</div>';
 
                 if (columnKey === 'pendente') {
                     html += '<span class="okp-tag" style="color:#a1a1aa; background:rgba(161,161,170,0.1);">✅ Aprovação automática de mesa</span>';
