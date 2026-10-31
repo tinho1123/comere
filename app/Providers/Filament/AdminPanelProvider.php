@@ -41,6 +41,11 @@ class AdminPanelProvider extends PanelProvider
             'panels::body.end',
             fn (): string => Blade::render('@include(\'filament.help-guide\')')
         );
+
+        FilamentView::registerRenderHook(
+            'panels::body.end',
+            fn (): string => Blade::render('@include(\'filament.orders-kanban-shortcut\')')
+        );
     }
 
     public function panel(Panel $panel): Panel
