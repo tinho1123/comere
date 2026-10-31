@@ -68,7 +68,7 @@
 
         .okp-rotate-overlay { display: none; }
         @media (max-width: 900px) and (orientation: portrait) {
-            .okp-board, .okp-header, .okp-overlay > div:last-child { display: none; }
+            .okp-board, .okp-header, .okp-legend, .okp-tutorial-spotlight, .okp-tutorial-tip { display: none; }
             .okp-rotate-overlay {
                 display: flex;
                 flex-direction: column;
@@ -91,6 +91,8 @@
             <p style="margin: 0; font-size: 13px; color: #a1a1aa; max-width: 280px; line-height: 1.5;">
                 O painel de pedidos só funciona na horizontal, para mostrar todas as etapas lado a lado.
             </p>
+            <button type="button" id="okp-force-landscape-btn" class="okp-exit-btn" style="background:#f43f5e; border-color:#f43f5e; color:#fff;">🔄 Forçar tela horizontal</button>
+            <p id="okp-force-landscape-status" style="margin: 0; font-size: 12px; color: #71717a; max-width: 280px; line-height: 1.5; min-height: 16px;"></p>
             <button type="button" class="okp-exit-btn" onclick="window.location.href = document.getElementById('okp-root').dataset.exitUrl;">✕ Sair</button>
         </div>
         <div class="okp-header">
@@ -138,7 +140,7 @@
             </div>
         </div>
 
-        <div style="display:flex; flex-wrap:wrap; gap:18px; font-size:12px; color:#71717a; border-top:1px solid #1f1f23; padding-top:12px;">
+        <div class="okp-legend" style="display:flex; flex-wrap:wrap; gap:18px; font-size:12px; color:#71717a; border-top:1px solid #1f1f23; padding-top:12px;">
             <span>🛍 Marketplace = pedidos do site/app</span>
             <span>🍽 Mesa = sessões do salão (auto-aprovadas)</span>
             <span style="color:#fda4af;">🔔 pisca vermelho = precisa de aprovação</span>
@@ -175,6 +177,30 @@
             document.addEventListener('keydown', function (e) {
                 if (e.key === 'Escape') exit();
             });
+
+            // "Forçar tela horizontal": o Screen Orientation API só deixa travar a
+            // orientação com a página em fullscreen, e só em navegadores Chromium
+            // (Safari/iOS não suporta nada disso) — por isso sempre com fallback
+            // pedindo para girar manualmente.
+            const forceLandscapeBtn = document.getElementById('okp-force-landscape-btn');
+            const forceLandscapeStatus = document.getElementById('okp-force-landscape-status');
+            if (forceLandscapeBtn) {
+                forceLandscapeBtn.addEventListener('click', async function () {
+                    forceLandscapeStatus.textContent = '';
+                    try {
+                        if (!document.fullscreenElement) {
+                            await document.documentElement.requestFullscreen();
+                        }
+                        if (screen.orientation && screen.orientation.lock) {
+                            await screen.orientation.lock('landscape');
+                        } else {
+                            forceLandscapeStatus.textContent = 'Seu navegador não permite girar sozinho — gire o celular manualmente.';
+                        }
+                    } catch (err) {
+                        forceLandscapeStatus.textContent = 'Não consegui girar automaticamente neste navegador — gire o celular manualmente.';
+                    }
+                });
+            }
 
             function beep(frequency) {
                 try {
@@ -335,9 +361,18 @@
             window.addEventListener('beforeunload', function () { clearInterval(pollTimer); });
 
             // Tutorial obrigatório no primeiro acesso: spotlight + balão sobre
-            // cada coluna, sem nenhum outro overlay por cima do kanban.
+            // cada coluna, sem nenhum outro overlay por cima do kanban. Nunca
+            // roda enquanto a tela "gire o celular" está em exibição (retrato
+            // no mobile) — senão os elementos do tutorial, inseridos depois
+            // da legenda, quebram o seletor CSS que esconde o board nessa tela.
+            const portraitLockQuery = window.matchMedia('(max-width: 900px) and (orientation: portrait)');
+            let tutorialStarted = false;
+
             function runTutorial() {
                 if (localStorage.getItem(tutorialKey) === '1') return;
+                if (portraitLockQuery.matches) return;
+                if (tutorialStarted) return;
+                tutorialStarted = true;
 
                 const steps = [
                     { column: 'pendente', text: 'Aqui ficam os pedidos novos e as mesas com itens recém-chegados. Cards piscando em vermelho precisam da sua aprovação.' },
@@ -394,6 +429,9 @@
             }
 
             setTimeout(runTutorial, 300);
+            portraitLockQuery.addEventListener('change', function (e) {
+                if (!e.matches) setTimeout(runTutorial, 300);
+            });
         })();
     </script>
 </x-filament-panels::page>
