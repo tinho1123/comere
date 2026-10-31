@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\MenuExportController;
 use App\Http\Controllers\Admin\OrderChatController as AdminOrderChatController;
+use App\Http\Controllers\Admin\OrdersKanbanController;
 use App\Http\Controllers\Admin\PendingOrdersController;
 use App\Http\Controllers\Admin\SalesReportExportController;
 use App\Http\Controllers\Admin\SelectCompanyController;
@@ -113,6 +114,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/pedidos/{order:uuid}/mensagens', [AdminOrderChatController::class, 'index'])->name('admin.order.chat.index');
     Route::post('/admin/pedidos/{order:uuid}/mensagens', [AdminOrderChatController::class, 'store'])->name('admin.order.chat.store');
     Route::get('/admin/pedidos-mensagens/nao-lidas', [AdminOrderChatController::class, 'unreadCount'])->name('admin.order.chat.unread-count');
+    Route::get('/admin/painel-pedidos/dados', [OrdersKanbanController::class, 'data'])->name('admin.orders-kanban.data');
     Route::get('/admin/produtos/{company:uuid}/cardapio', [MenuExportController::class, 'show'])->name('admin.products.menu');
     Route::get('/admin/relatorio-vendas/{company:uuid}/export', [SalesReportExportController::class, 'export'])->name('admin.sales-report.export');
     Route::get('/admin/select-company', [SelectCompanyController::class, 'show'])->name('admin.select-company');
