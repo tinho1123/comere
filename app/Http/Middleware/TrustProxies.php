@@ -10,12 +10,13 @@ class TrustProxies extends Middleware
     /**
      * The trusted proxies for this application.
      *
+     * Trust all proxies: production runs behind Hostinger's CDN/anti-bot
+     * layer (hcdn), whose forwarding IP we don't control, so the app must
+     * rely on its X-Forwarded-* headers to detect HTTPS correctly.
+     *
      * @var array<int, string>|string|null
      */
-    protected $proxies = [
-        '127.0.0.1',
-        '::1',
-    ];
+    protected $proxies = '*';
 
     /**
      * The headers that should be used to detect proxies.
