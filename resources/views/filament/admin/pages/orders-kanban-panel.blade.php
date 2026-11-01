@@ -1,6 +1,7 @@
 @php
     $tenant = \Filament\Facades\Filament::getTenant();
     $dataUrl = route('admin.orders-kanban.data', ['company' => $tenant->uuid]);
+    $advanceUrlTemplate = route('admin.orders-kanban.advance', ['order' => '__UUID__']);
     $exitUrl = \App\Filament\Admin\Pages\Dashboard::getUrl(tenant: $tenant);
     $tutorialKey = 'comere_orders_kanban_tutorial_seen_'.$tenant->uuid;
 @endphp
@@ -39,6 +40,10 @@
         .okp-column-footer { font-size: 11px; color: #71717a; padding: 0 2px; }
         .okp-card { background: #1c1c20; border: 1px solid #2a2a30; border-left: 3px solid #3f3f46; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 6px; cursor: pointer; position: relative; }
         .okp-card:hover { border-color: #3f3f46; }
+        .okp-card[draggable="true"] { cursor: grab; }
+        .okp-card.okp-dragging { opacity: 0.4; }
+        .okp-column-body.okp-drop-target { outline: 2px dashed #818cf8; outline-offset: 4px; border-radius: 10px; background: rgba(129,140,248,0.06); }
+        .okp-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1c1c20; border: 1px solid #3f3f46; color: #f4f4f5; font-size: 13px; padding: 10px 16px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 1200; }
         .okp-badge { font-size: 10px; font-weight: 700; border-radius: 6px; padding: 3px 7px; align-self: flex-start; }
         .okp-card-title { font-size: 14px; font-weight: 700; color: #fff; }
         .okp-card-sub { font-size: 12px; color: #d4d4d8; }
@@ -154,8 +159,20 @@
             if (!root) return;
 
             const dataUrl = @js($dataUrl);
+            const advanceUrlTemplate = @js($advanceUrlTemplate);
+            const csrfToken = @js(csrf_token());
             const exitUrl = root.dataset.exitUrl;
             const tutorialKey = @js($tutorialKey);
+
+            // Transições que dá pra fazer arrastando o card: só as que não
+            // precisam de nenhum formulário extra (aprovar, marcar entregue).
+            // Em preparo → Pronto exige escolher motorista, então continua
+            // só pelo modal de detalhes, igual recusar.
+            const dragTransitions = {
+                pendente: 'em_preparo',
+                pronto: 'entregue',
+            };
+            let draggingCard = null;
 
             const columnMeta = {
                 pendente: { color: '#f43f5e' },
@@ -172,6 +189,29 @@
             function exit() {
                 window.location.href = exitUrl;
             }
+
+            // Zonas de soltar: cada coluna só aceita um card vindo da coluna
+            // de origem certa (ver dragTransitions acima).
+            root.querySelectorAll('[data-column]').forEach(function (columnEl) {
+                const targetKey = columnEl.dataset.column;
+                const body = columnEl.querySelector('[data-body]');
+
+                body.addEventListener('dragover', function (e) {
+                    if (draggingCard && dragTransitions[draggingCard.from] === targetKey) {
+                        e.preventDefault();
+                        body.classList.add('okp-drop-target');
+                    }
+                });
+                body.addEventListener('dragleave', function () {
+                    body.classList.remove('okp-drop-target');
+                });
+                body.addEventListener('drop', function (e) {
+                    body.classList.remove('okp-drop-target');
+                    if (!draggingCard || dragTransitions[draggingCard.from] !== targetKey) return;
+                    e.preventDefault();
+                    advanceOrder(draggingCard.uuid, targetKey);
+                });
+            });
 
             document.getElementById('okp-exit-btn').addEventListener('click', exit);
             document.addEventListener('keydown', function (e) {
@@ -217,6 +257,36 @@
                 } catch (e) { /* som é um extra, nunca deve travar o painel */ }
             }
 
+            function toast(message) {
+                const el = document.createElement('div');
+                el.className = 'okp-toast';
+                el.textContent = message;
+                root.appendChild(el);
+                setTimeout(function () { el.remove(); }, 3000);
+            }
+
+            async function advanceOrder(uuid, to) {
+                try {
+                    const res = await fetch(advanceUrlTemplate.replace('__UUID__', uuid), {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                        },
+                        body: JSON.stringify({ to: to }),
+                    });
+                    const body = await res.json().catch(function () { return {}; });
+                    if (!res.ok || !body.success) {
+                        toast(body.message || 'Não deu pra mover esse pedido — ele pode já ter mudado de etapa.');
+                        return;
+                    }
+                    poll();
+                } catch (e) {
+                    toast('Falha de conexão ao mover o pedido.');
+                }
+            }
+
             function money(value) {
                 return 'R$ ' + Number(value || 0).toFixed(2).replace('.', ',');
             }
@@ -237,10 +307,24 @@
                 return 'há ' + Math.round(diffMin / 60) + 'h';
             }
 
-            function orderCard(card, columnColor) {
+            function orderCard(card, columnColor, columnKey) {
                 const el = document.createElement('div');
                 el.className = 'okp-card' + (card.needs_approval ? ' okp-alert-approval' : '');
                 el.style.borderLeftColor = columnColor;
+
+                if (dragTransitions[columnKey]) {
+                    el.draggable = true;
+                    el.addEventListener('dragstart', function (e) {
+                        draggingCard = { uuid: card.uuid, from: columnKey };
+                        el.classList.add('okp-dragging');
+                        e.dataTransfer.effectAllowed = 'move';
+                        e.dataTransfer.setData('text/plain', card.uuid);
+                    });
+                    el.addEventListener('dragend', function () {
+                        el.classList.remove('okp-dragging');
+                        draggingCard = null;
+                    });
+                }
 
                 let html = '<span class="okp-badge" style="color:#fb7185; background:rgba(244,63,94,0.12);">🛍 '
                     + (card.channel === 'online' ? 'MARKETPLACE' : 'BALCÃO') + '</span>';
@@ -319,7 +403,7 @@
 
                     cards.forEach(function (card) {
                         const el = card.type === 'order'
-                            ? orderCard(card, columnMeta[key].color)
+                            ? orderCard(card, columnMeta[key].color, key)
                             : sessionCard(card, columnMeta[key].color, key);
                         body.appendChild(el);
 

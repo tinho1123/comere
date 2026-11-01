@@ -115,6 +115,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/pedidos/{order:uuid}/mensagens', [AdminOrderChatController::class, 'store'])->name('admin.order.chat.store');
     Route::get('/admin/pedidos-mensagens/nao-lidas', [AdminOrderChatController::class, 'unreadCount'])->name('admin.order.chat.unread-count');
     Route::get('/admin/painel-pedidos/dados', [OrdersKanbanController::class, 'data'])->name('admin.orders-kanban.data');
+    Route::post('/admin/painel-pedidos/pedidos/{order:uuid}/avancar', [OrdersKanbanController::class, 'advance'])->name('admin.orders-kanban.advance');
     Route::get('/admin/produtos/{company:uuid}/cardapio', [MenuExportController::class, 'show'])->name('admin.products.menu');
     Route::get('/admin/relatorio-vendas/{company:uuid}/export', [SalesReportExportController::class, 'export'])->name('admin.sales-report.export');
     Route::get('/admin/select-company', [SelectCompanyController::class, 'show'])->name('admin.select-company');
