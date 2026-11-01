@@ -197,4 +197,85 @@ class OrdersKanbanControllerTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    #[Test]
+    public function it_approves_a_pending_order_when_dragged_to_em_preparo()
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create();
+        $user->companies()->attach($company->id);
+
+        $order = $this->makeOrder($company, Order::STATUS_PENDING);
+
+        $response = $this->actingAs($user)
+            ->postJson("/admin/painel-pedidos/pedidos/{$order->uuid}/avancar", ['to' => 'em_preparo']);
+
+        $response->assertStatus(200);
+        $response->assertJson(['success' => true, 'status' => Order::STATUS_PROCESSING]);
+        $this->assertSame(Order::STATUS_PROCESSING, $order->fresh()->status);
+    }
+
+    #[Test]
+    public function it_delivers_a_shipped_order_when_dragged_to_entregue()
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create();
+        $user->companies()->attach($company->id);
+
+        $order = $this->makeOrder($company, Order::STATUS_SHIPPED);
+
+        $response = $this->actingAs($user)
+            ->postJson("/admin/painel-pedidos/pedidos/{$order->uuid}/avancar", ['to' => 'entregue']);
+
+        $response->assertStatus(200);
+        $response->assertJson(['success' => true, 'status' => Order::STATUS_DELIVERED]);
+        $this->assertSame(Order::STATUS_DELIVERED, $order->fresh()->status);
+    }
+
+    #[Test]
+    public function it_refuses_to_advance_an_order_that_is_not_in_the_expected_status()
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create();
+        $user->companies()->attach($company->id);
+
+        $order = $this->makeOrder($company, Order::STATUS_PROCESSING);
+
+        $response = $this->actingAs($user)
+            ->postJson("/admin/painel-pedidos/pedidos/{$order->uuid}/avancar", ['to' => 'em_preparo']);
+
+        $response->assertStatus(409);
+        $this->assertSame(Order::STATUS_PROCESSING, $order->fresh()->status);
+    }
+
+    #[Test]
+    public function it_rejects_an_unsupported_transition()
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create();
+        $user->companies()->attach($company->id);
+
+        $order = $this->makeOrder($company, Order::STATUS_PROCESSING);
+
+        $response = $this->actingAs($user)
+            ->postJson("/admin/painel-pedidos/pedidos/{$order->uuid}/avancar", ['to' => 'pronto']);
+
+        $response->assertStatus(422);
+    }
+
+    #[Test]
+    public function it_forbids_advancing_an_order_from_a_different_company()
+    {
+        $company = Company::factory()->create();
+        $otherCompany = Company::factory()->create();
+        $user = User::factory()->create();
+        $user->companies()->attach($company->id);
+
+        $order = $this->makeOrder($otherCompany, Order::STATUS_PENDING);
+
+        $response = $this->actingAs($user)
+            ->postJson("/admin/painel-pedidos/pedidos/{$order->uuid}/avancar", ['to' => 'em_preparo']);
+
+        $response->assertStatus(403);
+    }
 }

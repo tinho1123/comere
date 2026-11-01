@@ -62,6 +62,39 @@ class OrdersKanbanController extends Controller
         ]);
     }
 
+    /**
+     * Drag-and-drop between columns, for the two marketplace transitions
+     * that need no extra input: Pendente→Em preparo (approve) and
+     * Pronto→Entregue (mark delivered). Em preparo→Pronto needs a driver
+     * picked from a form (see OrderResource's "ship" action), so it isn't
+     * offered as a drag target — only the normal detail modal does that.
+     * Rejecting is likewise never done by dragging, only from the modal.
+     */
+    public function advance(Request $request, Order $order): JsonResponse
+    {
+        abort_unless(auth()->user()->canAccessTenant($order->company), 403);
+
+        $data = $request->validate([
+            'to' => ['required', 'in:em_preparo,entregue'],
+        ]);
+
+        if ($data['to'] === 'em_preparo') {
+            if (! $order->canBeApproved()) {
+                return response()->json(['success' => false, 'message' => 'Pedido não está mais pendente.'], 409);
+            }
+
+            $order->approve();
+        } else {
+            if (! $order->canBeDelivered() || $order->hasUnresolvedFailedDelivery()) {
+                return response()->json(['success' => false, 'message' => 'Pedido não pode ser marcado como entregue agora.'], 409);
+            }
+
+            $order->deliver();
+        }
+
+        return response()->json(['success' => true, 'status' => $order->status]);
+    }
+
     private function orderColumn(Order $order): string
     {
         return match ($order->status) {
